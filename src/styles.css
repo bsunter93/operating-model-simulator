@@ -52,7 +52,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 
 /* ── frame ─────────────────────────────────────────────────────────────── */
-.app{min-height:100vh;display:grid;grid-template-rows:auto 1fr}
+.app{min-height:100vh;display:grid;grid-template-rows:auto 1fr;grid-template-columns:minmax(0,1fr);overflow-x:clip}
 .mast{border-bottom:1px solid var(--line);background:var(--surface)}
 .mast-in{max-width:1180px;margin:0 auto;padding:8px clamp(16px,3vw,32px);display:flex;align-items:center;gap:16px 28px;min-height:56px;flex-wrap:wrap}
 .brand{display:flex;align-items:baseline;gap:12px;color:var(--ink);flex-wrap:wrap}
@@ -272,7 +272,7 @@ th .term:hover:after{font-weight:400}
 .mast-in{min-height:52px}
 
 /* ── single-column pages ───────────────────────────────────────────────── */
-.page.one{display:block;max-width:1080px;padding-bottom:140px}
+.page.one{display:block;max-width:1080px;padding-bottom:140px;justify-self:center;width:100%}
 .main.one{max-width:100%}
 .next{display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end;margin:34px 0 0;padding-top:18px;border-top:1px solid var(--hair)}
 .next .btn{text-decoration:none}
@@ -403,7 +403,7 @@ th .term:hover:after{font-weight:400}
 .page-sec:last-child{border-bottom:0}
 .next{display:none}
 .drawer-back{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:40}
-.drawer{position:fixed;top:0;right:0;bottom:0;width:min(1000px,100vw);background:var(--paper);z-index:41;overflow-y:auto;box-shadow:-12px 0 40px rgba(0,0,0,.3);border-left:1px solid var(--line)}
+.drawer{position:fixed;top:0;right:0;bottom:0;width:min(820px,100vw);background:var(--paper);z-index:41;overflow-y:auto;box-shadow:-12px 0 40px rgba(0,0,0,.3);border-left:1px solid var(--line)}
 .drawer-close{position:sticky;top:0;z-index:2;display:block;width:100%;text-align:right;font:500 13px/1 var(--sans);color:var(--muted);padding:12px 18px;background:var(--paper);border-bottom:1px solid var(--hair)}
 .drawer-close:hover{color:var(--ink)}
 .drawer-body{padding:8px clamp(16px,3vw,32px) 60px}
@@ -431,8 +431,10 @@ body.drawer-open{overflow:hidden}
   .strip-l+.strip-l,.chip+.strip-l{margin-left:0;margin-top:10px}
   .chip{max-width:100%;white-space:normal;line-height:1.3}
   .strip-reset{margin-left:0;margin-top:12px;text-align:left}
-  .page.one{margin-left:236px;max-width:none;padding:20px 40px 140px}
+  .page.one{margin:0 0 0 236px;width:auto;justify-self:stretch;max-width:none;padding:20px 40px 140px}
   .foot{margin-left:236px;max-width:none;padding-left:40px}
   .page-sec{scroll-margin-top:24px}
   .tourbar,.tourcard{left:256px}
 }
+
+.page-sec,.page.one,.main{min-width:0}
