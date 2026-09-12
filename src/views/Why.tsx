@@ -49,7 +49,7 @@ export function Why({ teamId: requested }: { teamId: string }) {
       <ul className="facts">
         <li><b>{Math.round(team.startingFte)} → {Math.round(team.endingFte)}</b><Term k="headcount">people, Jan to Dec</Term></li>
         <li><b>{pct(team.peakUtilization)}</b><Term k="utilization">peak utilization</Term>, {monthLabel(team.peakMonth)}</li>
-        <li><b>{team.monthsConstrained}</b>month{team.monthsConstrained === 1 ? '' : 's'} over the <Term k="target">{pct(def.targetUtilization)} target</Term></li>
+        <li><b>{team.monthsConstrained}</b>month{team.monthsConstrained === 1 ? '' : 's'} over capacity (<Term k="target">{pct(def.targetUtilization)} target</Term>)</li>
         <li><b>{team.peakWorkforceGap.toFixed(1)}</b><Term k="shortfall">people short</Term> at peak</li>
         <li><b>{pct(1 - def.shrinkage)}</b>of paid hours <Term k="productive">productive</Term></li>
         {landing.length > 0 && <li><b>{landing.map((m) => `+${Math.round(m.hiresLanded)} ${monthLabel(m.month)}`).join(', ')}</b>hires landing</li>}
@@ -68,7 +68,7 @@ export function Why({ teamId: requested }: { teamId: string }) {
         <div className="legend">
           <span><i className="bar" /> <Term k="run">run work</Term></span>
           <span><i className="bar2" /> <Term k="initiative">initiative work</Term></span>
-          <span><i data-s="severe" /> <Term k="gap">over target</Term></span>
+          <span><i data-s="severe" /> <Term k="gap">over capacity</Term></span>
           <span><i className="tline" /> <Term k="target">target capacity</Term> ({pct(def.targetUtilization)} of productive hours)</span>
           <span><i className="aline" /> <Term k="productive">all productive hours</Term></span>
           {state.interventionIds.length > 0 && <span><i className="ghost" /> before your levers</span>}
@@ -81,25 +81,25 @@ export function Why({ teamId: requested }: { teamId: string }) {
             <>
               <b>The plan already hires {planned.reduce((s, h) => s + h.headcount, 0)} people for this team.</b> They arrive in <b>{monthLabel(landing[0].month)}</b>.
               {' '}Between {monthLabel(firstOver.month)} and then, the team runs up to <b>{pct(peak.utilization)}</b> of its productive hours against a {pct(def.targetUtilization)} target, {people(peak.workforceGap)} short at the worst point.
-              {lastOver && landing[0].monthIndex <= lastOver.monthIndex ? <> Even after they land it is over target through {monthLabel(lastOver.month)}.</> : <> Once they land it clears the target for the rest of the year.</>}
+              {lastOver && landing[0].monthIndex <= lastOver.monthIndex ? <> Even after they land it is over capacity through {monthLabel(lastOver.month)}.</> : <> Once they land it is back within capacity for the rest of the year.</>}
               {' '}Hiring solves the capacity problem eventually. It does not solve the one that exists today.
             </>
           ) : (
             <>
-              <b>This scenario cancels the {planned.reduce((s, h) => s + h.headcount, 0)} hires the plan had for this team.</b> It runs over target from {monthLabel(firstOver.month)}{lastOver ? ` through ${monthLabel(lastOver.month)}` : ''}, peaking at {pct(peak.utilization)}.
+              <b>This scenario cancels the {planned.reduce((s, h) => s + h.headcount, 0)} hires the plan had for this team.</b> It runs over capacity from {monthLabel(firstOver.month)}{lastOver ? ` through ${monthLabel(lastOver.month)}` : ''}, peaking at {pct(peak.utilization)}.
             </>
           )}
         </div>
       )}
       {planned.length === 0 && firstOver && landing.length === 0 && (
         <div className="callout">
-          <b>The plan has no hires for this team.</b> It runs over target from {monthLabel(firstOver.month)}{lastOver && lastOver !== firstOver ? ` through ${monthLabel(lastOver.month)}` : ''}, peaking at {pct(peak.utilization)} with {people(peak.workforceGap)} short.
+          <b>The plan has no hires for this team.</b> It runs over capacity from {monthLabel(firstOver.month)}{lastOver && lastOver !== firstOver ? ` through ${monthLabel(lastOver.month)}` : ''}, peaking at {pct(peak.utilization)} with {people(peak.workforceGap)} short.
         </div>
       )}
       {planned.length === 0 && landing.length > 0 && (
         <div className="callout">
           <b>The plan has no hires for this team; your lever adds {landing.map((m) => `${Math.round(m.hiresLanded)} in ${monthLabel(m.month)}`).join(' and ')}.</b>
-          {firstOver ? <> It is still over target from {monthLabel(firstOver.month)}{lastOver && lastOver !== firstOver ? ` through ${monthLabel(lastOver.month)}` : ''}, peaking at {pct(peak.utilization)}{peak.workforceGap >= 0.5 ? ` with ${people(peak.workforceGap)} short` : ''}.</> : <> With them it stays within target all year.</>}
+          {firstOver ? <> It is still over capacity from {monthLabel(firstOver.month)}{lastOver && lastOver !== firstOver ? ` through ${monthLabel(lastOver.month)}` : ''}, peaking at {pct(peak.utilization)}{peak.workforceGap >= 0.5 ? ` with ${people(peak.workforceGap)} short` : ''}.</> : <> With them it stays within capacity all year.</>}
           {landing[0].monthIndex > 0 && <> Nothing changes before {monthLabel(landing[0].month)}; that is the lead time.</>}
         </div>
       )}

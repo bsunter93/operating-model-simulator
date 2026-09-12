@@ -35,13 +35,13 @@ export function verdict(r: ModelResult, teamName: (id: string) => string, initNa
     sentences.push(`Every team stays within its target all year and every initiative starts when planned.`);
   } else if (severe.length > 0) {
     headline = 'Not as written.';
-    sentences.push(`${listNames(severe.map((t) => teamName(t.teamId)))} ${severe.length === 1 ? 'runs' : 'run'} past 100% of available hours, and ${over.length} of ${nTeams} teams are over target at some point in the year.`);
+    sentences.push(`${listNames(severe.map((t) => teamName(t.teamId)))} ${severe.length === 1 ? 'runs' : 'run'} past 100% of available hours, and ${over.length} of ${nTeams} teams are over capacity at some point in the year.`);
   } else if (over.length <= 2) {
     headline = 'Mostly.';
-    sentences.push(`${over.length} of ${nTeams} teams ${over.length === 1 ? 'runs' : 'run'} over target at some point in the year; the rest have room. The first is ${teamName(s.firstBreakTeamId!)} in ${monthLabel(s.firstBreakMonth!, true)}.`);
+    sentences.push(`${over.length} of ${nTeams} teams ${over.length === 1 ? 'runs' : 'run'} over capacity at some point in the year; the rest have room. The first is ${teamName(s.firstBreakTeamId!)} in ${monthLabel(s.firstBreakMonth!, true)}.`);
   } else {
     headline = 'Not all of it at once.';
-    sentences.push(`${over.length} of ${nTeams} teams run over target at some point in the year; the first is ${teamName(s.firstBreakTeamId!)} in ${monthLabel(s.firstBreakMonth!, true)}.`);
+    sentences.push(`${over.length} of ${nTeams} teams run over capacity at some point in the year; the first is ${teamName(s.firstBreakTeamId!)} in ${monthLabel(s.firstBreakMonth!, true)}.`);
   }
 
   for (const c of seq) {
@@ -59,12 +59,12 @@ export function verdict(r: ModelResult, teamName: (id: string) => string, initNa
   if (base && base !== r) {
     const parts: string[] = [];
     const bo = base.teams.filter((t) => t.worstStatus === 'severe' || t.worstStatus === 'constrained').length;
-    if (bo !== over.length) parts.push(`teams over target ${bo} → ${over.length}`);
+    if (bo !== over.length) parts.push(`teams over capacity ${bo} → ${over.length}`);
     let bpeak = 0;
     for (const t of base.teams) for (const m of t.months) bpeak = Math.max(bpeak, m.workforceGap);
     if (Math.round(bpeak) !== Math.round(peak?.fte ?? 0)) parts.push(`peak shortfall ${Math.round(bpeak)} → ${Math.round(peak?.fte ?? 0)} people`);
     const gapB = base.teams.reduce((a, t) => a + t.totalGapVsPlanHours, 0), gapR = r.teams.reduce((a, t) => a + t.totalGapVsPlanHours, 0);
-    if (Math.abs(gapB - gapR) > 50) parts.push(`hours over target ${Math.round(gapB).toLocaleString()} → ${Math.round(gapR).toLocaleString()}`);
+    if (Math.abs(gapB - gapR) > 50) parts.push(`hours over capacity ${Math.round(gapB).toLocaleString()} → ${Math.round(gapR).toLocaleString()}`);
     if (Math.abs(base.summary.revenueExposureUsd - s.revenueExposureUsd) > 1e5) parts.push(`revenue exposure ${money(base.summary.revenueExposureUsd)} → ${money(s.revenueExposureUsd)}`);
     if (Math.abs(base.financials.annualTotalCostUsd - r.financials.annualTotalCostUsd) > 1e4) parts.push(`cost ${money(base.financials.annualTotalCostUsd)} → ${money(r.financials.annualTotalCostUsd)}`);
     versus = parts.length ? `Against the base plan: ${parts.join('; ')}.` : 'No material change from the base plan.';

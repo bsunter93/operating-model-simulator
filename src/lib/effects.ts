@@ -10,7 +10,7 @@ export function describeEffect(iv: Intervention, before: ModelResult, after: Mod
   const teamLine = (id: string) => {
     const a = team(before, id), b = team(after, id);
     if (a.monthsConstrained === b.monthsConstrained && Math.abs(a.peakUtilization - b.peakUtilization) < 0.005) return `${teamName(id)}: no change`;
-    return `${teamName(id)}: ${a.monthsConstrained} → ${b.monthsConstrained} months over target, peak ${pct(a.peakUtilization)} → ${pct(b.peakUtilization)}`;
+    return `${teamName(id)}: ${a.monthsConstrained} → ${b.monthsConstrained} months over capacity, peak ${pct(a.peakUtilization)} → ${pct(b.peakUtilization)}`;
   };
   switch (iv.type) {
     case 'expediteHiring': {

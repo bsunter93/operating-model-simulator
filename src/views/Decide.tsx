@@ -81,7 +81,7 @@ export function Decide() {
       <div className="tbl-wrap">
         <table className="tbl dec">
           <thead>
-            <tr><th>#</th><th>Option</th><th><Term k="cost">Added cost</Term></th><th><Term k="speed">Hours still over target</Term></th><th><Term k="exposure">Revenue exposure</Term></th><th><Term k="score">Score</Term></th></tr>
+            <tr><th>#</th><th>Option</th><th><Term k="cost">Added cost</Term></th><th><Term k="speed">Hours still over capacity</Term></th><th><Term k="exposure">Revenue exposure</Term></th><th><Term k="score">Score</Term></th></tr>
           </thead>
           <tbody>
             {rows.map((r) => (
@@ -113,7 +113,7 @@ export function Decide() {
         <h2>What would change my mind</h2>
         <p className="sub">Thresholds found by rerunning the model until the answer flips. They move when you change anything above.</p>
         <ul className="th">{th.map((t) => <li key={t.text}>{t.text}</li>)}</ul>
-        {result.summary.firstBreakMonth && <p className="note">Under this configuration the first team over target is {teamName(result.summary.firstBreakTeamId!)} in {monthLabel(result.summary.firstBreakMonth, true)}.</p>}
+        {result.summary.firstBreakMonth && <p className="note">Under this configuration the first team over capacity is {teamName(result.summary.firstBreakTeamId!)} in {monthLabel(result.summary.firstBreakMonth, true)}.</p>}
       </section>
 
       <nav className="next">

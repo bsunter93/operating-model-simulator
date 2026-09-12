@@ -357,8 +357,8 @@ function detectConstraints(model: OperatingModel, teams: TeamResult[], schedule:
     const impact = prod > 0 ? (r.totalGapHours / prod) * t.monthlyFteCostUsd : 0;
     out.push({
       id: `capacity:${r.teamId}`, kind: 'capacity', teamId: r.teamId,
-      title: `${t.name} above target utilization`,
-      detail: `${r.monthsConstrained} of ${months.length} months above ${Math.round(r.months[0].targetUtilization * 100)}% target; peak ${Math.round(r.peakUtilization * 100)}% in ${r.peakMonth}; ${Math.round(r.totalGapHours).toLocaleString()} gap hours; peak shortfall ${r.peakWorkforceGap.toFixed(1)} FTE.`,
+      title: `${t.name} over capacity`,
+      detail: `${r.monthsConstrained} of ${months.length} months over capacity against a ${Math.round(r.months[0].targetUtilization * 100)}% target; peak ${Math.round(r.peakUtilization * 100)}% in ${r.peakMonth}; ${Math.round(r.totalGapHours).toLocaleString()} gap hours; peak shortfall ${r.peakWorkforceGap.toFixed(1)} FTE.`,
       businessImpactUsd: impact, firstMonth: r.firstConstrainedMonth,
       metric: 'peak utilization', value: r.peakUtilization, threshold: r.months[0].targetUtilization,
     });

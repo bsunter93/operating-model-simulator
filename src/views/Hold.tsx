@@ -56,22 +56,22 @@ export function Hold() {
       {v.versus && <p className="versus">{v.versus}</p>}
 
       <div className="metrics">
-        <Metric label="Revenue target" value={money(model.strategy.revenueTargetUsd)} delta={{ text: `${pct(model.strategy.growthTargetPct)} growth`, dir: 'flat' }} />
-        <Metric label="Headcount, Jan → Dec" term="headcount" value={`${Math.round(s.startingFte)} → ${Math.round(s.endingFte)}`} delta={{ text: s.endingFte < s.startingFte ? 'attrition outruns the hiring plan' : 'hiring outruns attrition', dir: 'flat' }} />
+        <Metric label="Revenue target" value={money(model.strategy.revenueTargetUsd)} delta={{ text: `${pct(model.strategy.growthTargetPct)} revenue growth, year over year`, dir: 'flat' }} />
+        <Metric label="Headcount, Jan → Dec" term="headcount" value={`${Math.round(s.startingFte)} → ${Math.round(s.endingFte)}`} delta={{ text: `${signed(Math.round(s.endingFte) - Math.round(s.startingFte), (n) => `${n}`)} (${signed((s.endingFte - s.startingFte) / s.startingFte, (n) => pct(n))}): ${s.endingFte < s.startingFte ? 'attrition outruns the hiring plan' : 'hiring outruns attrition'}`, dir: 'flat' }} />
         <Metric label="Peak shortfall" term="peakShortfall" value={peak ? people(peak.fte) : 'none'} tone={peak ? 'alert' : undefined}
-          delta={peak ? (isBase ? { text: `${teamName(peak.team.teamId)}, ${monthLabel(peak.month)}`, dir: 'flat' } : d(peak.fte, basePeak?.fte ?? 0, (n) => people(n))) : undefined} />
-        <Metric label="Teams over target" term="constrained" value={`${s.teamsConstrained} of ${nTeams}`} tone={s.teamsConstrained ? 'alert' : undefined} delta={d(s.teamsConstrained, base.summary.teamsConstrained, (n) => `${n}`) ?? { text: `${s.teamsWatch} more on watch`, dir: 'flat' }} />
-        <Metric label="Initiative load" term="initiativeLoad" value={pct(s.portfolioLoad)} delta={{ text: 'of target capacity goes to initiatives', dir: 'flat' }} />
+          delta={peak ? (isBase ? { text: `${teamName(peak.team.teamId)} in ${monthLabel(peak.month)} needs ${people(peak.fte)} more than it has`, dir: 'flat' } : d(peak.fte, basePeak?.fte ?? 0, (n) => people(n))) : undefined} />
+        <Metric label="Teams over capacity" term="constrained" value={`${s.teamsConstrained} of ${nTeams}`} tone={s.teamsConstrained ? 'alert' : undefined} delta={d(s.teamsConstrained, base.summary.teamsConstrained, (n) => `${n}`) ?? { text: `at some point in the year; ${s.teamsWatch} more within 5 points of capacity`, dir: 'flat' }} />
+        <Metric label="Initiative load" term="initiativeLoad" value={pct(s.portfolioLoad)} delta={{ text: 'of all available hours go to initiatives instead of day-to-day work', dir: 'flat' }} />
         <Metric label="Budget variance" term="budget" value={money(s.annualBudgetVarianceUsd, { sign: true })} tone={s.annualBudgetVarianceUsd > 0 ? 'alert' : undefined}
-          delta={d(s.annualBudgetVarianceUsd, base.summary.annualBudgetVarianceUsd, (n) => money(n)) ?? { text: s.annualBudgetVarianceUsd > 0 ? 'over the modeled cap' : 'under the modeled cap', dir: 'flat' }} />
-        <Metric label="Revenue exposure" term="exposure" value={money(s.revenueExposureUsd)} tone="warm" delta={d(s.revenueExposureUsd, base.summary.revenueExposureUsd, (n) => money(n)) ?? { text: 'revenue at risk × odds of failure', dir: 'flat' }} />
-        <Metric label="Initiatives delayed" term="delayed" value={`${s.initiativesDelayed} of ${model.initiatives.length}`} tone={s.initiativesDelayed ? 'warm' : undefined} delta={{ text: 'by dependencies the plan did not sequence', dir: 'flat' }} />
+          delta={d(s.annualBudgetVarianceUsd, base.summary.annualBudgetVarianceUsd, (n) => money(n)) ?? { text: `${money(Math.abs(s.annualBudgetVarianceUsd))} ${s.annualBudgetVarianceUsd > 0 ? 'over' : 'under'} the ${money(result.financials.annualBudgetUsd)} budget for these teams`, dir: 'flat' }} />
+        <Metric label="Revenue exposure" term="exposure" value={money(s.revenueExposureUsd)} tone="warm" delta={d(s.revenueExposureUsd, base.summary.revenueExposureUsd, (n) => money(n)) ?? { text: 'revenue riding on initiatives, weighted by their odds of failing', dir: 'flat' }} />
+        <Metric label="Initiatives delayed" term="delayed" value={`${s.initiativesDelayed} of ${model.initiatives.length}`} tone={s.initiativesDelayed ? 'warm' : undefined} delta={{ text: 'cannot start on the planned date because of a dependency', dir: 'flat' }} />
       </div>
 
       <section className="sec">
         <h2>What breaks first</h2>
         <p className="sub">Every constraint is computed from the monthly model and ranked by what it costs. Click one to see why.</p>
-        {result.constraints.length === 0 ? <div className="empty">Nothing. Every team stays within target and every initiative starts when planned.</div> : (
+        {result.constraints.length === 0 ? <div className="empty">Nothing. Every team stays within capacity and every initiative starts when planned.</div> : (
           <ol className="cons">
             {result.constraints.map((c, i) => {
               const link = c.teamId ? `#/why/${c.teamId}` : c.initiativeId ? '#/why/initiatives' : null;
@@ -120,7 +120,7 @@ export function Hold() {
             </tbody>
           </table>
         </div>
-        <div className="legend"><span><i /> within target</span><span><i data-s="watch" /> <Term k="watch">watch</Term></span><span><i data-s="constrained" /> <Term k="constrained">over target</Term></span><span><i data-s="severe" /> <Term k="severe">over 100%</Term></span></div>
+        <div className="legend"><span><i /> within capacity</span><span><i data-s="watch" /> <Term k="watch">watch</Term></span><span><i data-s="constrained" /> <Term k="constrained">over capacity</Term></span><span><i data-s="severe" /> <Term k="severe">over 100%</Term></span></div>
       </section>
 
       <nav className="next">

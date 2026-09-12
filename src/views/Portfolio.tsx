@@ -92,7 +92,7 @@ export function Portfolio() {
 
       <section className="sec">
         <h2>Who each initiative takes</h2>
-        <p className="sub">People assigned while the initiative is active. They come out of the same hours as the team's run work, which is how initiatives push teams over target.</p>
+        <p className="sub">People assigned while the initiative is active. They come out of the same hours as the team's run work, which is how initiatives push teams over capacity.</p>
         <div className="tbl-wrap">
           <table className="tbl">
             <thead><tr><th>Initiative</th><th>Teams and people</th><th>Planned</th><th>Feasible</th><th>Done</th><th><Term k="delayed">Delay</Term></th><th><Term k="exposure">Exposure</Term></th></tr></thead>

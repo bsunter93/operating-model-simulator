@@ -26,13 +26,13 @@ export function Cost() {
       <WhyTabs active="cost" />
       <h1 className="title">The cost</h1>
       <p className="lede">
-        Three numbers. What the plan costs against its <Term k="budget">cap</Term>. What the capacity shortfall costs, priced as the hours over target at each team's loaded rate. And what any fix adds.
+        Three numbers. What the plan costs against its <Term k="budget">cap</Term>. What the capacity shortfall costs, priced as the hours over capacity at each team's loaded rate. And what any fix adds.
       </p>
 
       <div className="metrics three">
         <div className="metric"><div className="l">Modeled cost, {model.calendar.startMonth.slice(0, 4)}</div><div className="v">{money(f.annualTotalCostUsd)}</div><div className="d">{money(f.annualRunCostUsd)} people · {money(f.annualChangeCostUsd)} one-time changes</div></div>
         <div className="metric"><div className="l"><Term k="budget">Against the cap</Term></div><div className={'v' + (f.annualVarianceUsd > 0 ? ' alert' : '')}>{money(f.annualVarianceUsd, { sign: true })}</div><div className="d">{f.annualVarianceUsd > 0 ? `over a ${money(f.annualBudgetUsd)} cap; ${overMonths.length} month${overMonths.length === 1 ? '' : 's'} over` : `under a ${money(f.annualBudgetUsd)} cap`}</div></div>
-        <div className="metric"><div className="l">What the shortfall costs</div><div className={'v' + (gapCost > 0 ? ' warm' : '')}>{gapCost > 0 ? money(gapCost) : 'nothing'}</div><div className="d">{gapCost > 0 ? 'hours over target, at loaded cost' : 'no team over target'}{active.length && Math.abs(gapCost - baseGapCost) > 1e3 ? ` · was ${money(baseGapCost)} before your levers` : ''}</div></div>
+        <div className="metric"><div className="l">What the shortfall costs</div><div className={'v' + (gapCost > 0 ? ' warm' : '')}>{gapCost > 0 ? money(gapCost) : 'nothing'}</div><div className="d">{gapCost > 0 ? 'hours over capacity, at loaded cost' : 'no team over capacity'}{active.length && Math.abs(gapCost - baseGapCost) > 1e3 ? ` · was ${money(baseGapCost)} before your levers` : ''}</div></div>
       </div>
 
       <div className="chart">

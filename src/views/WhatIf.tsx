@@ -34,7 +34,7 @@ export function WhatIf() {
               <b>{scenario.name}</b>
               <span className="scen-desc">{scenario.description}</span>
               <span className={'scen-v' + (vv.headline === 'Yes.' ? ' ok' : vv.headline === 'Not as written.' ? ' bad' : '')}>{vv.headline}</span>
-              <span className="scen-n">{result.summary.teamsConstrained} of {result.teams.length} teams over target · {money(result.summary.revenueExposureUsd)} exposed</span>
+              <span className="scen-n">{result.summary.teamsConstrained} of {result.teams.length} teams over capacity · {money(result.summary.revenueExposureUsd)} exposed</span>
             </button>
           );
         })}
@@ -57,10 +57,10 @@ export function WhatIf() {
             </thead>
             <tbody>
               {([
-                ['Teams over target', (r: ModelResult) => `${r.summary.teamsConstrained} of ${r.teams.length}`, 'constrained'],
+                ['Teams over capacity', (r: ModelResult) => `${r.summary.teamsConstrained} of ${r.teams.length}`, 'constrained'],
                 ['First break', (r: ModelResult) => (r.summary.firstBreakMonth ? `${teamName(r.summary.firstBreakTeamId!)}, ${monthLabel(r.summary.firstBreakMonth)}` : 'none'), null],
                 ['Peak shortfall', (r: ModelResult) => { const k = Math.round(peakShortfall(r)); return k === 0 ? 'none' : k === 1 ? '1 person' : `${k} people`; }, 'peakShortfall'],
-                ['Hours over target', (r: ModelResult) => num(r.teams.reduce((s, t) => s + t.totalGapVsPlanHours, 0)), 'gap'],
+                ['Hours over capacity', (r: ModelResult) => num(r.teams.reduce((s, t) => s + t.totalGapVsPlanHours, 0)), 'gap'],
                 ['Headcount, Dec', (r: ModelResult) => `${Math.round(r.summary.endingFte)}`, 'headcount'],
                 ['Cost', (r: ModelResult) => money(r.financials.annualTotalCostUsd), null],
                 ['Budget variance', (r: ModelResult) => money(r.financials.annualVarianceUsd, { sign: true }), 'budget'],

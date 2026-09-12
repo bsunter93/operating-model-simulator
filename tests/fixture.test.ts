@@ -83,7 +83,7 @@ describe('Atlas Systems scenarios', () => {
     expect(r.constraints.some((c) => c.kind === 'budget')).toBe(true);
     expect(r.financials.budgetLevers.length).toBeGreaterThanOrEqual(4);
   });
-  it('growth of 20% pushes most operational teams over target', () => {
+  it('growth of 20% pushes most operational teams over capacity', () => {
     const r = run(model, { scenario: 'scenario-growth-20' });
     expect(r.summary.teamsConstrained).toBeGreaterThanOrEqual(5);
   });

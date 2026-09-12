@@ -77,7 +77,7 @@ export function Workforce() {
 
       <section className="sec">
         <h2>When the hires land, against when they are needed</h2>
-        <p className="sub">Each planned request from the month it is raised to the month people start. The marker is the first month that team goes over target.</p>
+        <p className="sub">Each planned request from the month it is raised to the month people start. The marker is the first month that team goes over capacity.</p>
         {requests.length === 0 ? <div className="empty">No hiring requests in this plan.</div> : (
           <div className="chart" data-tour="hiring">
             <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Hiring timing">
@@ -106,7 +106,7 @@ export function Workforce() {
                     {r.needIdx >= 0 && (
                       <>
                         <line x1={x(r.needIdx)} x2={x(r.needIdx)} y1={y + 8} y2={y + 28} stroke="var(--alert)" strokeWidth={2} />
-                        <text x={x(r.needIdx) + 4} y={y + 5} fontSize={10.5} fontFamily="var(--mono)" fill="var(--alert)">over target from {monthLabel(months[r.needIdx])}</text>
+                        <text x={x(r.needIdx) + 4} y={y + 5} fontSize={10.5} fontFamily="var(--mono)" fill="var(--alert)">over capacity from {monthLabel(months[r.needIdx])}</text>
                       </>
                     )}
                     {late && <text x={x(r.needIdx) + 4} y={y + 38} fontSize={10.5} fontFamily="var(--mono)" fill="var(--alert)">hires are {r.landIdx - r.needIdx} month{r.landIdx - r.needIdx === 1 ? '' : 's'} late</text>}
@@ -114,23 +114,23 @@ export function Workforce() {
                 );
               })}
             </svg>
-            <div className="legend"><span><i className="ghostbar" /> waiting for hires</span><span><i className="bar" /> hires start</span><span><i className="alertline" /> team goes over target</span></div>
+            <div className="legend"><span><i className="ghostbar" /> waiting for hires</span><span><i className="bar" /> hires start</span><span><i className="alertline" /> team goes over capacity</span></div>
           </div>
         )}
         {lateBy.length > 0 && (
           <div className="callout">
-            <b>{lateBy.length === 1 ? `${teamName(lateBy[0].h.teamId)}'s hires arrive ${lateBy[0].landIdx - lateBy[0].needIdx} months after the team goes over target.` : `${lateBy.length} of ${requests.length} hiring requests land after their team is already over target.`}</b>
+            <b>{lateBy.length === 1 ? `${teamName(lateBy[0].h.teamId)}'s hires arrive ${lateBy[0].landIdx - lateBy[0].needIdx} months after the team goes over capacity.` : `${lateBy.length} of ${requests.length} hiring requests land after their team is already over capacity.`}</b>
             {' '}The hires are needed. They arrive too late. Whatever covers the gap has to work faster than recruiting.
           </div>
         )}
-        {wasted.length > 0 && <p className="note">{wasted.map((r) => teamName(r.h.teamId)).join(', ')}: hires planned for a team that never goes over target in this configuration.</p>}
+        {wasted.length > 0 && <p className="note">{wasted.map((r) => teamName(r.h.teamId)).join(', ')}: hires planned for a team that never goes over capacity in this configuration.</p>}
       </section>
 
       <section className="sec">
         <h2>Team by team</h2>
         <div className="tbl-wrap">
           <table className="tbl">
-            <thead><tr><th>Team</th><th>Jan</th><th><Term k="attrition">Leaving</Term></th><th>Arriving</th><th>Dec</th><th>Peak <Term k="required">needed</Term></th><th>Peak <Term k="shortfall">short</Term></th><th>First over target</th></tr></thead>
+            <thead><tr><th>Team</th><th>Jan</th><th><Term k="attrition">Leaving</Term></th><th>Arriving</th><th>Dec</th><th>Peak <Term k="required">needed</Term></th><th>Peak <Term k="shortfall">short</Term></th><th>First over capacity</th></tr></thead>
             <tbody>
               {result.teams.map((t) => {
                 const loss = t.months.reduce((s, m) => s + m.attritionLoss, 0);

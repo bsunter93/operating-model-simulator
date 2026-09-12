@@ -15,16 +15,16 @@ export function thresholds(model: OperatingModel, scenarioId: string, active: In
   const scen = model.scenarios.find((s) => s.id === scenarioId)!;
   const baseMult = scen.type === 'demandMultiplier' ? scen.demandMultiplier : 1;
 
-  // Demand growth until another team goes over target.
+  // Demand growth until another team goes over capacity.
   for (let k = 0.02; k <= 0.6; k += 0.02) {
     const r = run(model, { scenario: { id: 'x', name: 'x', type: 'demandMultiplier', demandMultiplier: baseMult * (1 + k) }, interventions: active });
     if (r.summary.teamsConstrained > over) {
       const newly = r.teams.find((t) => (t.worstStatus === 'constrained' || t.worstStatus === 'severe') && cur.teams.find((c) => c.teamId === t.teamId)!.worstStatus !== 'constrained' && cur.teams.find((c) => c.teamId === t.teamId)!.worstStatus !== 'severe');
-      out.push({ variable: 'demand', text: `Demand can run ${pct(k)} above ${scen.type === 'base' ? 'plan' : 'this scenario'} before another team goes over target${newly ? ` (${teamName(newly.teamId)})` : ''}.` });
+      out.push({ variable: 'demand', text: `Demand can run ${pct(k)} above ${scen.type === 'base' ? 'plan' : 'this scenario'} before another team goes over capacity${newly ? ` (${teamName(newly.teamId)})` : ''}.` });
       break;
     }
   }
-  if (!out.some((t) => t.variable === 'demand')) out.push({ variable: 'demand', text: `Demand can run 60% above ${scen.type === 'base' ? 'plan' : 'this scenario'} without another team going over target.` });
+  if (!out.some((t) => t.variable === 'demand')) out.push({ variable: 'demand', text: `Demand can run 60% above ${scen.type === 'base' ? 'plan' : 'this scenario'} without another team going over capacity.` });
 
   // Hiring lead time until an expedite or hire stops changing the picture.
   for (const iv of active) {
@@ -41,7 +41,7 @@ export function thresholds(model: OperatingModel, scenarioId: string, active: In
     }
   }
 
-  // Automation: the smallest reduction that keeps the team within target.
+  // Automation: the smallest reduction that keeps the team within capacity.
   for (const iv of active) {
     if (iv.type !== 'automation') continue;
     const without = active.filter((x) => x.id !== iv.id);
@@ -51,15 +51,15 @@ export function thresholds(model: OperatingModel, scenarioId: string, active: In
       if (r.monthsConstrained === 0) { found = rate; break; }
     }
     if (found !== null) {
-      out.push({ variable: 'automation', text: `${teamName(iv.teamId)} stays within target all year once the reduction reaches ${pct(found)}; below that, some months remain over.` });
+      out.push({ variable: 'automation', text: `${teamName(iv.teamId)} stays within capacity all year once the reduction reaches ${pct(found)}; below that, some months remain over.` });
     } else {
       const at60 = run(model, { scenario: scenarioId, interventions: [...without, { ...iv, workloadReductionRate: 0.6 }] }).teams.find((t) => t.teamId === iv.teamId)!;
       const s0 = iv.startMonth ? Math.max(0, monthIndex(model.calendar.startMonth, iv.startMonth)) : 0;
       const landIdx = s0 + iv.timeToImpactMonths;
       const early = at60.months.filter((m) => (m.status === 'constrained' || m.status === 'severe') && m.monthIndex < landIdx);
       out.push({ variable: 'automation', text: early.length && early.length === at60.monthsConstrained
-        ? `“${iv.name}” lands in ${monthLabel(at60.months[Math.min(landIdx, at60.months.length - 1)].month)}; the ${early.length === 1 ? 'month' : `${early.length} months`} over target before that cannot be fixed by any reduction, only by something faster.`
-        : `No reduction up to 60% keeps ${teamName(iv.teamId)} within target all year on its own.` });
+        ? `“${iv.name}” lands in ${monthLabel(at60.months[Math.min(landIdx, at60.months.length - 1)].month)}; the ${early.length === 1 ? 'month' : `${early.length} months`} over capacity before that cannot be fixed by any reduction, only by something faster.`
+        : `No reduction up to 60% keeps ${teamName(iv.teamId)} within capacity all year on its own.` });
     }
   }
 

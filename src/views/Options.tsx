@@ -75,9 +75,9 @@ export function Options({ teamId: requested }: { teamId: string }) {
         </div>
         <div className="two-chart">
           <div className="chart sticky">
-            <div className="chart-title"><b>{def.name}, month by month</b><span>{team.monthsConstrained} month{team.monthsConstrained === 1 ? '' : 's'} over the {pct(def.targetUtilization)} target · peak {pct(team.peakUtilization)}</span></div>
+            <div className="chart-title"><b>{def.name}, month by month</b><span>{team.monthsConstrained} month{team.monthsConstrained === 1 ? '' : 's'} over capacity at a {pct(def.targetUtilization)} target · peak {pct(team.peakUtilization)}</span></div>
             <TeamTimeline team={team} ghost={active.length ? ghost : undefined} />
-            <div className="legend"><span><i className="bar" /> run work</span><span><i className="bar2" /> initiative work</span><span><i data-s="severe" /> over target</span><span><i className="tline" /> target capacity</span>{active.length > 0 && <span><i className="ghost" /> before your levers</span>}</div>
+            <div className="legend"><span><i className="bar" /> run work</span><span><i className="bar2" /> initiative work</span><span><i data-s="severe" /> over capacity</span><span><i className="tline" /> target capacity</span>{active.length > 0 && <span><i className="ghost" /> before your levers</span>}</div>
           </div>
         </div>
       </div>

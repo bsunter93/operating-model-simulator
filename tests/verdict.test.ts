@@ -35,6 +35,6 @@ describe('verdict moves with the model', () => {
     m.budget.modeledAnnualBudgetUsd *= 2;
     const v = verdict(run(m), tn, inn);
     expect(v.headline).toBe('Mostly.');
-    expect(v.sentences.join(' ')).toMatch(/1 of 8 teams runs over target/);
+    expect(v.sentences.join(' ')).toMatch(/1 of 8 teams runs over capacity/);
   });
 });

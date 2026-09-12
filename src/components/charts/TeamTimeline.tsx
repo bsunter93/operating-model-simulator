@@ -58,7 +58,7 @@ export function TeamTimeline({ team, ghost }: Props) {
           <rect key={`g${i}`} x={cx(i) - barW / 2} y={y(m.workloadHours)} width={barW} height={Math.max(0, PH + T - y(m.workloadHours))} fill="none" stroke="var(--muted)" strokeWidth={1} strokeDasharray="3 3" opacity={0.7} />
         ))}
 
-        {/* bars: run + portfolio, 2px surface gap; overage above target in alert */}
+        {/* bars: run + portfolio, 2px surface gap; overage over capacity in alert */}
         {months.map((m, i) => {
           const x0 = cx(i) - barW / 2;
           const yRun = y(m.runHours), yTop = y(m.workloadHours), yBase = T + PH;
@@ -110,7 +110,7 @@ export function TeamTimeline({ team, ghost }: Props) {
           <b>{monthLabel(h.month, true)} · {pct(h.utilization)} of productive hours</b>
           run work {num(h.runHours)} h · initiatives {num(h.portfolioHours)} h<br />
           target capacity {num(h.targetCapacityHours)} h at {h.availableFte.toFixed(1)} FTE<br />
-          {h.gapHours > 0 ? `${num(h.gapHours)} h over target · ${h.workforceGap.toFixed(1)} FTE short` : 'within target'}
+          {h.gapHours > 0 ? `${num(h.gapHours)} h over capacity · ${h.workforceGap.toFixed(1)} FTE short` : 'within capacity'}
           {h.hiresLanded > 0 ? ` · ${Math.round(h.hiresLanded)} hires land` : ''}
         </div>
       )}

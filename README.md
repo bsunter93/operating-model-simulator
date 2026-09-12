@@ -30,7 +30,7 @@ A seven-step walkthrough highlights what it is talking about and asks the reader
 - Initiatives consume their assigned people's hours while active; dependencies push start dates.
 - Interventions: expedite hiring, hire, automate, reallocate, defer, cancel, change target.
 - Revenue exposure: revenue at risk × failure odds, raised by capacity shortfall on the initiative's teams.
-- Decision score: min-max normalized cost, residual hours over target, and exposure, weighted by the reader.
+- Decision score: min-max normalized cost, residual hours over capacity, and exposure, weighted by the reader.
 
 Decisions the spec left open and how they were resolved are in [docs/engine-notes.md](docs/engine-notes.md).
 

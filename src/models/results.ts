@@ -120,7 +120,7 @@ export interface ExposureItem {
   revenueAtRiskUsd: number;
   baseProbability: number;
   scenarioProbability: number;
-  /** Largest share of the initiative's teams' workload above target during its active months. */
+  /** Largest share of the initiative's teams' workload over capacity during its active months. */
   capacityShortfall: number;
   effectiveProbability: number;
   exposureUsd: number;

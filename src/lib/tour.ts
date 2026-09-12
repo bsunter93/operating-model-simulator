@@ -60,8 +60,8 @@ export const TOUR: TourStep[] = [
     target: 'constraint-first-team',
     body: (c) => {
       const s = c.result.summary;
-      if (!s.firstBreakTeamId) return 'No team runs over target in this plan. The constraints, if any, are about sequencing or budget.';
-      return `${c.teamName(s.firstBreakTeamId)} is the first team over its target, in ${monthLabel(s.firstBreakMonth!, true)}. The next step opens its year.`;
+      if (!s.firstBreakTeamId) return 'No team runs over capacity in this plan. The constraints, if any, are about sequencing or budget.';
+      return `${c.teamName(s.firstBreakTeamId)} is the first team over capacity, in ${monthLabel(s.firstBreakMonth!, true)}. The next step opens its year.`;
     },
   },
   {
@@ -104,7 +104,7 @@ export const TOUR: TourStep[] = [
       const eff = c.effect(id);
       const t = c.result.teams.find((x) => x.teamId === firstTeam(c))!;
       const b = c.base.teams.find((x) => x.teamId === firstTeam(c))!;
-      const tail = t.monthsConstrained === 0 ? `${c.teamName(t.teamId)} now stays within target all year.` : `${c.teamName(t.teamId)} is still over target for ${t.monthsConstrained} month${t.monthsConstrained === 1 ? '' : 's'} (was ${b.monthsConstrained}).`;
+      const tail = t.monthsConstrained === 0 ? `${c.teamName(t.teamId)} now stays within capacity all year.` : `${c.teamName(t.teamId)} is still over capacity for ${t.monthsConstrained} month${t.monthsConstrained === 1 ? '' : 's'} (was ${b.monthsConstrained}).`;
       const lead = eff ? eff.replace(/[.\s]+$/, '') + '. ' : '';
       return `${lead}${tail} Change the number next to it, or add a second lever; they stack. Then move on to stress the plan.`;
     },
