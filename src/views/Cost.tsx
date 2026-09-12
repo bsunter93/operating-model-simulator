@@ -26,7 +26,7 @@ export function Cost() {
       <WhyTabs active="cost" />
       <h1 className="title">The cost</h1>
       <p className="lede">
-        Three numbers matter. What the plan costs against its <Term k="budget">cap</Term>. What the capacity shortfall costs, priced as the hours nobody has at each team's loaded rate. And what any fix adds. Cheapest is not the same as best; the point is to see all three at once.
+        Three numbers. What the plan costs against its <Term k="budget">cap</Term>. What the capacity shortfall costs, priced as the hours over target at each team's loaded rate. And what any fix adds.
       </p>
 
       <div className="metrics three">
@@ -51,7 +51,7 @@ export function Cost() {
 
       {f.annualVarianceUsd > 0 && (
         <div className="callout">
-          <b>The cap bites by {money(f.annualVarianceUsd)} over the year.</b> The model names the levers below; it does not pull them. Cancelling hires releases cash. Deferring an initiative releases people, not cash: they are already on payroll.
+          <b>The cap bites by {money(f.annualVarianceUsd)} over the year.</b> The levers below would close it. Cancelling hires releases cash. Deferring an initiative releases people, not cash, because they are already on payroll.
         </div>
       )}
       {f.budgetLevers.length > 0 && (
@@ -107,7 +107,7 @@ export function Cost() {
           <p className="sub">Nothing is on. Turn on a lever in <a href={href(`#/options/${result.summary.firstBreakTeamId ?? model.teams[0].id}`)}>What to do</a> and this compares its price with the hours it recovers.</p>
         ) : (
           <>
-            <p className="sub">{active.length === 1 ? 'Your lever adds' : `Your ${active.length} levers add`} {money(Math.max(0, addedCost))} to the year. The shortfall they leave behind is priced at {money(gapCost)}, down from {money(baseGapCost)}. {gapCost < baseGapCost && addedCost > 0 ? `Every dollar spent recovers ${((baseGapCost - gapCost) / addedCost).toFixed(2)} dollars of hours nobody had.` : ''}</p>
+            <p className="sub">{active.length === 1 ? 'Your lever adds' : `Your ${active.length} levers add`} {money(Math.max(0, addedCost))} to the year. The shortfall they leave behind is priced at {money(gapCost)}, down from {money(baseGapCost)}. {gapCost < baseGapCost && addedCost > 0 ? `Each dollar spent recovers $${((baseGapCost - gapCost) / addedCost).toFixed(2)} of shortfall.` : ''}</p>
             <ul className="th">
               {active.map((iv) => {
                 const line = iv.type === 'expediteHiring' ? `${money(iv.oneTimeCostUsd)} one-time`

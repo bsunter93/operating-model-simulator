@@ -101,7 +101,7 @@ export function customIntervention(model: OperatingModel, teamId: string, kind: 
     case 'target': {
       const target = (value ?? Math.min(100, Math.round(t.targetUtilization * 100) + 8)) / 100;
       return { id, name: `Accept higher utilization on ${t.name}`, type: 'serviceLevelChange', teamId, newTargetUtilization: target,
-        description: 'Run hotter on purpose. The work does not change; the service level absorbs the difference. Scores like doing nothing in comparisons.' };
+        description: 'Raise the target utilization. The work does not change; the service level absorbs the difference. Scores like doing nothing in comparisons.' };
     }
   }
 }
@@ -220,13 +220,14 @@ export type Route =
   | { view: 'initiatives' }
   | { view: 'workforce' }
   | { view: 'cost' }
+  | { view: 'organization' }
   | { view: 'whatif' }
   | { view: 'options'; teamId: string }
   | { view: 'decide' }
   | { view: 'plan' };
 
 export const STEPS: { view: Route['view']; label: string; path: string }[] = [
-  { view: 'hold', label: 'Does it hold?', path: '#/' },
+  { view: 'hold', label: 'Can the plan work?', path: '#/' },
   { view: 'why', label: 'Why', path: '#/why' },
   { view: 'whatif', label: 'What if', path: '#/whatif' },
   { view: 'options', label: 'What to do', path: '#/options' },
@@ -238,7 +239,7 @@ function parseHash(model: OperatingModel): Route {
   const h = window.location.hash.replace(/^#\/?/, '').split('?')[0];
   const [view, arg] = h.split('/');
   const team = (id?: string) => (id && model.teams.some((t) => t.id === id) ? id : '');
-  if (view === 'why') return arg === 'initiatives' ? { view: 'initiatives' } : arg === 'workforce' ? { view: 'workforce' } : arg === 'cost' ? { view: 'cost' } : { view: 'why', teamId: team(arg) };
+  if (view === 'why') return arg === 'initiatives' ? { view: 'initiatives' } : arg === 'workforce' ? { view: 'workforce' } : arg === 'cost' ? { view: 'cost' } : arg === 'organization' ? { view: 'organization' } : { view: 'why', teamId: team(arg) };
   if (view === 'whatif') return { view: 'whatif' };
   if (view === 'options') return { view: 'options', teamId: team(arg) };
   if (view === 'decide') return { view: 'decide' };

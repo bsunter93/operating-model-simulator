@@ -85,7 +85,7 @@ export function Portfolio() {
             <b>{init.name} is planned for {monthLabel(s.plannedStart, true)}. The earliest it can start is {monthLabel(s.effectiveStart!, true)}.</b>
             {' '}It depends on {pred.name}, which starts {monthLabel(ps.effectiveStart!)} and runs {pred.durationMonths} months, finishing {monthLabel(ps.completion!)}{dep.lagMonths ? `, plus a ${dep.lagMonths}-month handover` : ''}.
             {s.truncated && <> That pushes {init.name} past the end of the plan.</>}
-            {' '}Every initiative looks reasonable on its own. Put them in one model and the plan is {s.delayMonths} months inconsistent with itself.
+            {' '}Each initiative is fine on its own. Together, the plan is {s.delayMonths} months inconsistent with itself.
           </div>
         );
       })}

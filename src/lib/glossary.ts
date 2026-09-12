@@ -24,6 +24,7 @@ export const GLOSSARY = {
   score: 'A preference score from the weights you set. It ranks options against each other; it does not claim one is objectively best.',
   cost: 'Total modeled cost over the year minus the cost of doing nothing.',
   speed: 'Hours of work left above target across all teams and months. Lower means the fix landed sooner and closed more.',
+  contextPenalty: 'Extra time a task takes when the person handling it does not know the client. It applies to one-off work; reusable work carries none.',
 } as const;
 
 export type TermKey = keyof typeof GLOSSARY;

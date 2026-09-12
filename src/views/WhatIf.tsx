@@ -23,7 +23,7 @@ export function WhatIf() {
     <main className="main one">
       <div className="eyebrow">3 · What if</div>
       <h1 className="title">What if the world is different from the plan?</h1>
-      <p className="lede">A plan that only works when everything goes to plan is not a plan. Pick a scenario; the whole model reruns under it{active.length ? `, with your ${active.length} lever${active.length > 1 ? 's' : ''} still on` : ''}. It stays selected as you move through the other steps.</p>
+      <p className="lede">Pick a scenario to see how the plan holds up when conditions change. The whole model reruns under it{active.length ? `, with your ${active.length} lever${active.length > 1 ? 's' : ''} still on` : ''}. It stays selected as you move through the other steps.</p>
 
       <div className="scen" data-tour="scenarios" role="radiogroup" aria-label="Scenario">
         {byScenario.map(({ scenario, result }) => {

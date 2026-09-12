@@ -41,7 +41,7 @@ export function Workforce() {
       <WhyTabs active="workforce" />
       <h1 className="title">The workforce</h1>
       <p className="lede">
-        Headcount is not a number; it is a line that moves every month. People leave at the <Term k="attrition">attrition</Term> rate, hires land after their <Term k="leadTime">lead time</Term>, and the work does not wait for either.
+        Headcount changes every month. People leave at the <Term k="attrition">attrition</Term> rate and hires arrive after their <Term k="leadTime">lead time</Term>. This page shows who is actually available each month, and when.
       </p>
 
       <div className="flow" aria-label="Headcount over the year">
@@ -120,7 +120,7 @@ export function Workforce() {
         {lateBy.length > 0 && (
           <div className="callout">
             <b>{lateBy.length === 1 ? `${teamName(lateBy[0].h.teamId)}'s hires arrive ${lateBy[0].landIdx - lateBy[0].needIdx} months after the team goes over target.` : `${lateBy.length} of ${requests.length} hiring requests land after their team is already over target.`}</b>
-            {' '}The plan is not wrong to hire; it is wrong about when the need starts. Whatever bridges the gap has to work faster than recruiting does.
+            {' '}The hires are needed. They arrive too late. Whatever covers the gap has to work faster than recruiting.
           </div>
         )}
         {wasted.length > 0 && <p className="note">{wasted.map((r) => teamName(r.h.teamId)).join(', ')}: hires planned for a team that never goes over target in this configuration.</p>}

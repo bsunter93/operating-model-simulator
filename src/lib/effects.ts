@@ -35,7 +35,7 @@ export function describeEffect(iv: Intervention, before: ModelResult, after: Mod
     }
     case 'cancel': {
       const changed = before.teams.map((t) => teamLine(t.teamId)).filter((s) => !s.endsWith('no change'));
-      return changed.length ? changed.join('. ') : 'Releases capacity nobody was short of';
+      return changed.length ? changed.join('. ') : 'Releases capacity on teams that were not short';
     }
   }
 }

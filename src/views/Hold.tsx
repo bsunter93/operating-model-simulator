@@ -42,14 +42,14 @@ export function Hold() {
     <main className="main one">
       <div className="purpose">
         <div className="purpose-text">
-          <b>What this is.</b> A month-by-month model of one company's operating plan. It turns the strategy into work, the work into hours, and the hours into people, then shows where the plan runs out of people, when, and what would change that. Follow the steps in order, or jump around; every number recomputes as you go, and nothing on these pages is typed in as a conclusion.
+          <b>What this is.</b> A month-by-month model of one company's operating plan. It turns the strategy into work, the work into hours, and the hours into people, then shows where the plan runs out of people, when, and what would change that. Follow the steps in order or jump around. Every number recomputes as you go. No conclusion on these pages is written by hand; all of it is computed.
         </div>
         <ol className="chain" aria-label="How the model flows">
           {['Strategy', 'Demand', 'Workload', 'Capacity', 'Workforce', 'Portfolio', 'Decision'].map((x) => <li key={x}>{x}</li>)}
         </ol>
       </div>
 
-      <div className="eyebrow">1 · Does it hold?</div>
+      <div className="eyebrow">1 · Can the plan work?</div>
       <h1 className="title">Can {model.name} execute the {year} plan?</h1>
       <p className="lede" data-tour="verdict">
         <b>{v.headline}</b> {v.sentences.join(' ')}

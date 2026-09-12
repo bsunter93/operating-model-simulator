@@ -5,6 +5,7 @@ import { Why } from './views/Why';
 import { Portfolio } from './views/Portfolio';
 import { Workforce } from './views/Workforce';
 import { Cost } from './views/Cost';
+import { Organization } from './views/Organization';
 import { WhatIf } from './views/WhatIf';
 import { Options } from './views/Options';
 import { Decide } from './views/Decide';
@@ -18,6 +19,7 @@ function Screen() {
     case 'initiatives': return <Portfolio />;
     case 'workforce': return <Workforce />;
     case 'cost': return <Cost />;
+    case 'organization': return <Organization />;
     case 'whatif': return <WhatIf />;
     case 'options': return <Options teamId={route.teamId} />;
     case 'decide': return <Decide />;

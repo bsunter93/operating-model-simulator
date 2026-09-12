@@ -63,7 +63,7 @@ export function Options({ teamId: requested }: { teamId: string }) {
         <div className="two-controls">
           <div className="card" data-tour="levers">
             <h3>Try on {def.name}</h3>
-            <p className="note top">Three things any team can do: add people, remove work, or run hotter.</p>
+            <p className="note top">Three things any team can do: add people, remove work, or accept a higher target.</p>
             <ul className="ivs">{levers.map(item)}</ul>
           </div>
           <div className="card">

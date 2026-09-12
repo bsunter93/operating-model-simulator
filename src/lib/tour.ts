@@ -82,8 +82,8 @@ export const TOUR: TourStep[] = [
     title: 'What would you try first?',
     route: (c) => `#/options/${firstTeam(c)}`,
     target: 'levers',
-    question: 'Pick the lever you would reach for. The model will tell you what it actually does here.',
-    body: () => 'There is no right answer. Each option below is run through the same model; the point is to see the timing and the cost, not to be told what to do.',
+    question: 'Which lever would you try first?',
+    body: () => 'Each option below is run through the same model. Pick one to see its timing and its cost.',
     choices: (c) => {
       const team = firstTeam(c);
       const out: TourChoice[] = [];
@@ -113,8 +113,8 @@ export const TOUR: TourStep[] = [
     title: 'Now make the world harder',
     route: () => '#/whatif',
     target: 'scenarios',
-    question: 'Pick a scenario. Your levers stay on, so you see whether they still hold.',
-    body: () => 'A plan that only works when everything goes to plan is not a plan. Each scenario changes the conditions and reruns the whole model.',
+    question: 'Pick a scenario.',
+    body: () => 'Each scenario changes the conditions and reruns the whole model. Your levers stay on.',
     choices: (c) => c.model.scenarios.filter((s) => s.type !== 'base').slice(0, 4).map((s) => ({ id: s.id, label: s.name, scenarioId: s.id })),
     after: (c) => {
       const v = verdict(c.result, c.teamName, c.initName, c.base);
