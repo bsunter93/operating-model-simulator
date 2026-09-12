@@ -3,19 +3,18 @@ import type { ReactNode } from 'react';
 import { monthIndex } from '../engine';
 import type { DecisionWeights } from '../models/types';
 import { customIntervention, useStore } from '../state/store';
-import { Stage } from '../components/Stage';
-import type { StageView } from '../components/Stage';
-import { Controls } from '../components/Controls';
+import { Board } from '../components/Board';
+import type { Detail } from '../components/Board';
 import { Term } from '../components/Term';
+import { Loop } from '../components/Loop';
+import { Tornado } from '../components/Tornado';
 import { verdict } from '../lib/verdict';
 import { thresholds } from '../lib/thresholds';
 import { effectsFor } from '../lib/effects';
 import { whatChanged } from '../lib/whatChanged';
 import { money, monthLabel, num, pct } from '../lib/format';
 
-const people = (n: number) => (Math.round(n) === 1 ? '1 person' : `${Math.round(n)} people`);
-
-interface Beat { id: string; eyebrow: string; stage: (ctx: { team: string }) => StageView; body: ReactNode }
+interface Beat { id: string; eyebrow: string; body: ReactNode }
 
 function WeightSliders({ weights, onChange }: { weights: DecisionWeights; onChange: (w: DecisionWeights) => void }) {
   const set = (key: keyof DecisionWeights, v: number) => {
@@ -36,7 +35,7 @@ export function Story() {
   const s = result.summary;
   const focusTeam = state.teamId ?? s.firstBreakTeamId ?? model.teams[0].id;
   const [active, setActive] = useState(0);
-  const [override, setOverride] = useState<StageView | null>(null);
+  const [detail, setDetail] = useState<Detail>(null);
   const beatRefs = useRef<(HTMLElement | null)[]>([]);
   const v = verdict(result, teamName, initName, isBase ? undefined : base);
   const year = model.calendar.startMonth.slice(0, 4);
@@ -45,12 +44,12 @@ export function Story() {
   const th = useMemo(() => thresholds(model, state.scenarioId, activeLevers, teamName), [model, state.scenarioId, activeLevers, teamName]);
   const scen = model.scenarios.find((x) => x.id === state.scenarioId)!;
   const changed = useMemo(() => (isBase ? null : whatChanged(model, scen, activeLevers, result, base, teamName, initName)), [isBase, model, scen, activeLevers, result, base, teamName, initName]);
+  const totalFte = model.teams.reduce((a, t) => a + t.currentFte, 0);
+  const totalHours = result.teams.reduce((a, t) => a + t.annualWorkloadHours, 0);
 
-  // Constraints in date order for beat 3.
   const dated = useMemo(() => [...result.constraints].sort((a, b) => ((a.firstMonth ? idx(a.firstMonth) : 99) - (b.firstMonth ? idx(b.firstMonth) : 99)) || b.businessImpactUsd - a.businessImpactUsd), [result.constraints, model.calendar.startMonth]);
   const rankTag = (id: string) => { const i = result.constraints.findIndex((c) => c.id === id); return i === 0 ? 'primary' : i === 1 ? 'secondary' : null; };
 
-  // The "what would you try first" choices, read from the model.
   const choices = useMemo(() => {
     const out: { id: string; label: string; ids: string[] }[] = [];
     const exp = model.interventions.find((iv) => iv.type === 'expediteHiring' && model.hiringPlan.find((h) => h.id === iv.hiringRequestId)?.teamId === focusTeam);
@@ -70,7 +69,6 @@ export function Story() {
   }, [choices, interventions, model, state.scenarioId, doNothing, teamName, focusTeam]);
   const chosen = choices.find((c) => c.ids.every((id) => state.interventionIds.includes(id)) && state.interventionIds.length === c.ids.length)?.id ?? null;
 
-  // Decision record text.
   const record = useMemo(() => {
     const lines: string[] = [];
     lines.push(`DECISION RECORD · ${model.name} · ${year} plan · scenario: ${scen.name}`, '');
@@ -93,12 +91,63 @@ export function Story() {
     return lines.join('\n');
   }, [model, year, scen, activeLevers, v, th, teamName, initName]);
   const [copied, setCopied] = useState(false);
-  const recordRef = useRef(record); recordRef.current = record;
-  const thRef = useRef(th.map((t) => t.text)); thRef.current = th.map((t) => t.text);
+  const q = window.location.hash.includes('?') ? '?' + window.location.hash.split('?')[1] : '';
 
   const beats: Beat[] = [
     {
-      id: 'verdict', eyebrow: `1 · Can ${model.name} execute the ${year} plan?`, stage: () => ({ kind: 'map', focusTeam: s.firstBreakTeamId }),
+      id: 'situation', eyebrow: '1 · The situation',
+      body: (
+        <>
+          <h2>{model.name} plans {pct(model.strategy.growthTargetPct)} growth with {num(totalFte)} people.</h2>
+          <p>{isFixture ? 'A fictional company. ' : ''}{model.teams.length} teams, {model.demandStreams.length} streams of work, {model.initiatives.length} initiatives, {model.hiringPlan.length} planned hiring requests, a {money(model.budget.modeledAnnualBudgetUsd)} budget for these teams.</p>
+          <p>This page turns that plan into hours of work and people, month by month, and shows where it holds and where it does not. The board on the right stays the same all the way down; what you choose below changes what it shows.</p>
+          <Loop />
+          <p className="small">Strategy becomes work, work becomes hours, hours become people. Decisions change the strategy and the loop runs again. <button className="linkbtn" onClick={() => setDetail('about')}>How it works →</button></p>
+        </>
+      ),
+    },
+    {
+      id: 'year', eyebrow: '2 · The year',
+      body: (
+        <>
+          <h2>{num(Math.round(totalHours))} hours of work, spread across twelve months.</h2>
+          <p>The map on the right is the whole plan at a glance: each cell is one team's month, as a share of the hours its people can actually work. Colored cells are above that team's own target. Click any team to see its year in the chart beneath.</p>
+          <p className="small">Hours come from volume × handling time per stream, plus people assigned to initiatives. People change every month: attrition comes off, hires land after their lead time.</p>
+        </>
+      ),
+    },
+    {
+      id: 'constraints', eyebrow: '3 · Constraints',
+      body: (
+        <>
+          <h2>Pick the conditions.</h2>
+          <p className="small">Each one changes the plan's conditions and reruns the model. The map marks every cell that moved.</p>
+          <div className="choices grid2">
+            {model.scenarios.map((sc) => (
+              <button key={sc.id} className={'choice' + (state.scenarioId === sc.id ? ' on' : '')} onClick={() => dispatch({ type: 'scenario', id: sc.id })} title={sc.description}><b>{sc.name}</b></button>
+            ))}
+          </div>
+        </>
+      ),
+    },
+    {
+      id: 'levers', eyebrow: '4 · Levers',
+      body: (
+        <>
+          <h2>Pick what you would do for {teamName(focusTeam)}.</h2>
+          <p className="small">Each option runs through the same model; the line under it says what it does. They stack. Sizes and the plan's own options are in the Levers box under the board.</p>
+          <div className="choices">
+            {choices.map((c) => (
+              <button key={c.id} className={'choice' + (chosen === c.id ? ' on' : '')} onClick={() => dispatch({ type: 'setInterventions', ids: c.ids })}>
+                <b>{c.label}</b><small>{choiceEffects.get(c.ids[0]) ?? ''}</small>
+              </button>
+            ))}
+          </div>
+        </>
+      ),
+    },
+    {
+      id: 'result', eyebrow: `5 · Result: can ${model.name} execute the ${year} plan?`,
       body: (
         <>
           <h2 className="verdict-big">{v.headline}</h2>
@@ -115,20 +164,13 @@ export function Story() {
               <button className="linkbtn small" onClick={() => dispatch({ type: 'reset' })}>Back to the base plan</button>
             </div>
           )}
-          <p className="small plan-line">{isFixture ? `${model.name} is fictional: ` : ''}{pct(model.strategy.growthTargetPct)} growth, {num(model.teams.reduce((a, t) => a + t.currentFte, 0))} people in {model.teams.length} teams, {model.initiatives.length} initiatives, {model.hiringPlan.length} hiring requests, a {money(model.budget.modeledAnnualBudgetUsd)} budget. Every number is computed from those inputs, month by month. <button className="linkbtn" onClick={() => setOverride({ kind: 'about' })}>How it works →</button></p>
-        </>
-      ),
-    },
-    {
-      id: 'breaks', eyebrow: '2 · What breaks, and when', stage: () => ({ kind: 'map', focusTeam: focusTeam }),
-      body: (
-        <>
-          <h2>{dated.length === 0 ? 'Nothing breaks.' : dated[0].teamId ? `${teamName(dated[0].teamId)}, in ${monthLabel(dated[0].firstMonth!)}.` : `${dated[0].title}.`}</h2>
-          <p className="small">In date order. Primary and secondary are the two that cost the most. Click one to see it on the stage.</p>
+          <h3 className="h3">What breaks, and when</h3>
+          <p className="small">In date order. Primary and secondary are the two that cost the most. Click one to put that team on the board.</p>
           <ol className="beat-cons">
+            {dated.length === 0 && <li className="dim">Nothing breaks. Every team stays within capacity and every initiative starts when planned.</li>}
             {dated.map((c) => (
               <li key={c.id} className={'bc' + ((c.teamId && c.teamId === focusTeam) ? ' on' : '')} data-kind={c.kind}>
-                <button onClick={() => { if (c.teamId) { dispatch({ type: 'team', id: c.teamId }); setOverride({ kind: 'team', teamId: c.teamId }); } else setOverride({ kind: 'initiatives' }); }}>
+                <button onClick={() => { if (c.teamId) dispatch({ type: 'team', id: c.teamId }); else setDetail('initiatives'); }}>
                   <span className="bc-when">{c.firstMonth ? monthLabel(c.firstMonth) : '—'}</span>
                   <span className="bc-t">{c.title}{rankTag(c.id) && <em className="bc-tag">{rankTag(c.id)}</em>}</span>
                   <span className="bc-i">{c.businessImpactUsd > 0 ? `${money(c.businessImpactUsd)} at stake` : ''}</span>
@@ -140,95 +182,40 @@ export function Story() {
       ),
     },
     {
-      id: 'why', eyebrow: '3 · Why', stage: ({ team }) => ({ kind: 'team', teamId: team, ghost: false }),
-      body: (() => {
-        const t = result.teams.find((x) => x.teamId === focusTeam)!;
-        const land = t.months.find((m) => m.hiresLanded > 0);
-        const planned = model.hiringPlan.filter((h) => h.teamId === focusTeam).reduce((a, h) => a + h.headcount, 0);
-        return (
-          <>
-            <h2>{t.monthsConstrained ? 'The work arrives before the people do.' : `${teamName(focusTeam)} holds.`}</h2>
-            <p>Bars are hours of work each month; the line is what {teamName(focusTeam)} can handle at its {pct(t.months[0].targetUtilization)} target. {t.monthsConstrained ? <>It peaks at <b>{pct(t.peakUtilization)}</b> in {monthLabel(t.peakMonth)}, {people(t.peakWorkforceGap)} short.</> : <>It peaks at {pct(t.peakUtilization)} in {monthLabel(t.peakMonth)} and stays under.</>}</p>
-            {planned > 0 && land && <p>The plan already hires <b>{planned}</b> people for this team; they land in <b>{monthLabel(land.month)}</b>. Everything before that is the problem.</p>}
-            {planned > 0 && !land && <p>The plan had {planned} hires for this team; this scenario cancels them.</p>}
-            <p className="small">More on the stage: <button className="linkbtn" onClick={() => setOverride({ kind: 'workforce' })}>workforce</button> · <button className="linkbtn" onClick={() => setOverride({ kind: 'initiatives' })}>initiatives</button> · <button className="linkbtn" onClick={() => setOverride({ kind: 'cost' })}>cost</button></p>
-          </>
-        );
-      })(),
-    },
-    {
-      id: 'try', eyebrow: '4 · What would you try first?', stage: ({ team }) => ({ kind: 'team', teamId: team, ghost: true }),
-      body: (
-        <>
-          <h2>Pick a lever.</h2>
-          <p className="small">Each runs through the same model. Fine-tune or stack more in the Levers box under the stage.</p>
-          <div className="choices">
-            {choices.map((c) => (
-              <button key={c.id} className={'choice' + (chosen === c.id ? ' on' : '')} onClick={() => dispatch({ type: 'setInterventions', ids: c.ids })}>
-                <b>{c.label}</b><small>{choiceEffects.get(c.ids[0]) ?? ''}</small>
-              </button>
-            ))}
-          </div>
-
-        </>
-      ),
-    },
-    {
-      id: 'whatif', eyebrow: '5 · What if', stage: () => ({ kind: 'scenarios' }),
-      body: (
-        <>
-          <h2>Now make the world harder.</h2>
-          <p className="small">Each one changes the conditions and reruns the model. Your levers stay on.</p>
-          <div className="choices grid2">
-            {model.scenarios.map((sc) => (
-              <button key={sc.id} className={'choice' + (state.scenarioId === sc.id ? ' on' : '')} onClick={() => dispatch({ type: 'scenario', id: sc.id })} title={sc.description}><b>{sc.name}</b></button>
-            ))}
-          </div>
-        </>
-      ),
-    },
-    {
-      id: 'weigh', eyebrow: '6 · Weigh it', stage: () => ({ kind: 'ranking' }),
+      id: 'decide', eyebrow: '6 · Decide',
       body: (
         <>
           <h2>Which option, given what matters to you?</h2>
-          <p className="small">Cost, speed, revenue at risk. Drag; the ranking on the stage follows.</p>
+          <p className="small">Cost, speed, revenue at risk. The record below is written by the model from what you selected, including what would change its mind.</p>
           <WeightSliders weights={state.weights} onChange={(w) => dispatch({ type: 'weights', weights: w })} />
+          <div className="btns"><button className="btn small" onClick={() => { void navigator.clipboard.writeText(record).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1500); }); }}>{copied ? 'Copied' : 'Copy the record'}</button><a className="btn ghost small" href={'#/summary' + q}>One-page summary →</a></div>
+          <details className="fold small"><summary>The record</summary><pre className="record">{record}</pre></details>
+          <h3 className="h3">What would change my mind</h3>
+          <ul className="th small">{th.map((t) => <li key={t.text}>{t.text}</li>)}</ul>
+          <h3 className="h3">What actually moves the answer</h3>
+          <Tornado />
         </>
       ),
     },
     {
-      id: 'decide', eyebrow: '7 · Decide', stage: () => ({ kind: 'record', text: record, thresholds: th.map((t) => t.text) }),
-      body: (
-        <>
-          <h2>The record.</h2>
-          <p className="small">Written by the model from what you selected, including what would change its mind.</p>
-          <div className="btns"><button className="btn small" onClick={() => { void navigator.clipboard.writeText(record).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1500); }); }}>{copied ? 'Copied' : 'Copy the record'}</button><a className="btn ghost small" href={'#/summary' + (window.location.hash.includes('?') ? '?' + window.location.hash.split('?')[1] : '')}>One-page summary →</a></div>
-
-        </>
-      ),
-    },
-    {
-      id: 'yours', eyebrow: '8 · Make it yours', stage: () => ({ kind: 'map', focusTeam: null }),
+      id: 'yours', eyebrow: '7 · Your numbers',
       body: (
         <>
           <h2>Try it with your own numbers.</h2>
-          <p className="small">A fresh, one-screen version: your teams, your work, your hires, and the answer beside them.</p>
-          <a className="btn" href="#/mine">Open Your numbers →</a>
-          <p className="small" style={{ marginTop: 10 }}>Also: <button className="linkbtn" onClick={() => setOverride({ kind: 'organization' })}>pods or one pool</button> · <button className="linkbtn" onClick={() => setOverride({ kind: 'about' })}>how this works</button></p>
+          <p className="small">A one-screen version: your teams, your work, your hires, and the answer beside them.</p>
+          <a className="btn" href={'#/mine' + q}>Open Your numbers →</a>
         </>
       ),
     },
   ];
 
-  // Scroll-spy on the beats; an override clears when the active beat changes.
+  // Scroll-spy: the current beat is the last one whose top has passed 140px below the viewport top.
   useEffect(() => {
     const on = () => {
-      // The current beat is the last one whose top has passed a line 140px below the viewport top.
       const y = window.scrollY + 140;
       let cur = 0;
       beatRefs.current.forEach((el, i) => { if (el && el.offsetTop <= y) cur = i; });
-      setActive((prev) => { if (prev !== cur) setOverride(null); return cur; });
+      setActive(cur);
     };
     on();
     window.addEventListener('scroll', on, { passive: true });
@@ -236,21 +223,20 @@ export function Story() {
     return () => { window.removeEventListener('scroll', on); window.removeEventListener('resize', on); };
   }, [model]);
 
-  // Legacy links inside stage panels (#/?p=team:x, ?go=sec-options) become stage changes.
+  // Links from detail panels (#/?p=team:x, ?p=workforce, ?go=...) act on the board.
   useEffect(() => {
     const on = () => {
-      const q = new URLSearchParams(window.location.hash.split('?')[1] ?? '');
-      const p = q.get('p'), go = q.get('go'), team = q.get('team');
+      const qs = new URLSearchParams(window.location.hash.split('?')[1] ?? '');
+      const p = qs.get('p'), go = qs.get('go'), team = qs.get('team');
       if (!p && !go && !team) return;
       if (team) dispatch({ type: 'team', id: team });
-      if (p?.startsWith('team:')) { dispatch({ type: 'team', id: p.slice(5) }); setOverride({ kind: 'team', teamId: p.slice(5) }); }
-      else if (p === 'initiatives' || p === 'workforce' || p === 'cost' || p === 'organization' || p === 'plan' || p === 'about' || p === 'scenarios' || p === 'ranking') setOverride({ kind: p });
-      else if (p === 'record') setOverride({ kind: 'record', text: recordRef.current, thresholds: thRef.current });
+      if (p?.startsWith('team:')) dispatch({ type: 'team', id: p.slice(5) });
+      else if (p === 'initiatives' || p === 'workforce' || p === 'cost' || p === 'organization' || p === 'about') setDetail(p);
       if (go === 'sec-options') beatRefs.current[3]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      if (go === 'sec-whatif') beatRefs.current[4]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      if (go === 'sec-decide') beatRefs.current[6]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      q.delete('p'); q.delete('go'); q.delete('team');
-      const str = q.toString();
+      if (go === 'sec-whatif') beatRefs.current[2]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      if (go === 'sec-decide') beatRefs.current[5]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      qs.delete('p'); qs.delete('go'); qs.delete('team');
+      const str = qs.toString();
       history.replaceState(null, '', '#/' + (str ? '?' + str : ''));
     };
     on();
@@ -258,7 +244,6 @@ export function Story() {
     return () => window.removeEventListener('hashchange', on);
   }, [dispatch]);
 
-  // Deep links: #beat-<id> scrolls to that beat once the page exists.
   useEffect(() => {
     const m = /^#beat-([a-z]+)/.exec(window.location.hash);
     if (!m) return;
@@ -267,8 +252,6 @@ export function Story() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const view: StageView = override ?? beats[active].stage({ team: focusTeam });
-  const onTeam = (id: string) => { dispatch({ type: 'team', id }); setOverride({ kind: 'team', teamId: id, ghost: active >= 3 }); };
   const goTo = (i: number) => beatRefs.current[i]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
   return (
@@ -281,16 +264,12 @@ export function Story() {
           <section key={b.id} ref={(el) => { beatRefs.current[i] = el; }} className={'beat' + (i === active ? ' on' : '')} id={`beat-${b.id}`}>
             <div className="eyebrow">{b.eyebrow}</div>
             {b.body}
-            {i < beats.length - 1 && <button className="next-beat" onClick={() => goTo(i + 1)}>Next: {beats[i + 1].eyebrow.replace(/^\d+ · /, '')} ↓</button>}
+            {i < beats.length - 1 && <button className="next-beat" onClick={() => goTo(i + 1)}>Next: {beats[i + 1].eyebrow.replace(/^\d+ · /, '').replace(/:.*$/, '')} ↓</button>}
           </section>
         ))}
       </div>
       <div className="stage">
-        <div className="stage-pic">
-          {override && <button className="stage-back" onClick={() => setOverride(null)}>← back to the story's view</button>}
-          <Stage view={view} onTeam={onTeam} onMap={() => setOverride({ kind: 'map', focusTeam })} />
-        </div>
-        <Controls teamId={focusTeam} onTeam={(id) => { dispatch({ type: 'team', id }); if (override?.kind === 'team') setOverride({ kind: 'team', teamId: id, ghost: override.ghost }); }} />
+        <Board teamId={focusTeam} onTeam={(id) => dispatch({ type: 'team', id })} detail={detail} onDetail={setDetail} />
       </div>
     </div>
   );

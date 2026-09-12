@@ -666,3 +666,32 @@ button.cell{cursor:pointer}
 .mast-in .state{order:2;flex:1 1 100%;overflow:visible;flex-wrap:wrap;margin-left:0;padding-top:6px;border-top:1px solid var(--hair)}
 .mast-in .state .chip{max-width:none}
 .mast-right{order:1}
+
+/* ── the board ─────────────────────────────────────────────────────────── */
+.stage{display:block;height:auto;overflow:visible;position:sticky;top:12px;max-height:calc(100vh - 24px);overflow-y:auto;padding:10px 24px 40px 24px}
+.board{display:grid;gap:14px}
+.board-map .strip-t.big .cell{position:relative}
+.cell sup{position:absolute;top:1px;right:3px;font:500 8.5px/1 var(--mono);color:var(--muted)}
+.cell.worse{box-shadow:inset 0 0 0 2px var(--alert)}
+.cell.worse sup{color:var(--alert)}
+.cell.better{box-shadow:inset 0 0 0 2px var(--ok)}
+.cell.better sup{color:var(--ok)}
+.legend i.dworse{background:transparent;box-shadow:inset 0 0 0 2px var(--alert)}
+.legend i.dbetter{background:transparent;box-shadow:inset 0 0 0 2px var(--ok)}
+.stage-q p b.alert{color:var(--alert)} .stage-q p b.ok{color:var(--ok)}
+.showbase{font-size:12px;color:var(--muted);margin-left:6px;white-space:nowrap}
+.showbase input{accent-color:var(--accent);vertical-align:-1px}
+.board-team .chart{padding-top:10px}
+.board-detail{border-top:1px solid var(--line);padding-top:8px}
+.detail-tabs{display:flex;gap:4px;align-items:center;flex-wrap:wrap}
+.detail-tabs .lbl{font:500 10.5px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-right:6px}
+.detail-tabs button{font:500 12.5px/1 var(--sans);color:var(--muted);padding:6px 9px;border-radius:3px;border:1px solid transparent}
+.detail-tabs button:hover{color:var(--ink)}
+.detail-tabs button.on{color:var(--ink);background:var(--tint);border-color:var(--line)}
+.detail-body{margin-top:10px;border:1px solid var(--line);border-radius:4px;padding:8px 16px 16px;background:var(--surface)}
+.detail-body .main{max-width:100%}
+.detail-body .title{font-size:22px}
+.h3{font:600 17px/1.25 var(--display);color:var(--ink);margin:16px 0 4px}
+.beat .loop{max-width:100%;margin:8px 0}
+.tray{max-height:none;overflow:visible}
+@media (max-width:980px){.stage{position:static;max-height:none}}
