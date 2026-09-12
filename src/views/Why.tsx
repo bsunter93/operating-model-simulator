@@ -6,13 +6,15 @@ import { monthLabel, num, pct } from '../lib/format';
 
 const people = (n: number) => (Math.round(n) === 1 ? '1 person' : `${Math.round(n)} people`);
 
-export function WhyTabs({ active }: { active: 'team' | 'initiatives' }) {
+export function WhyTabs({ active }: { active: 'team' | 'initiatives' | 'workforce' | 'cost' }) {
   const { result } = useStore();
   const team = result.summary.firstBreakTeamId ?? result.teams[0].teamId;
   return (
     <div className="tabs" role="tablist">
       <a role="tab" aria-selected={active === 'team'} href={href(`#/why/${team}`)}>A team's year</a>
       <a role="tab" aria-selected={active === 'initiatives'} href={href('#/why/initiatives')}>The initiatives</a>
+      <a role="tab" aria-selected={active === 'workforce'} href={href('#/why/workforce')}>The workforce</a>
+      <a role="tab" aria-selected={active === 'cost'} href={href('#/why/cost')}>The cost</a>
     </div>
   );
 }

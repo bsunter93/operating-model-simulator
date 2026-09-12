@@ -218,6 +218,8 @@ export type Route =
   | { view: 'hold' }
   | { view: 'why'; teamId: string }
   | { view: 'initiatives' }
+  | { view: 'workforce' }
+  | { view: 'cost' }
   | { view: 'whatif' }
   | { view: 'options'; teamId: string }
   | { view: 'decide' }
@@ -236,7 +238,7 @@ function parseHash(model: OperatingModel): Route {
   const h = window.location.hash.replace(/^#\/?/, '').split('?')[0];
   const [view, arg] = h.split('/');
   const team = (id?: string) => (id && model.teams.some((t) => t.id === id) ? id : '');
-  if (view === 'why') return arg === 'initiatives' ? { view: 'initiatives' } : { view: 'why', teamId: team(arg) };
+  if (view === 'why') return arg === 'initiatives' ? { view: 'initiatives' } : arg === 'workforce' ? { view: 'workforce' } : arg === 'cost' ? { view: 'cost' } : { view: 'why', teamId: team(arg) };
   if (view === 'whatif') return { view: 'whatif' };
   if (view === 'options') return { view: 'options', teamId: team(arg) };
   if (view === 'decide') return { view: 'decide' };

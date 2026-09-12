@@ -50,7 +50,7 @@
   "initiatives": [
     { "id": "init-enterprise-growth", "name": "Enterprise Growth Program", "startMonth": "2027-01", "durationMonths": 9, "requiredFteByTeam": { "team-enterprise-sales": 12, "team-customer-ops": 4, "team-implementation": 3, "team-platform-engineering": 6 }, "strategicValue": 10, "financialValueUsd": 30000000, "urgency": 9, "confidence": 0.80, "revenueAtRiskUsd": 30000000, "executionFailureProbability": 0.15, "discretionary": false },
     { "id": "init-international-expansion", "name": "International Expansion", "startMonth": "2027-03", "durationMonths": 8, "requiredFteByTeam": { "team-customer-ops": 5, "team-implementation": 5, "team-platform-engineering": 10, "team-data-platform": 4 }, "strategicValue": 9, "financialValueUsd": 22000000, "urgency": 8, "confidence": 0.72, "revenueAtRiskUsd": 22000000, "executionFailureProbability": 0.22, "discretionary": false },
-    { "id": "init-margin-program", "name": "Operating Margin Program", "startMonth": "2027-02", "durationMonths": 6, "requiredFteByTeam": { "team-customer-ops": 2, "team-consumer-ops": 4 }, "strategicValue": 8, "financialValueUsd": 12000000, "urgency": 7, "confidence": 0.85, "revenueAtRiskUsd": 8000000, "executionFailureProbability": 0.12, "discretionary": true },
+    { "id": "init-self-service", "name": "Customer Self-Service Portal", "startMonth": "2027-02", "durationMonths": 6, "requiredFteByTeam": { "team-customer-ops": 2, "team-consumer-ops": 4 }, "strategicValue": 8, "financialValueUsd": 12000000, "urgency": 7, "confidence": 0.85, "revenueAtRiskUsd": 8000000, "executionFailureProbability": 0.12, "discretionary": true },
     { "id": "init-platform-scale", "name": "Platform Scale Program", "startMonth": "2027-04", "durationMonths": 7, "requiredFteByTeam": { "team-platform-engineering": 18, "team-data-platform": 7 }, "strategicValue": 10, "financialValueUsd": 28000000, "urgency": 9, "confidence": 0.78, "revenueAtRiskUsd": 28000000, "executionFailureProbability": 0.18, "discretionary": false }
   ],
 
@@ -79,7 +79,7 @@
     { "id": "intervention-reallocate-to-implementation", "name": "Move 5 people from Customer Operations to Implementation", "type": "reallocation", "fromTeamId": "team-customer-ops", "toTeamId": "team-implementation", "headcount": 5, "timeToImpactMonths": 1, "implementationCostUsd": 150000, "description": "Five experienced account people cross-train and move within a month." },
     { "id": "intervention-defer-international", "name": "Defer International Expansion by 3 months", "type": "defer", "initiativeId": "init-international-expansion", "months": 3, "description": "Push the start from March to June." },
     { "id": "intervention-accept-higher-utilization", "name": "Accept 88% utilization on Implementation", "type": "serviceLevelChange", "teamId": "team-implementation", "newTargetUtilization": 0.88, "description": "Trade slack for throughput. The service level absorbs the difference." },
-    { "id": "intervention-cancel-margin", "name": "Cancel the Operating Margin Program", "type": "cancel", "initiativeId": "init-margin-program", "description": "Release six people-worth of capacity in Customer and Consumer Operations." }
+    { "id": "intervention-cancel-self-service", "name": "Cancel the Self-Service Portal", "type": "cancel", "initiativeId": "init-self-service", "description": "Drop the portal for this year and release six people-worth of capacity in Customer and Consumer Operations." }
   ],
 
   "decisionWeights": { "cost": 0.25, "speed": 0.25, "revenueExposure": 0.50 },

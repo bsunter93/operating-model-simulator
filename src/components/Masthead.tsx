@@ -6,7 +6,7 @@ export function Masthead() {
   const { model, state, dispatch, interventions, isFixture, isBase } = useStore();
   const scenario = model.scenarios.find((s) => s.id === state.scenarioId)!;
   const on = interventions.filter((iv) => state.interventionIds.includes(iv.id));
-  const current = route.view === 'initiatives' ? 'why' : route.view;
+  const current = route.view === 'initiatives' || route.view === 'workforce' || route.view === 'cost' ? 'why' : route.view;
   const pathFor = (view: string, path: string) => {
     if (view === 'why' && route.view === 'why' && route.teamId) return `#/why/${route.teamId}`;
     if (view === 'options' && route.view === 'options' && route.teamId) return `#/options/${route.teamId}`;

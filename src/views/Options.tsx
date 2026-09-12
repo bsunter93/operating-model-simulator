@@ -68,7 +68,7 @@ export function Options({ teamId: requested }: { teamId: string }) {
           </div>
           <div className="card">
             <h3>Already on the table</h3>
-            <p className="note top">Options written into this plan. Some touch other teams; the line says so.</p>
+            <p className="note top">Options written into this plan.</p>
             <ul className="ivs">{planned.map(item)}</ul>
           </div>
           {(state.interventionIds.length > 0 || Object.keys(state.overrides).length > 0) && <button className="reset" onClick={() => { dispatch({ type: 'setInterventions', ids: [] }); }}>Turn everything off</button>}

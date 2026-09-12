@@ -70,7 +70,7 @@ describe('base run', () => {
   });
   it('does not mutate the input', () => {
     const before = JSON.stringify(model);
-    run(model, { scenario: 'scenario-growth-20', interventions: ['intervention-expedite-implementation', 'intervention-cancel-margin'] });
+    run(model, { scenario: 'scenario-growth-20', interventions: ['intervention-expedite-implementation', 'intervention-cancel-self-service'] });
     expect(JSON.stringify(model)).toBe(before);
   });
   it('produces no NaN or Infinity anywhere', () => {
@@ -172,10 +172,10 @@ describe('demand and productivity', () => {
 describe('portfolio and dependencies', () => {
   const base = run(model);
   it('initiatives consume capacity only while active', () => {
-    const margin = base.initiatives.find((i) => i.initiativeId === 'init-margin-program')!;
-    expect(margin.effectiveStart).toBe('2027-02');
-    expect(margin.completion).toBe('2027-08');
-    expect(margin.activeMonthIndexes).toEqual([1, 2, 3, 4, 5, 6]);
+    const portal = base.initiatives.find((i) => i.initiativeId === 'init-self-service')!;
+    expect(portal.effectiveStart).toBe('2027-02');
+    expect(portal.completion).toBe('2027-08');
+    expect(portal.activeMonthIndexes).toEqual([1, 2, 3, 4, 5, 6]);
     const cons = team(base, 'team-consumer-ops');
     expect(cons.months[0].portfolioHours).toBe(0);
     expect(cons.months[1].portfolioHours).toBeCloseTo(4 * 160 * (1 - 0.16), 6);
@@ -204,10 +204,10 @@ describe('portfolio and dependencies', () => {
     for (const t of r.teams) t.months.forEach((mm, i) => expect(mm.portfolioHours).toBeLessThanOrEqual(team(base, t.teamId).months[i].portfolioHours + 1e-9));
   });
   it('cancelling an initiative releases its capacity', () => {
-    const r = run(model, { interventions: ['intervention-cancel-margin'] });
+    const r = run(model, { interventions: ['intervention-cancel-self-service'] });
     const cons = team(r, 'team-consumer-ops');
     for (let m = 1; m < 7; m++) expect(cons.months[m].portfolioHours).toBe(0);
-    expect(r.exposure.items.some((e) => e.initiativeId === 'init-margin-program')).toBe(false);
+    expect(r.exposure.items.some((e) => e.initiativeId === 'init-self-service')).toBe(false);
     expect(totalGap(r)).toBeLessThanOrEqual(totalGap(base));
   });
   it('reallocation keeps total FTE constant and moves capacity after the transition', () => {
@@ -228,7 +228,7 @@ describe('budget and exposure', () => {
     expect(r.financials.annualBudgetUsd).toBeCloseTo(base.financials.annualBudgetUsd * 0.9, 6);
     expect(r.financials.annualRunCostUsd).toBeCloseTo(base.financials.annualRunCostUsd, 6);
     expect(r.financials.budgetLevers.length).toBeGreaterThan(0);
-    expect(r.financials.budgetLevers.some((l) => l.kind === 'defer-discretionary-initiative' && l.id === 'init-margin-program')).toBe(true);
+    expect(r.financials.budgetLevers.some((l) => l.kind === 'defer-discretionary-initiative' && l.id === 'init-self-service')).toBe(true);
     expect(r.financials.budgetLevers.some((l) => l.kind === 'defer-discretionary-initiative' && l.id === 'init-enterprise-growth')).toBe(false);
   });
   it('raising execution-failure probability cannot reduce exposure', () => {
