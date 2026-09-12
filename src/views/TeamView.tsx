@@ -1,10 +1,13 @@
-import { model, useStore } from '../state/store';
+import { useStore } from '../state/store';
 import { TeamTimeline } from '../components/charts/TeamTimeline';
 import { StatusPill } from '../components/StatusPill';
+import { Term } from '../components/Term';
 import { monthLabel, num, pct } from '../lib/format';
 
+const people = (n: number) => (Math.round(n) === 1 ? '1 person' : `${Math.round(n)} people`);
+
 export function TeamView({ teamId }: { teamId: string }) {
-  const { result, doNothing, state } = useStore();
+  const { result, doNothing, state, model } = useStore();
   const team = result.teams.find((t) => t.teamId === teamId)!;
   const ghost = doNothing.teams.find((t) => t.teamId === teamId)!;
   const def = model.teams.find((t) => t.id === teamId)!;
@@ -14,23 +17,27 @@ export function TeamView({ teamId }: { teamId: string }) {
   const peak = team.months.find((m) => m.month === team.peakMonth)!;
   const planned = model.hiringPlan.filter((h) => h.teamId === teamId);
   const streams = model.demandStreams.filter((s) => s.teamId === teamId);
+  const q = window.location.hash.split('?')[1];
 
   return (
     <main className="main">
       <div className="eyebrow">Capacity timeline</div>
       <div className="teamhead">
         <h1 className="title">{def.name}</h1>
-        <select className="teampick" value={teamId} onChange={(e) => { window.location.hash = `#/capacity/${e.target.value}`; }} aria-label="Team">
+        <select className="teampick" value={teamId} onChange={(e) => { window.location.hash = `#/capacity/${e.target.value}` + (q ? '?' + q : ''); }} aria-label="Team">
           {model.teams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
         </select>
         <StatusPill status={team.worstStatus} />
       </div>
+      <p className="lede small">
+        Bars are hours of work each month; the line is what this team can handle at its target. Where a bar rises above the line, work is queuing.
+      </p>
       <ul className="facts">
-        <li><b>{Math.round(team.startingFte)} → {Math.round(team.endingFte)}</b>FTE, Jan to Dec</li>
-        <li><b>{pct(team.peakUtilization)}</b>peak, {monthLabel(team.peakMonth)}</li>
-        <li><b>{team.monthsConstrained}</b>months over {pct(def.targetUtilization)} target</li>
-        <li><b>{team.peakWorkforceGap.toFixed(1)}</b>FTE short at peak</li>
-        <li><b>{pct(1 - def.shrinkage)}</b>of paid hours productive</li>
+        <li><b>{Math.round(team.startingFte)} → {Math.round(team.endingFte)}</b><Term k="headcount">people, Jan to Dec</Term></li>
+        <li><b>{pct(team.peakUtilization)}</b><Term k="utilization">peak utilization</Term>, {monthLabel(team.peakMonth)}</li>
+        <li><b>{team.monthsConstrained}</b>months over the <Term k="target">{pct(def.targetUtilization)} target</Term></li>
+        <li><b>{team.peakWorkforceGap.toFixed(1)}</b><Term k="shortfall">people short</Term> at peak</li>
+        <li><b>{pct(1 - def.shrinkage)}</b>of paid hours <Term k="productive">productive</Term></li>
         {landing.length > 0 && <li><b>{landing.map((m) => `+${Math.round(m.hiresLanded)} ${monthLabel(m.month)}`).join(', ')}</b>hires landing</li>}
       </ul>
 
@@ -45,11 +52,11 @@ export function TeamView({ teamId }: { teamId: string }) {
         </div>
         <TeamTimeline team={team} ghost={state.interventionIds.length ? ghost : undefined} />
         <div className="legend">
-          <span><i className="bar" /> run work</span>
-          <span><i className="bar2" /> initiative work</span>
-          <span><i data-s="severe" /> over target</span>
-          <span><i className="tline" /> target capacity ({pct(def.targetUtilization)} of productive hours)</span>
-          <span><i className="aline" /> all productive hours</span>
+          <span><i className="bar" /> <Term k="run">run work</Term></span>
+          <span><i className="bar2" /> <Term k="initiative">initiative work</Term></span>
+          <span><i data-s="severe" /> <Term k="gap">over target</Term></span>
+          <span><i className="tline" /> <Term k="target">target capacity</Term> ({pct(def.targetUtilization)} of productive hours)</span>
+          <span><i className="aline" /> <Term k="productive">all productive hours</Term></span>
           {state.interventionIds.length > 0 && <span><i className="ghost" /> before interventions</span>}
         </div>
       </div>
@@ -59,7 +66,7 @@ export function TeamView({ teamId }: { teamId: string }) {
           {landing.length > 0 ? (
             <>
               <b>The plan already hires {planned.reduce((s, h) => s + h.headcount, 0)} people for this team.</b> They arrive in <b>{monthLabel(landing[0].month)}</b>.
-              {' '}Between {monthLabel(firstOver.month)} and then, the team runs up to <b>{pct(peak.utilization)}</b> of its productive hours against an {pct(def.targetUtilization)} target, {peak.workforceGap.toFixed(0)} people short at the worst point.
+              {' '}Between {monthLabel(firstOver.month)} and then, the team runs up to <b>{pct(peak.utilization)}</b> of its productive hours against a {pct(def.targetUtilization)} target, {people(peak.workforceGap)} short at the worst point.
               {lastOver && landing[0].monthIndex <= lastOver.monthIndex ? <> Even after they land it is over target through {monthLabel(lastOver.month)}.</> : <> Once they land it clears the target for the rest of the year.</>}
               {' '}Hiring solves the capacity problem eventually. It does not solve the one that exists today.
             </>
@@ -70,10 +77,22 @@ export function TeamView({ teamId }: { teamId: string }) {
           )}
         </div>
       )}
+      {planned.length === 0 && firstOver && landing.length === 0 && (
+        <div className="callout">
+          <b>The plan has no hires for this team.</b> It runs over target from {monthLabel(firstOver.month)}{lastOver && lastOver !== firstOver ? ` through ${monthLabel(lastOver.month)}` : ''}, peaking at {pct(peak.utilization)} with {people(peak.workforceGap)} short.
+        </div>
+      )}
+      {planned.length === 0 && landing.length > 0 && (
+        <div className="callout">
+          <b>The plan has no hires for this team; your lever adds {landing.map((m) => `${Math.round(m.hiresLanded)} in ${monthLabel(m.month)}`).join(' and ')}.</b>
+          {firstOver ? <> It is still over target from {monthLabel(firstOver.month)}{lastOver && lastOver !== firstOver ? ` through ${monthLabel(lastOver.month)}` : ''}, peaking at {pct(peak.utilization)}{peak.workforceGap >= 0.5 ? ` with ${people(peak.workforceGap)} short` : ''}.</> : <> With them it stays within target all year.</>}
+          {landing[0].monthIndex > 0 && <> Nothing changes before {monthLabel(landing[0].month)}; that is the lead time.</>}
+        </div>
+      )}
 
-      <section className="sec" style={{ marginTop: 28 }}>
-        <h2>Month by month</h2>
-        <p className="sub">Available FTE is last month's headcount less attrition plus arrivals. Required FTE is what the workload needs at the {pct(def.targetUtilization)} target.</p>
+      <details className="fold">
+        <summary>Month by month, in numbers</summary>
+        <p className="sub"><Term k="required">Required</Term> is what the workload needs at the {pct(def.targetUtilization)} target. <Term k="attrition">Attrition</Term> is applied every month; arrivals are hires landing or people moved in.</p>
         <div className="tbl-wrap">
           <table className="tbl">
             <thead>
@@ -97,7 +116,7 @@ export function TeamView({ teamId }: { teamId: string }) {
             </tbody>
           </table>
         </div>
-      </section>
+      </details>
     </main>
   );
 }

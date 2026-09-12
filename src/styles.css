@@ -179,3 +179,72 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 
 .foot{max-width:1180px;margin:0 auto;padding:0 clamp(16px,3vw,32px) 40px;font-size:12px;color:var(--muted)}
 .foot a{color:var(--muted);text-decoration:underline;text-underline-offset:3px}
+
+/* ── purpose strip ─────────────────────────────────────────────────────── */
+.purpose{display:grid;gap:12px;padding:14px 18px;margin:0 0 26px;background:var(--tint);border:1px solid var(--line);border-radius:4px}
+.purpose-text{font-size:13.5px;line-height:1.5;color:var(--body);max-width:70ch}
+.purpose-text b{color:var(--ink)}
+.chain{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:4px;align-items:center}
+.chain li{font:500 10.5px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--accent);padding:6px 8px;border:1px solid var(--accent-soft);background:var(--surface);border-radius:2px;position:relative}
+.chain li+li:before{content:"→";position:absolute;left:-10px;top:5px;color:var(--muted);font-size:11px}
+.chain li+li{margin-left:10px}
+.chain li:last-child{color:var(--warm);border-color:var(--warm-soft)}
+.versus{font-size:13.5px;color:var(--muted);margin:-12px 0 22px;max-width:70ch}
+.lede.small{font-size:14px;color:var(--muted);margin:0 0 16px}
+
+/* ── terms (tooltips) ──────────────────────────────────────────────────── */
+.term{position:relative;border-bottom:1px dotted var(--muted);cursor:help;text-decoration:none}
+.term.info{display:inline-block;border:1px solid var(--line);border-radius:50%;width:15px;height:15px;line-height:13px;text-align:center;font:500 10px/13px var(--mono);color:var(--muted);margin-left:6px;vertical-align:1px;cursor:help}
+.term:hover:after,.term:focus-visible:after{content:attr(data-tip);position:absolute;left:0;top:calc(100% + 8px);z-index:20;width:max-content;max-width:280px;background:var(--ink);color:var(--paper);font:400 12px/1.45 var(--sans);letter-spacing:0;text-transform:none;padding:8px 10px;border-radius:3px;box-shadow:0 4px 14px rgba(0,0,0,.18);white-space:normal;text-align:left}
+.term:hover:before,.term:focus-visible:before{content:"";position:absolute;left:10px;top:calc(100% + 3px);border:5px solid transparent;border-bottom-color:var(--ink);z-index:21}
+.metric .l .term,.tbl th .term{border-bottom-color:var(--line)}
+th .term:hover:after{font-weight:400}
+
+/* ── rail: tour, knobs, buttons ────────────────────────────────────────── */
+.tour{border-color:var(--accent);background:var(--accent-soft)}
+.tour.on{background:var(--surface)}
+.tour-title{display:block;font:600 14.5px/1.3 var(--display);color:var(--ink);margin:2px 0 6px}
+.tour-body{font-size:13px;line-height:1.5;color:var(--body);margin:0 0 12px}
+.tour-nav{display:flex;gap:8px;justify-content:space-between}
+.btn{font:500 13px/1 var(--sans);color:var(--paper);background:var(--accent);padding:9px 14px;border-radius:3px}
+.btn:hover{filter:brightness(1.08)}
+.btn.ghost{background:transparent;color:var(--accent);border:1px solid var(--accent)}
+.btns{display:flex;gap:10px;flex-wrap:wrap}
+.note.top{margin:0 0 10px}
+.iv{display:block;padding:8px 8px;border-radius:3px}
+.iv.on{background:var(--accent-soft)}
+.iv-main{display:grid;grid-template-columns:18px 1fr;gap:10px;align-items:start;cursor:pointer}
+.iv-main input{margin:3px 0 0;accent-color:var(--accent)}
+.iv b{display:block;font:500 13px/1.35 var(--sans);color:var(--ink)}
+.knob{display:flex;align-items:center;gap:8px;margin:6px 0 0 28px;font:400 12px/1 var(--sans);color:var(--muted)}
+.knob input{width:64px;font:500 12.5px/1 var(--mono);color:var(--ink);background:var(--paper);border:1px solid var(--line);border-radius:3px;padding:5px 6px;text-align:right}
+
+/* ── scenarios ─────────────────────────────────────────────────────────── */
+.tbl.cmp th button{font:500 11px/1.3 var(--mono);letter-spacing:.04em;text-transform:uppercase;color:var(--muted);text-align:right;max-width:110px;white-space:normal}
+.tbl.cmp th.sel button,.tbl.cmp th.sel{color:var(--ink)}
+.tbl.cmp td.sel,.tbl.cmp th.sel{background:var(--accent-soft)}
+.tbl.cmp th.sel button:after{content:" ●";color:var(--accent)}
+.tbl.dec td.left,.tbl.edit td.left{text-align:left}
+.tbl.dec tr.stack td{background:var(--accent-soft)}
+.weights{display:grid;gap:6px;max-width:520px;margin:0 0 16px}
+.wrow{display:grid;grid-template-columns:150px 1fr 48px;gap:12px;align-items:center;font-size:13px;color:var(--body)}
+.wrow.scale{grid-template-columns:64px 1fr 110px;max-width:520px}
+.wrow input[type=range]{accent-color:var(--accent);width:100%}
+.wv{font:500 12.5px/1 var(--mono);color:var(--ink);text-align:right}
+.scorebar{display:inline-grid;grid-template-columns:110px auto;gap:8px;align-items:center}
+.scorebar i{display:block;height:8px;background:var(--tint);border-radius:2px;position:relative;overflow:hidden}
+.scorebar i:after{content:"";position:absolute;inset:0;width:var(--w);background:var(--accent);border-radius:2px}
+.scorebar em{font:500 12px/1 var(--mono);color:var(--ink);font-style:normal}
+
+/* ── your numbers ──────────────────────────────────────────────────────── */
+.cellin{font:500 12.5px/1 var(--mono);color:var(--ink);background:var(--paper);border:1px solid var(--line);border-radius:3px;padding:5px 6px;text-align:right}
+.errors{margin:14px 0 0;padding:12px 16px;border-left:3px solid var(--alert);background:var(--alert-soft);font-size:13px;color:var(--body)}
+.errors b{color:var(--ink)} .errors ul{margin:6px 0 0;padding-left:18px}
+
+/* ── fold ──────────────────────────────────────────────────────────────── */
+.fold{margin:26px 0 0;border-top:1px solid var(--line);padding-top:12px}
+.fold summary{font:600 15px/1.3 var(--display);color:var(--ink);cursor:pointer;list-style:none;display:flex;align-items:center;gap:10px}
+.fold summary:before{content:"+";display:inline-grid;place-items:center;width:20px;height:20px;border:1px solid var(--line);border-radius:3px;font:500 14px/1 var(--mono);color:var(--accent)}
+.fold[open] summary:before{content:"−"}
+.fold summary::-webkit-details-marker{display:none}
+.fold .sub{margin-top:10px}
