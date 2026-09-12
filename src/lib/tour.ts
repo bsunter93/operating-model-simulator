@@ -61,7 +61,10 @@ export const TOUR: TourStep[] = [
     body: (c) => {
       const s = c.result.summary;
       if (!s.firstBreakTeamId) return 'No team runs over capacity in this plan. The constraints, if any, are about sequencing or budget.';
-      return `${c.teamName(s.firstBreakTeamId)} is the first team over capacity, in ${monthLabel(s.firstBreakMonth!, true)}. The next step opens its year.`;
+      const rank = c.result.constraints.findIndex((x) => x.kind === 'capacity' && x.teamId === s.firstBreakTeamId) + 1;
+      const costlier = c.result.constraints.slice(0, Math.max(0, rank - 1)).filter((x) => x.kind === 'capacity');
+      const where = rank === 1 ? 'It is also the most expensive constraint.' : rank > 1 ? `The list is ranked by cost, so it sits at number ${rank}${costlier.length ? `; ${costlier.map((x) => c.teamName(x.teamId!)).join(' and ')} ${costlier.length === 1 ? 'costs' : 'cost'} more but ${costlier.length === 1 ? 'breaks' : 'break'} later` : ''}.` : '';
+      return `${c.teamName(s.firstBreakTeamId)} is the first team over capacity, in ${monthLabel(s.firstBreakMonth!, true)}. ${where} The next step opens its year.`;
     },
   },
   {

@@ -31,7 +31,6 @@ export function Hold() {
   const basePeak = peakShortfall(base);
   const nTeams = model.teams.length;
   const year = model.calendar.startMonth.slice(0, 4);
-  const firstCap = result.constraints.find((c) => c.kind === 'capacity');
 
   const d = (cur: number, ref: number, fmt: (n: number) => string, worseWhenUp = true) => {
     if (isBase || Math.abs(cur - ref) < 1e-9) return undefined;
@@ -76,7 +75,7 @@ export function Hold() {
             {result.constraints.map((c, i) => {
               const link = c.teamId ? `#/why/${c.teamId}` : c.initiativeId ? '#/why/initiatives' : null;
               return (
-                <li key={c.id} className="con" data-kind={c.kind} data-tour={firstCap && c.id === firstCap.id ? 'constraint-first-team' : undefined}>
+                <li key={c.id} className="con" data-kind={c.kind} data-tour={c.kind === 'capacity' && c.teamId === s.firstBreakTeamId ? 'constraint-first-team' : undefined}>
                   <div className="n">{i + 1}</div>
                   <div>
                     <div className="t">
