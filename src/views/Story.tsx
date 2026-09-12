@@ -218,7 +218,8 @@ export function Story() {
   // Scroll-spy on the beats; an override clears when the active beat changes.
   useEffect(() => {
     const on = () => {
-      const y = window.scrollY + window.innerHeight * 0.38;
+      // The current beat is the last one whose top has passed a line 140px below the viewport top.
+      const y = window.scrollY + 140;
       let cur = 0;
       beatRefs.current.forEach((el, i) => { if (el && el.offsetTop <= y) cur = i; });
       setActive((prev) => { if (prev !== cur) setOverride(null); return cur; });

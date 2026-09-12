@@ -573,3 +573,14 @@ button.cell{cursor:pointer}
 .tray.compact{max-height:min(46vh,420px)}
 .tbl.mini td{padding:3px 6px}.tbl.mini .cellin{padding:3px 5px;font-size:12px}
 .mast-in .state .chip{max-width:200px;font-size:11.5px}
+
+.mast-links{margin-left:auto;display:flex;gap:16px;align-items:center;white-space:nowrap}
+.mast-links a{font:500 13px/1 var(--sans);color:var(--muted)}
+.mast-links a:first-child{color:var(--accent)}
+.mast-links a:hover{color:var(--ink);text-decoration:none}
+.beat{opacity:.55}
+.beat.on{opacity:1}
+.beat{scroll-margin-top:12px}
+.strip-t.big td{padding:2px}
+.strip-t.big .cell{height:26px;line-height:26px;font-size:11px}
+.strip-t.big th{font-size:9.5px}
