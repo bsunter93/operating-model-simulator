@@ -1,0 +1,98 @@
+{
+  "modelVersion": "2.0",
+  "id": "atlas-systems-2027",
+  "name": "Atlas Systems",
+  "status": "calibrated",
+
+  "calendar": { "startMonth": "2027-01", "endMonth": "2027-12", "workHoursPerFteMonth": 160 },
+
+  "strategy": {
+    "revenueTargetUsd": 500000000,
+    "growthTargetPct": 0.12,
+    "employeeCount": 1200,
+    "enterpriseCustomers": 10000,
+    "operatingCostTargetUsd": 160000000,
+    "strategicPriorities": ["enterprise-growth", "international-expansion", "platform-scale", "operating-efficiency"]
+  },
+
+  "teams": [
+    { "id": "team-enterprise-sales", "name": "Enterprise Sales", "teamType": "portfolio-only", "currentFte": 120, "annualAttrition": 0.14, "shrinkage": 0.18, "targetUtilization": 0.70, "monthlyFteCostUsd": 18000 },
+    { "id": "team-customer-ops", "name": "Customer Operations", "teamType": "operational", "currentFte": 85, "annualAttrition": 0.12, "shrinkage": 0.15, "targetUtilization": 0.80, "monthlyFteCostUsd": 12500 },
+    { "id": "team-consumer-ops", "name": "Consumer Operations", "teamType": "operational", "currentFte": 150, "annualAttrition": 0.14, "shrinkage": 0.16, "targetUtilization": 0.82, "monthlyFteCostUsd": 11000 },
+    { "id": "team-enterprise-support", "name": "Enterprise Support", "teamType": "operational", "currentFte": 40, "annualAttrition": 0.12, "shrinkage": 0.15, "targetUtilization": 0.78, "monthlyFteCostUsd": 11500 },
+    { "id": "team-consumer-support", "name": "Consumer Support", "teamType": "operational", "currentFte": 65, "annualAttrition": 0.15, "shrinkage": 0.15, "targetUtilization": 0.78, "monthlyFteCostUsd": 10500 },
+    { "id": "team-implementation", "name": "Implementation", "teamType": "operational", "currentFte": 50, "annualAttrition": 0.12, "shrinkage": 0.15, "targetUtilization": 0.80, "monthlyFteCostUsd": 14500 },
+    { "id": "team-platform-engineering", "name": "Platform Engineering", "teamType": "portfolio-and-run", "currentFte": 160, "annualAttrition": 0.10, "shrinkage": 0.12, "targetUtilization": 0.80, "monthlyFteCostUsd": 19000 },
+    { "id": "team-data-platform", "name": "Data Platform", "teamType": "portfolio-and-run", "currentFte": 55, "annualAttrition": 0.10, "shrinkage": 0.12, "targetUtilization": 0.80, "monthlyFteCostUsd": 18500 }
+  ],
+
+  "seasonality": {
+    "2027-01": 0.90, "2027-02": 0.95, "2027-03": 1.00, "2027-04": 1.05, "2027-05": 1.10, "2027-06": 1.15,
+    "2027-07": 1.05, "2027-08": 1.00, "2027-09": 1.05, "2027-10": 1.10, "2027-11": 0.95, "2027-12": 0.70
+  },
+
+  "demandStreams": [
+    { "id": "demand-enterprise-implementation", "name": "Enterprise implementations", "teamId": "team-implementation", "unit": "implementations", "annualVolume": 480, "handlingMinutesPerUnit": 8000, "complexityFactor": 1.0, "workMix": { "reusable": 0.25, "configurable": 0.55, "bespoke": 0.20 }, "seasonality": "default" },
+    { "id": "demand-enterprise-account-requests", "name": "Enterprise account requests", "teamId": "team-customer-ops", "unit": "requests", "annualVolume": 48000, "handlingMinutesPerUnit": 100, "complexityFactor": 1.0, "workMix": { "reusable": 0.55, "configurable": 0.30, "bespoke": 0.15 }, "seasonality": "default" },
+    { "id": "demand-consumer-cases", "name": "Consumer operations cases", "teamId": "team-consumer-ops", "unit": "cases", "annualVolume": 420000, "handlingMinutesPerUnit": 26, "complexityFactor": 1.0, "workMix": { "reusable": 0.70, "configurable": 0.25, "bespoke": 0.05 }, "seasonality": "default" },
+    { "id": "demand-enterprise-support", "name": "Enterprise support cases", "teamId": "team-enterprise-support", "unit": "cases", "annualVolume": 72000, "handlingMinutesPerUnit": 28, "complexityFactor": 1.0, "workMix": { "reusable": 0.65, "configurable": 0.25, "bespoke": 0.10 }, "seasonality": "default" },
+    { "id": "demand-consumer-support", "name": "Consumer support cases", "teamId": "team-consumer-support", "unit": "cases", "annualVolume": 210000, "handlingMinutesPerUnit": 19.5, "complexityFactor": 1.0, "workMix": { "reusable": 0.75, "configurable": 0.20, "bespoke": 0.05 }, "seasonality": "default" },
+    { "id": "demand-platform-projects", "name": "Platform engineering projects", "teamId": "team-platform-engineering", "unit": "projects", "annualVolume": 60, "handlingMinutesPerUnit": 130000, "complexityFactor": 1.0, "workMix": { "reusable": 0.30, "configurable": 0.45, "bespoke": 0.25 }, "seasonality": "default" },
+    { "id": "demand-data-projects", "name": "Data platform projects", "teamId": "team-data-platform", "unit": "projects", "annualVolume": 48, "handlingMinutesPerUnit": 75000, "complexityFactor": 1.0, "workMix": { "reusable": 0.35, "configurable": 0.45, "bespoke": 0.20 }, "seasonality": "default" }
+  ],
+
+  "hiringPlan": [
+    { "id": "hire-implementation-10", "teamId": "team-implementation", "requestMonth": "2027-01", "headcount": 10, "leadTimeMonths": 5 },
+    { "id": "hire-consumer-ops-12", "teamId": "team-consumer-ops", "requestMonth": "2027-02", "headcount": 12, "leadTimeMonths": 3 },
+    { "id": "hire-platform-8", "teamId": "team-platform-engineering", "requestMonth": "2027-01", "headcount": 8, "leadTimeMonths": 4 }
+  ],
+
+  "initiatives": [
+    { "id": "init-enterprise-growth", "name": "Enterprise Growth Program", "startMonth": "2027-01", "durationMonths": 9, "requiredFteByTeam": { "team-enterprise-sales": 12, "team-customer-ops": 4, "team-implementation": 3, "team-platform-engineering": 6 }, "strategicValue": 10, "financialValueUsd": 30000000, "urgency": 9, "confidence": 0.80, "revenueAtRiskUsd": 30000000, "executionFailureProbability": 0.15, "discretionary": false },
+    { "id": "init-international-expansion", "name": "International Expansion", "startMonth": "2027-03", "durationMonths": 8, "requiredFteByTeam": { "team-customer-ops": 5, "team-implementation": 5, "team-platform-engineering": 10, "team-data-platform": 4 }, "strategicValue": 9, "financialValueUsd": 22000000, "urgency": 8, "confidence": 0.72, "revenueAtRiskUsd": 22000000, "executionFailureProbability": 0.22, "discretionary": false },
+    { "id": "init-margin-program", "name": "Operating Margin Program", "startMonth": "2027-02", "durationMonths": 6, "requiredFteByTeam": { "team-customer-ops": 2, "team-consumer-ops": 4 }, "strategicValue": 8, "financialValueUsd": 12000000, "urgency": 7, "confidence": 0.85, "revenueAtRiskUsd": 8000000, "executionFailureProbability": 0.12, "discretionary": true },
+    { "id": "init-platform-scale", "name": "Platform Scale Program", "startMonth": "2027-04", "durationMonths": 7, "requiredFteByTeam": { "team-platform-engineering": 18, "team-data-platform": 7 }, "strategicValue": 10, "financialValueUsd": 28000000, "urgency": 9, "confidence": 0.78, "revenueAtRiskUsd": 28000000, "executionFailureProbability": 0.18, "discretionary": false }
+  ],
+
+  "dependencies": [
+    { "id": "dep-international-platform", "predecessorId": "init-platform-scale", "successorId": "init-international-expansion", "lagMonths": 1 }
+  ],
+
+  "budget": { "modeledAnnualBudgetUsd": 127000000 },
+
+  "pooling": { "clientCount": 10, "workloadPerClient": 2, "ahtSeconds": 900, "targetSeconds": 120, "serviceLevel": 0.80, "bespokeShare": 0.30, "contextPenalty": 0.40 },
+
+  "scenarios": [
+    { "id": "scenario-base", "name": "Base plan", "type": "base", "description": "The 2027 operating plan as written, including the three planned hiring requests." },
+    { "id": "scenario-growth-20", "name": "Growth +20%", "type": "demandMultiplier", "demandMultiplier": 1.20, "description": "Every demand stream runs 20% above plan for the whole year." },
+    { "id": "scenario-demand-shock", "name": "Demand shock +30% from April", "type": "demandMultiplier", "demandMultiplier": 1.30, "fromMonth": "2027-04", "description": "Demand steps up 30% in April and stays there." },
+    { "id": "scenario-hiring-freeze", "name": "Hiring freeze", "type": "hiringFreeze", "description": "Every planned hiring request is cancelled. Nobody already on staff leaves because of it." },
+    { "id": "scenario-budget-cut", "name": "Budget -10%", "type": "budgetConstraint", "budgetMultiplier": 0.90, "description": "The modeled budget cap drops to 90% of plan. The engine names the levers; it does not pull them." },
+    { "id": "scenario-productivity-15", "name": "Productivity +15%", "type": "productivityMultiplier", "multiplier": 1.15, "description": "The same work takes 15% fewer hours everywhere." },
+    { "id": "scenario-attrition-shock", "name": "Attrition shock", "type": "attritionMultiplier", "multiplier": 1.5, "description": "Attrition runs 50% above plan on every team." },
+    { "id": "scenario-revenue-exposure", "name": "Execution risk +50%", "type": "failureProbabilityMultiplier", "multiplier": 1.5, "description": "Every initiative's failure probability rises by half." }
+  ],
+
+  "interventions": [
+    { "id": "intervention-expedite-implementation", "name": "Expedite the planned implementation hires", "type": "expediteHiring", "hiringRequestId": "hire-implementation-10", "newLeadTimeMonths": 3, "oneTimeCostUsd": 120000, "description": "Agency sourcing and a signing bonus pull the lead time from five months to three." },
+    { "id": "intervention-automate-implementation", "name": "Automate 15% of implementation work", "type": "automation", "teamId": "team-implementation", "workloadReductionRate": 0.15, "timeToImpactMonths": 2, "implementationCostUsd": 900000, "description": "Standardized onboarding templates remove 15% of hands-on hours, starting two months after kickoff." },
+    { "id": "intervention-reallocate-to-implementation", "name": "Move 5 people from Customer Operations to Implementation", "type": "reallocation", "fromTeamId": "team-customer-ops", "toTeamId": "team-implementation", "headcount": 5, "timeToImpactMonths": 1, "implementationCostUsd": 150000, "description": "Five experienced account people cross-train and move within a month." },
+    { "id": "intervention-defer-international", "name": "Defer International Expansion by 3 months", "type": "defer", "initiativeId": "init-international-expansion", "months": 3, "description": "Push the start from March to June." },
+    { "id": "intervention-accept-higher-utilization", "name": "Accept 88% utilization on Implementation", "type": "serviceLevelChange", "teamId": "team-implementation", "newTargetUtilization": 0.88, "description": "Trade slack for throughput. The service level absorbs the difference." },
+    { "id": "intervention-cancel-margin", "name": "Cancel the Operating Margin Program", "type": "cancel", "initiativeId": "init-margin-program", "description": "Release six people-worth of capacity in Customer and Consumer Operations." }
+  ],
+
+  "decisionWeights": { "cost": 0.25, "speed": 0.25, "revenueExposure": 0.50 },
+
+  "demoIntent": {
+    "summary": "A mostly healthy organization with two or three teams near the ceiling, a hiring plan that arrives late, and a sequencing conflict the plan does not know about.",
+    "intents": [
+      "Implementation carries a meaningful gap (8 to 15 FTE at peak) that the planned 10 hires nearly close, five months after the need appears.",
+      "Consumer Operations becomes constrained through the seasonal peak as attrition erodes headcount ahead of the planned hires.",
+      "Data Platform sits in the 85 to 95% band mid-year: not broken, no slack.",
+      "Customer Operations is moderately pressured and is the plausible source team for a reallocation.",
+      "International Expansion is planned for March but depends on Platform Scale, which does not finish until November; the engine must show December as the earliest feasible start.",
+      "Enterprise Support and Platform Engineering stay healthy so the constraints read as real rather than everything being red."
+    ]
+  }
+}
