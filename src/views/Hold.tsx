@@ -42,7 +42,8 @@ export function Hold() {
     <main className="main one">
       <div className="purpose">
         <div className="purpose-text">
-          <b>A month-by-month model of a fictional company's plan.</b> Strategy becomes work, work becomes hours, hours become people. Decisions change the strategy and the loop runs again. Change anything; every number recomputes. <a href="#/about">How it works and what it assumes →</a>
+          <b>A month-by-month model of a fictional company's plan.</b> Strategy becomes work, work becomes hours, hours become people. Decisions change the strategy and the loop runs again. Change anything; every number recomputes.
+          <span className="purpose-method">Under the hood: a deterministic team-by-month engine for demand, capacity, workforce, portfolio, and cost; Erlang C for the queueing question; thresholds found by rerunning the model until the answer flips; 86 automated tests. <a href="#/about">How it works and what it assumes →</a></span>
         </div>
         <Loop />
       </div>

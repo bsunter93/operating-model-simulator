@@ -2,7 +2,7 @@
 
 **Can this organization actually execute the plan?**
 
-A month-by-month model of a fictional company's operating plan. It turns strategy into work, work into hours, and hours into people, then shows where the plan runs out of people, when, and what would change that. Every number is computed by a deterministic engine from one JSON file. Nothing on the pages is written in as a conclusion.
+A month-by-month model of a fictional company's operating plan. It turns strategy into work, work into hours, and hours into people, then shows which team hits its capacity limit first, when, which initiative launches are at risk, and what would change that. Every number is computed by a deterministic engine from one JSON file. Nothing on the pages is written in as a conclusion.
 
 Live: **https://bensunter.com/simulator/**
 
