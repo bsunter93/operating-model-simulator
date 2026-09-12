@@ -21,6 +21,7 @@ export function Masthead() {
         </a>
         <a className="brand-home" href="https://bensunter.com/">bensunter.com</a>
       </div>
+      <div className="sticky-nav">
       <nav className="steps" aria-label="Steps">
         {STEPS.map((s, i) => (
           <a key={s.view} href={href(pathFor(s.view, s.path))} aria-current={current === s.view ? 'page' : undefined} className={s.view === 'plan' ? 'aside' : s.view === 'about' ? 'aside2' : ''}>
@@ -36,6 +37,7 @@ export function Masthead() {
           <a key={iv.id} className="chip on" href={href(`#/options/${'teamId' in iv ? iv.teamId : 'toTeamId' in iv ? iv.toTeamId : isCustomId(iv.id) ? iv.id.split(':')[0] : ''}`)} title={iv.name}>{iv.name}</a>
         ))}
         {!isBase && <button className="strip-reset" onClick={() => dispatch({ type: 'reset' })}>Reset to base plan</button>}
+      </div>
       </div>
     </header>
   );

@@ -26,7 +26,7 @@ function Metric({ label, term, value, tone, delta }: { label: string; term?: Ter
 }
 
 export function Hold() {
-  const { result, base, isBase, model, teamName, initName } = useStore();
+  const { result, base, isBase, model, teamName, initName, isFixture } = useStore();
   const s = result.summary;
   const v = verdict(result, teamName, initName, isBase ? undefined : base);
   const peak = peakShortfall(result);
@@ -46,6 +46,27 @@ export function Hold() {
   const nowKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   const nowIdx = idx(nowKey);
   const nowIn = nowIdx >= 0 && nowIdx < result.months.length;
+
+  /** The inputs a constraint was computed from, in one line. */
+  const provenance = (c: (typeof result.constraints)[number]): string => {
+    if (c.kind === 'capacity' && c.teamId) {
+      const t = model.teams.find((x) => x.id === c.teamId)!;
+      const streams = model.demandStreams.filter((x) => x.teamId === t.id);
+      const inits = model.initiatives.filter((i) => i.requiredFteByTeam[t.id]).map((i) => `${i.requiredFteByTeam[t.id]} on ${i.name}`);
+      const hires = model.hiringPlan.filter((h) => h.teamId === t.id).map((h) => `${h.headcount} hires planned, ${h.leadTimeMonths}-month lead`);
+      const work = streams.map((x) => `${num(x.annualVolume)} ${x.unit} × ${x.handlingMinutesPerUnit >= 60 ? `${parseFloat((x.handlingMinutesPerUnit / 60).toFixed(1))} h` : `${x.handlingMinutesPerUnit} min`}`).join(', ');
+      return `${work || 'initiative work only'}; ${t.currentFte} people at a ${pct(t.targetUtilization)} target, ${pct(t.shrinkage)} shrinkage, ${pct(t.annualAttrition)} attrition${inits.length ? `; ${inits.join(', ')}` : ''}${hires.length ? `; ${hires.join(', ')}` : ''}.`;
+    }
+    if (c.kind === 'sequencing' && c.initiativeId) {
+      const sch = result.initiatives.find((i) => i.initiativeId === c.initiativeId)!;
+      const dep = sch.pushedBy ? model.dependencies.find((x) => x.id === sch.pushedBy!.dependencyId) : null;
+      const pred = dep ? model.initiatives.find((i) => i.id === dep.predecessorId) : null;
+      const init = model.initiatives.find((i) => i.id === c.initiativeId)!;
+      return `${init.name} planned ${monthLabel(init.startMonth)}, ${init.durationMonths} months${pred && dep ? `; depends on ${pred.name} (starts ${monthLabel(pred.startMonth)}, ${pred.durationMonths} months, ${dep.lagMonths}-month handover)` : ''}; ${money(init.revenueAtRiskUsd)} revenue at risk.`;
+    }
+    if (c.kind === 'budget') return `Team headcount × monthly cost, plus one-time lever costs, against the ${money(result.financials.annualBudgetUsd)} budget for these teams.`;
+    return '';
+  };
 
   const d = (cur: number, ref: number, fmt: (n: number) => string, worseWhenUp = true) => {
     if (isBase || Math.abs(cur - ref) < 1e-9) return undefined;
@@ -69,6 +90,7 @@ export function Hold() {
         <b>{v.headline}</b> {v.sentences.join(' ')}
       </p>
       {v.versus && <p className="versus">{v.versus}</p>}
+      <p className="readme">This page is the summary: the answer above, then what breaks and when, then where. Steps 2 to 5 are the detail behind each piece. {isFixture ? 'Atlas Systems is fictional; ' : ''}every figure is computed from the inputs on <a href={href('#/plan')}>Your numbers</a>, nothing is typed in, and it all recomputes when you change anything.</p>
 
       <div className="metrics">
         <Metric label="Revenue target" value={money(model.strategy.revenueTargetUsd)} delta={{ text: `${pct(model.strategy.growthTargetPct)} revenue growth, year over year`, dir: 'flat' }} />
@@ -87,7 +109,7 @@ export function Hold() {
         <div className="sec-head">
           <div>
             <h2>What breaks, and when</h2>
-            <p className="sub">Every constraint is computed from the monthly model. {order === 'date' ? 'In date order: the month each one starts.' : 'Ranked by what each one costs.'} Click one to see why.</p>
+            <p className="sub">{order === 'date' ? 'In date order: the month each one starts.' : 'Ranked by what each one costs.'} Each card says which inputs it came from. Detail: <a href={href(s.firstBreakTeamId ? `#/why/${s.firstBreakTeamId}` : '#/why/initiatives')}>step 2, Why →</a></p>
           </div>
           <div className="seg" role="group" aria-label="Order">
             <button className={order === 'date' ? 'on' : ''} onClick={() => setOrder('date')}>By date</button>
@@ -111,6 +133,7 @@ export function Hold() {
                       <span className="k">{c.kind === 'sequencing' ? <Term k="sequencing">sequencing</Term> : c.kind}</span>
                     </div>
                     <div className="w">{c.detail}</div>
+                    <div className="from"><span>From</span> {provenance(c)} <a href={href('#/plan')}>Change these →</a></div>
                   </div>
                   <div className="i">
                     <b>{c.businessImpactUsd > 0 ? money(c.businessImpactUsd) : '—'}</b>
@@ -126,7 +149,7 @@ export function Hold() {
 
       <section className="sec">
         <h2>Where and when</h2>
-        <p className="sub"><Term k="utilization">Utilization</Term> by team and month. A colored cell is above that team's own <Term k="target">target</Term>. Click a team to open its year.</p>
+        <p className="sub"><Term k="utilization">Utilization</Term> by team and month, computed from each team's workload and headcount. A colored cell is above that team's own <Term k="target">target</Term>. Click a team to open its year. Detail: <a href={href('#/why/workforce')}>step 2, the workforce →</a></p>
         <div className="tbl-wrap">
           <table className="strip-t">
             <thead>
