@@ -48,6 +48,7 @@ export function Story() {
 
   // Constraints in date order for beat 3.
   const dated = useMemo(() => [...result.constraints].sort((a, b) => ((a.firstMonth ? idx(a.firstMonth) : 99) - (b.firstMonth ? idx(b.firstMonth) : 99)) || b.businessImpactUsd - a.businessImpactUsd), [result.constraints, model.calendar.startMonth]);
+  const rankTag = (id: string) => { const i = result.constraints.findIndex((c) => c.id === id); return i === 0 ? 'primary' : i === 1 ? 'secondary' : null; };
 
   // The "what would you try first" choices, read from the model.
   const choices = useMemo(() => {
@@ -105,8 +106,12 @@ export function Story() {
           {changed && (
             <div className="changed">
               <b>What changed</b>
-              <p className="changed-cause">{changed.cause}</p>
-              <ul>{changed.effects.map((e) => <li key={e}>{e}</li>)}</ul>
+              <ol className="chain-v">
+                <li className="cause"><span className="cl">Cause</span><span className="cv">{changed.cause}</span></li>
+                {changed.steps.map((st) => (
+                  <li key={st.label}><span className="cl">{st.label}</span><span className="cv"><s>{st.from}</s> → <em>{st.to}</em>{st.note ? <i> {st.note}</i> : null}</span></li>
+                ))}
+              </ol>
               <button className="linkbtn small" onClick={() => dispatch({ type: 'reset' })}>Back to the base plan</button>
             </div>
           )}
@@ -119,13 +124,13 @@ export function Story() {
       body: (
         <>
           <h2>{dated.length === 0 ? 'Nothing breaks.' : dated[0].teamId ? `${teamName(dated[0].teamId)}, in ${monthLabel(dated[0].firstMonth!)}.` : `${dated[0].title}.`}</h2>
-          <p className="small">In date order. Click one to see it on the stage.</p>
+          <p className="small">In date order. Primary and secondary are the two that cost the most. Click one to see it on the stage.</p>
           <ol className="beat-cons">
             {dated.map((c) => (
               <li key={c.id} className={'bc' + ((c.teamId && c.teamId === focusTeam) ? ' on' : '')} data-kind={c.kind}>
                 <button onClick={() => { if (c.teamId) { dispatch({ type: 'team', id: c.teamId }); setOverride({ kind: 'team', teamId: c.teamId }); } else setOverride({ kind: 'initiatives' }); }}>
                   <span className="bc-when">{c.firstMonth ? monthLabel(c.firstMonth) : '—'}</span>
-                  <span className="bc-t">{c.title}</span>
+                  <span className="bc-t">{c.title}{rankTag(c.id) && <em className="bc-tag">{rankTag(c.id)}</em>}</span>
                   <span className="bc-i">{c.businessImpactUsd > 0 ? `${money(c.businessImpactUsd)} at stake` : ''}</span>
                 </button>
               </li>
@@ -198,7 +203,7 @@ export function Story() {
         <>
           <h2>The record.</h2>
           <p className="small">Written by the model from what you selected, including what would change its mind.</p>
-          <button className="btn small" onClick={() => { void navigator.clipboard.writeText(record).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1500); }); }}>{copied ? 'Copied' : 'Copy the record'}</button>
+          <div className="btns"><button className="btn small" onClick={() => { void navigator.clipboard.writeText(record).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1500); }); }}>{copied ? 'Copied' : 'Copy the record'}</button><a className="btn ghost small" href={'#/summary' + (window.location.hash.includes('?') ? '?' + window.location.hash.split('?')[1] : '')}>One-page summary →</a></div>
 
         </>
       ),

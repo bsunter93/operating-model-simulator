@@ -6,6 +6,7 @@ import { TeamTimeline } from './charts/TeamTimeline';
 import { StatusPill } from './StatusPill';
 import { Term } from './Term';
 import { HowCalc } from './HowCalc';
+import { sensitivity } from '../lib/sensitivity';
 import { money, monthLabel, num, pct } from '../lib/format';
 import { verdict } from '../lib/verdict';
 import { Portfolio } from '../views/Portfolio';
@@ -43,7 +44,7 @@ function MapStage({ focusTeam, onTeam }: { focusTeam?: string | null; onTeam: (i
   const nowIdx = result.months.indexOf(nowKey);
   return (
     <div className="stage-in">
-      <div className="stage-head"><b>Where and when</b><span><Term k="utilization">Utilization</Term> by team and month. Colored cells are over each team's own target. Click a team to see its year.</span></div>
+      <div className="stage-q"><h3>When do we run out of capacity?</h3><p>{result.summary.firstBreakTeamId ? <>{teamName(result.summary.firstBreakTeamId)} crosses its capacity in <b>{monthLabel(result.summary.firstBreakMonth!)}</b>; {result.summary.teamsConstrained} of {result.teams.length} teams do at some point in the year.</> : <>No team crosses its capacity this year.</>} <Term k="utilization">Utilization</Term> by team and month; click a team to see its year.</p></div>
       <div className="tbl-wrap">
         <table className="strip-t big">
           <thead><tr><th>Team</th>{result.months.map((m, i) => <th key={m} className={i === nowIdx ? 'now' : ''}>{monthLabel(m)}{i === nowIdx && <em>now</em>}</th>)}</tr></thead>
@@ -79,9 +80,9 @@ function TeamStage({ teamId, ghost, onTeam, onMap }: { teamId: string; ghost?: b
   const showGhost = ghost !== false && state.interventionIds.length > 0;
   return (
     <div className="stage-in">
-      <div className="stage-head">
-        <b><select className="teampick" value={teamId} onChange={(e) => onTeam(e.target.value)} aria-label="Team">{model.teams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</select> <StatusPill status={team.worstStatus} /></b>
-        <span><button className="linkbtn" onClick={onMap}>← all teams</button></span>
+      <div className="stage-q">
+        <h3>How much work, against how many people? <select className="teampick" value={teamId} onChange={(e) => onTeam(e.target.value)} aria-label="Team">{model.teams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</select> <StatusPill status={team.worstStatus} /></h3>
+        <p>{firstOver ? <>{def.name} is over capacity from <b>{monthLabel(firstOver.month)}</b>{lastOver && lastOver !== firstOver ? <> through <b>{monthLabel(lastOver.month)}</b></> : null}, peaking at <b>{pct(team.peakUtilization)}</b> in {monthLabel(team.peakMonth)}.</> : <>{def.name} stays within capacity all year, peaking at {pct(team.peakUtilization)} in {monthLabel(team.peakMonth)}.</>} <button className="linkbtn" onClick={onMap}>← all teams</button></p>
       </div>
       <div className="chart">
         <div className="chart-title"><b>Hours of work against what the team can handle</b><span>{streams.length ? streams.map((s) => { const h = s.handlingMinutesPerUnit / 60; return `${num(s.annualVolume)} ${s.unit} × ${h >= 1 ? `${parseFloat(h.toFixed(1))} h` : `${s.handlingMinutesPerUnit} min`}`; }).join(' · ') : 'initiative work only'}</span></div>
@@ -109,8 +110,7 @@ function ScenariosStage() {
   const v = verdict(cur.result, teamName, initName, cur.scenario.type === 'base' ? undefined : base);
   return (
     <div className="stage-in">
-      <div className="stage-head"><b>Every scenario, side by side</b><span>{active.length ? `with your ${active.length} lever${active.length > 1 ? 's' : ''} on` : 'as planned'} · click a column to select it</span></div>
-      <div className="callout"><b>Under “{cur.scenario.name}”: {v.headline}</b> {v.sentences.join(' ')} {v.versus ?? ''}</div>
+      <div className="stage-q"><h3>How does the plan hold up if the world changes?</h3><p>Under <b>{cur.scenario.name}</b>: <b>{v.headline}</b> {v.sentences[0]} {active.length ? `Your ${active.length} lever${active.length > 1 ? 's are' : ' is'} on in every column.` : ''} Click a column to select it.</p></div>
       <div className="tbl-wrap">
         <table className="tbl cmp">
           <thead><tr><th>Measure</th>{rows.map(({ scenario }) => <th key={scenario.id} className={scenario.id === state.scenarioId ? 'sel' : ''}><button onClick={() => dispatch({ type: 'scenario', id: scenario.id })}>{scenario.name}</button></th>)}</tr></thead>
@@ -148,7 +148,7 @@ function RankingStage() {
   const scen = model.scenarios.find((s) => s.id === state.scenarioId)!;
   return (
     <div className="stage-in">
-      <div className="stage-head"><b>Every option against doing nothing, under “{scen.name}”</b><span>ranked by the weights in the story · cost {pct(state.weights.cost)}, speed {pct(state.weights.speed)}, exposure {pct(state.weights.revenueExposure)}</span></div>
+      <div className="stage-q"><h3>Which option, given what matters to you?</h3><p>{rows[0] && rows[0].id !== 'do-nothing' ? <>Top by your weights: <b>{rows[0].label}</b>.</> : <>By your weights, nothing beats doing nothing.</>} Under {scen.name}; cost {pct(state.weights.cost)}, speed {pct(state.weights.speed)}, exposure {pct(state.weights.revenueExposure)}.</p></div>
       <div className="tbl-wrap">
         <table className="tbl dec">
           <thead><tr><th>#</th><th>Option</th><th><Term k="cost">Added cost</Term></th><th><Term k="speed">Hours still over capacity</Term></th><th><Term k="exposure">Revenue exposure</Term></th><th><Term k="score">Score</Term></th></tr></thead>
@@ -169,13 +169,40 @@ function RankingStage() {
   );
 }
 
+function Tornado() {
+  const { state, model, interventions, result } = useStore();
+  const active = interventions.filter((iv) => state.interventionIds.includes(iv.id));
+  const scen = model.scenarios.find((s) => s.id === state.scenarioId)!;
+  const rows = useMemo(() => sensitivity(model, scen, active, result), [model, scen, active, result]);
+  const max = Math.max(1, ...rows.map((r) => Math.abs(r.gapHours)));
+  return (
+    <div className="tornado">
+      <h4 className="h4">What actually moves the answer</h4>
+      <p className="note">Each row nudges one assumption and reruns the model. Bars are the change in hours over capacity across all teams; the number after is the change in peak shortfall.</p>
+      <table className="tbl torn">
+        <tbody>
+          {rows.map((r) => (
+            <tr key={r.variable}>
+              <td className="ink left">{r.variable} <span className="dim">{r.change}</span></td>
+              <td className="tbar"><span className={'tb' + (r.gapHours >= 0 ? ' worse' : ' better')} style={{ width: `${(Math.abs(r.gapHours) / max) * 100}%` }} /></td>
+              <td className={r.gapHours >= 0 ? 'ink' : ''}>{r.gapHours >= 0 ? '+' : '−'}{Math.round(Math.abs(r.gapHours)).toLocaleString()} h</td>
+              <td className="dim">{r.shortfall >= 0 ? '+' : '−'}{Math.abs(r.shortfall).toFixed(1)} people</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 function RecordStage({ text, thresholds }: { text: string; thresholds: string[] }) {
   return (
     <div className="stage-in">
-      <div className="stage-head"><b>The decision record</b><span>written by the model from what you selected</span></div>
+      <div className="stage-q"><h3>What would I sign, and what would change my mind?</h3><p>Written by the model from what you selected. Thresholds are found by rerunning it until the answer flips.</p></div>
       <pre className="record">{text}</pre>
       <h4 className="h4">What would change my mind</h4>
       <ul className="th">{thresholds.map((t) => <li key={t}>{t}</li>)}</ul>
+      <Tornado />
       <HowCalc kind="record" />
     </div>
   );
