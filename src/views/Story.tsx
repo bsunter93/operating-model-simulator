@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
-import { monthIndex } from '../engine';
+import { monthIndex, run } from '../engine';
 import type { DecisionWeights } from '../models/types';
 import { customIntervention, useStore } from '../state/store';
 import { Board } from '../components/Board';
@@ -10,7 +10,6 @@ import { Loop } from '../components/Loop';
 import { Tornado } from '../components/Tornado';
 import { verdict } from '../lib/verdict';
 import { thresholds } from '../lib/thresholds';
-import { effectsFor } from '../lib/effects';
 import { whatChanged } from '../lib/whatChanged';
 import { money, monthLabel, num, pct } from '../lib/format';
 
@@ -64,8 +63,27 @@ export function Story() {
     return out;
   }, [model, focusTeam, teamName, initName]);
   const choiceEffects = useMemo(() => {
-    const cands = choices.map((c) => interventions.find((iv) => iv.id === c.ids[0]) ?? customIntervention(model, c.ids[0].split(':')[0], c.ids[0].split(':')[1] as 'hire' | 'automate' | 'target')!).filter(Boolean);
-    return effectsFor(model, state.scenarioId, cands, [], doNothing, teamName, focusTeam);
+    const out = new Map<string, string>();
+    const before = doNothing.teams.find((t) => t.teamId === focusTeam)!;
+    for (const c of choices) {
+      const iv = interventions.find((x) => x.id === c.ids[0]) ?? customIntervention(model, c.ids[0].split(':')[0], c.ids[0].split(':')[1] as 'hire' | 'automate' | 'target');
+      if (!iv) continue;
+      const r = run(model, { scenario: state.scenarioId, interventions: [iv] });
+      const after = r.teams.find((t) => t.teamId === focusTeam)!;
+      const parts: string[] = [];
+      const landB = before.months.find((m) => m.hiresLanded > 0)?.month, landA = after.months.find((m) => m.hiresLanded > 0)?.month;
+      if (iv.type === 'expediteHiring') parts.push(landA && landB ? `The planned hires land in ${monthLabel(landA)} instead of ${monthLabel(landB)}.` : 'No planned hires to bring forward in this scenario.');
+      if (iv.type === 'hire') { const extra = after.months.find((m, i) => m.hiresLanded > before.months[i].hiresLanded); parts.push(extra ? `${iv.headcount} more people land in ${monthLabel(extra.month)}.` : `${iv.headcount} more people, but they land after the year ends.`); }
+      if (iv.type === 'automation') parts.push(`${pct(iv.workloadReductionRate)} of the hours go away from ${monthLabel(after.months[Math.min(11, iv.timeToImpactMonths)].month)}.`);
+      if (iv.type === 'reallocation') parts.push(`${iv.headcount} people arrive in ${monthLabel(after.months[Math.min(11, iv.timeToImpactMonths)].month)}; ${teamName(iv.fromTeamId)} loses them.`);
+      if (iv.type === 'defer') { const a = r.initiatives.find((x) => x.initiativeId === iv.initiativeId)!, b = doNothing.initiatives.find((x) => x.initiativeId === iv.initiativeId)!; parts.push(a.effectiveStart === b.effectiveStart ? `Nothing moves: a dependency already holds it to ${monthLabel(a.effectiveStart ?? '')}.` : `It starts ${monthLabel(a.effectiveStart ?? '')} instead of ${monthLabel(b.effectiveStart ?? '')}.`); }
+      if (iv.type === 'cancel') parts.push('Its people go back to their teams.');
+      if (iv.type === 'serviceLevelChange') parts.push(`The target moves to ${pct(iv.newTargetUtilization)}; the work does not move.`);
+      if (after.monthsConstrained === before.monthsConstrained && Math.abs(after.peakUtilization - before.peakUtilization) < 0.005) parts.push(`No change for ${teamName(focusTeam)}.`);
+      else parts.push(`Over capacity ${before.monthsConstrained} → ${after.monthsConstrained} months, peak ${pct(before.peakUtilization)} → ${pct(after.peakUtilization)}.`);
+      out.set(c.ids[0], parts.join(' '));
+    }
+    return out;
   }, [choices, interventions, model, state.scenarioId, doNothing, teamName, focusTeam]);
   const chosen = choices.find((c) => c.ids.every((id) => state.interventionIds.includes(id)) && state.interventionIds.length === c.ids.length)?.id ?? null;
 
@@ -132,19 +150,36 @@ export function Story() {
     },
     {
       id: 'levers', eyebrow: '4 · Levers',
-      body: (
-        <>
-          <h2>Pick what you would do for {teamName(focusTeam)}.</h2>
-          <p className="small">Each option runs through the same model; the line under it says what it does. They stack. Sizes and the plan's own options are in the Levers box under the board.</p>
-          <div className="choices">
-            {choices.map((c) => (
-              <button key={c.id} className={'choice' + (chosen === c.id ? ' on' : '')} onClick={() => dispatch({ type: 'setInterventions', ids: c.ids })}>
-                <b>{c.label}</b><small>{choiceEffects.get(c.ids[0]) ?? ''}</small>
-              </button>
-            ))}
-          </div>
-        </>
-      ),
+      body: (() => {
+        const t0 = doNothing.teams.find((x) => x.teamId === focusTeam)!;
+        const t1 = result.teams.find((x) => x.teamId === focusTeam)!;
+        const first = t0.months.find((m) => m.status === 'constrained' || m.status === 'severe');
+        const last = [...t0.months].reverse().find((m) => m.status === 'constrained' || m.status === 'severe');
+        const land = t0.months.find((m) => m.hiresLanded > 0);
+        const plannedN = model.hiringPlan.filter((h) => h.teamId === focusTeam).reduce((a, h) => a + h.headcount, 0);
+        return (
+          <>
+            <h2>{first ? `${teamName(focusTeam)} runs out of people in ${monthLabel(first.month)}.` : `${teamName(focusTeam)} holds all year.`}</h2>
+            <p>{first ? <>Under <b>{scen.name}</b> it is over capacity from {monthLabel(first.month)}{last && last !== first ? ` through ${monthLabel(last.month)}` : ''}, {Math.round(t0.peakWorkforceGap)} people short at the worst point.{plannedN > 0 && land ? <> The plan already hires {plannedN}; they land in <b>{monthLabel(land.month)}</b>, so the question is what covers the months before that.</> : plannedN > 0 ? <> The plan's {plannedN} hires are cancelled in this scenario.</> : <> The plan has no hires for this team.</>}</> : <>Nothing to fix here. Pick another team in the Team box under the board, or try a harder constraint above.</>}</p>
+            <h3 className="h3">What would you do about it?</h3>
+            <p className="small">Pick one. Each runs through the same model, and the board shows the change (dashed bars are before).</p>
+            <div className="choices">
+              {choices.map((c) => (
+                <button key={c.id} className={'choice' + (chosen === c.id ? ' on' : '')} onClick={() => dispatch({ type: 'setInterventions', ids: c.ids })}>
+                  <b>{c.label}</b><small className="plain">{choiceEffects.get(c.ids[0]) ?? ''}</small>
+                </button>
+              ))}
+            </div>
+            {activeLevers.length > 0 && (
+              <p className="picked">
+                <b>{activeLevers.map((iv) => iv.name).join(' + ')}.</b> {teamName(focusTeam)} is now over capacity for {t1.monthsConstrained} month{t1.monthsConstrained === 1 ? '' : 's'} (was {t0.monthsConstrained}), peak {pct(t1.peakUtilization)} (was {pct(t0.peakUtilization)}).
+                {' '}<button className="linkbtn" onClick={() => document.querySelector('.tray')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}>Change the size or add another lever ↓</button>
+              </p>
+            )}
+            {activeLevers.length === 0 && <p className="small">Sizes, and the plan's own options, are in the Levers box under the board. <button className="linkbtn" onClick={() => document.querySelector('.tray')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}>Open it ↓</button></p>}
+          </>
+        );
+      })(),
     },
     {
       id: 'result', eyebrow: `5 · Result: can ${model.name} execute the ${year} plan?`,

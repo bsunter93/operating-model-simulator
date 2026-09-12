@@ -695,3 +695,8 @@ button.cell{cursor:pointer}
 .beat .loop{max-width:100%;margin:8px 0}
 .tray{max-height:none;overflow:visible}
 @media (max-width:980px){.stage{position:static;max-height:none}}
+
+.choice small.plain{font:400 12.5px/1.45 var(--sans);color:var(--body);letter-spacing:0}
+.choice.on small.plain{color:var(--ink)}
+.picked{font-size:13.5px;line-height:1.5;color:var(--body);background:var(--accent-soft);border-left:3px solid var(--accent);padding:10px 12px;border-radius:0 3px 3px 0;margin:10px 0 0}
+.picked b{color:var(--ink)}
