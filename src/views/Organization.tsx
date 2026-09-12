@@ -2,7 +2,6 @@ import { useMemo } from 'react';
 import { comparePooling } from '../engine';
 import type { PoolingAssumptions } from '../models/types';
 import { href, useStore } from '../state/store';
-import { WhyTabs } from './Why';
 import { Term } from '../components/Term';
 import { pct } from '../lib/format';
 
@@ -47,8 +46,7 @@ export function Organization() {
 
   return (
     <main className="main one">
-      <div className="eyebrow">2 · Why</div>
-      <WhyTabs active="organization" />
+      
       <h1 className="title">Pods or one pool?</h1>
       <p className="lede">
         The same work needs a different number of people depending on how it is organized. A dedicated pod per client keeps context but each pod carries its own reserve. One pool shares the reserve but pays a <Term k="contextPenalty">context penalty</Term> on work where the person does not know the client. This page runs both with the same queueing model as <a href="https://bensunter.com/pods-or-pooled.html">Half a Day of Nothing</a>.

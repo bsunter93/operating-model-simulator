@@ -1,5 +1,4 @@
 import { href, useStore } from '../state/store';
-import { WhyTabs } from './Why';
 import { BarLine } from '../components/charts/BarLine';
 import { Term } from '../components/Term';
 import { monthLabel, num, pct } from '../lib/format';
@@ -37,8 +36,7 @@ export function Workforce() {
 
   return (
     <main className="main one">
-      <div className="eyebrow">2 · Why</div>
-      <WhyTabs active="workforce" />
+      
       <h1 className="title">The workforce</h1>
       <p className="lede">
         Headcount changes every month. People leave at the <Term k="attrition">attrition</Term> rate and hires arrive after their <Term k="leadTime">lead time</Term>. This page shows who is actually available each month, and when.

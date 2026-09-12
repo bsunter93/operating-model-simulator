@@ -62,7 +62,7 @@ export function ModelView() {
 
   return (
     <main className="main">
-      <div className="eyebrow">6 · Your numbers</div>
+      <div className="eyebrow">Your numbers</div>
       <h1 className="title">Make it your organization</h1>
       <p className="lede">
         Every page runs on the numbers below. Change a team's headcount or a stream's volume and the whole model recomputes. For a different organization altogether, export this model as JSON, edit it, and import it back.

@@ -1,5 +1,4 @@
 import { href, useStore } from '../state/store';
-import { WhyTabs } from './Why';
 import { Term } from '../components/Term';
 import { money, monthLabel } from '../lib/format';
 import { monthIndex } from '../engine';
@@ -20,8 +19,7 @@ export function Portfolio() {
 
   return (
     <main className="main one">
-      <div className="eyebrow">2 · Why</div>
-      <WhyTabs active="initiatives" />
+      
       <h1 className="title">The initiatives</h1>
       <p className="lede">
         Each initiative takes people from teams while it runs. The lighter bar is when the plan says it happens; the solid bar is when the model says it can, once dependencies are respected.

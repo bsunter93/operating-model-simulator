@@ -1,5 +1,4 @@
 import { href, useStore } from '../state/store';
-import { WhyTabs } from './Why';
 import { BarLine } from '../components/charts/BarLine';
 import { Term } from '../components/Term';
 import { money, monthLabel, num, pct } from '../lib/format';
@@ -22,8 +21,7 @@ export function Cost() {
 
   return (
     <main className="main one">
-      <div className="eyebrow">2 · Why</div>
-      <WhyTabs active="cost" />
+      
       <h1 className="title">The cost</h1>
       <p className="lede">
         Three numbers. What the plan costs against its <Term k="budget">cap</Term>. What the capacity shortfall costs, priced as the hours over capacity at each team's loaded rate. And what any fix adds.

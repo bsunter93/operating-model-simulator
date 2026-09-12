@@ -1,0 +1,305 @@
+import { useEffect, useMemo, useRef, useState } from 'react';
+import type { ReactNode } from 'react';
+import { monthIndex } from '../engine';
+import type { DecisionWeights } from '../models/types';
+import { customIntervention, useStore } from '../state/store';
+import { Stage } from '../components/Stage';
+import type { StageView } from '../components/Stage';
+import { Levers } from '../components/Levers';
+import { Term } from '../components/Term';
+import { Loop } from '../components/Loop';
+import { TEMPLATES } from '../data/templates';
+import { verdict } from '../lib/verdict';
+import { thresholds } from '../lib/thresholds';
+import { effectsFor } from '../lib/effects';
+import { money, monthLabel, num, pct } from '../lib/format';
+
+const people = (n: number) => (Math.round(n) === 1 ? '1 person' : `${Math.round(n)} people`);
+
+interface Beat { id: string; eyebrow: string; stage: (ctx: { team: string }) => StageView; body: ReactNode }
+
+function WeightSliders({ weights, onChange }: { weights: DecisionWeights; onChange: (w: DecisionWeights) => void }) {
+  const set = (key: keyof DecisionWeights, v: number) => {
+    const others = (['cost', 'speed', 'revenueExposure'] as const).filter((k) => k !== key);
+    const rest = 1 - v; const sumOthers = others.reduce((s, k) => s + weights[k], 0);
+    const next = { ...weights, [key]: v } as DecisionWeights;
+    for (const k of others) next[k] = sumOthers > 0 ? (weights[k] / sumOthers) * rest : rest / 2;
+    onChange(next);
+  };
+  const row = (key: keyof DecisionWeights, label: string, term: 'cost' | 'speed' | 'exposure') => (
+    <label className="wrow" key={key}><span className="wl"><Term k={term}>{label}</Term></span><input type="range" min={0} max={100} step={1} value={Math.round(weights[key] * 100)} onChange={(e) => set(key, Number(e.target.value) / 100)} /><span className="wv">{Math.round(weights[key] * 100)}%</span></label>
+  );
+  return <div className="weights">{row('cost', 'Cost', 'cost')}{row('speed', 'Speed', 'speed')}{row('revenueExposure', 'Revenue exposure', 'exposure')}</div>;
+}
+
+export function Story() {
+  const { state, dispatch, model, result, base, doNothing, interventions, teamName, initName, isFixture, isBase } = useStore();
+  const s = result.summary;
+  const focusTeam = state.teamId ?? s.firstBreakTeamId ?? model.teams[0].id;
+  const [active, setActive] = useState(0);
+  const [override, setOverride] = useState<StageView | null>(null);
+  const beatRefs = useRef<(HTMLElement | null)[]>([]);
+  const v = verdict(result, teamName, initName, isBase ? undefined : base);
+  const year = model.calendar.startMonth.slice(0, 4);
+  const idx = (k: string) => monthIndex(model.calendar.startMonth, k);
+  const activeLevers = useMemo(() => interventions.filter((iv) => state.interventionIds.includes(iv.id)), [interventions, state.interventionIds]);
+  const th = useMemo(() => thresholds(model, state.scenarioId, activeLevers, teamName), [model, state.scenarioId, activeLevers, teamName]);
+  const scen = model.scenarios.find((x) => x.id === state.scenarioId)!;
+
+  // Constraints in date order for beat 3.
+  const dated = useMemo(() => [...result.constraints].sort((a, b) => ((a.firstMonth ? idx(a.firstMonth) : 99) - (b.firstMonth ? idx(b.firstMonth) : 99)) || b.businessImpactUsd - a.businessImpactUsd), [result.constraints, model.calendar.startMonth]);
+
+  // The "what would you try first" choices, read from the model.
+  const choices = useMemo(() => {
+    const out: { id: string; label: string; ids: string[] }[] = [];
+    const exp = model.interventions.find((iv) => iv.type === 'expediteHiring' && model.hiringPlan.find((h) => h.id === iv.hiringRequestId)?.teamId === focusTeam);
+    if (exp) out.push({ id: 'expedite', label: 'Get the planned hires in sooner', ids: [exp.id] });
+    out.push({ id: 'hire', label: 'Hire more people', ids: [`${focusTeam}:hire`] });
+    out.push({ id: 'automate', label: 'Take work out of the team', ids: [`${focusTeam}:automate`] });
+    const move = model.interventions.find((iv): iv is Extract<typeof iv, { type: 'reallocation' }> => iv.type === 'reallocation' && iv.toTeamId === focusTeam);
+    if (move) out.push({ id: 'move', label: `Move people in from ${teamName(move.fromTeamId)}`, ids: [move.id] });
+    const rel = model.interventions.find((iv) => iv.type === 'defer' || iv.type === 'cancel');
+    if (rel) out.push({ id: 'portfolio', label: rel.type === 'defer' ? `Push ${initName(rel.initiativeId)} back` : `Cancel ${initName(rel.initiativeId)}`, ids: [rel.id] });
+    out.push({ id: 'target', label: 'Accept running the team hotter', ids: [`${focusTeam}:target`] });
+    return out;
+  }, [model, focusTeam, teamName, initName]);
+  const choiceEffects = useMemo(() => {
+    const cands = choices.map((c) => interventions.find((iv) => iv.id === c.ids[0]) ?? customIntervention(model, c.ids[0].split(':')[0], c.ids[0].split(':')[1] as 'hire' | 'automate' | 'target')!).filter(Boolean);
+    return effectsFor(model, state.scenarioId, cands, [], doNothing, teamName, focusTeam);
+  }, [choices, interventions, model, state.scenarioId, doNothing, teamName, focusTeam]);
+  const chosen = choices.find((c) => c.ids.every((id) => state.interventionIds.includes(id)) && state.interventionIds.length === c.ids.length)?.id ?? null;
+
+  // Decision record text.
+  const record = useMemo(() => {
+    const lines: string[] = [];
+    lines.push(`DECISION RECORD · ${model.name} · ${year} plan · scenario: ${scen.name}`, '');
+    lines.push(`Decision: ${activeLevers.length ? activeLevers.map((iv) => iv.name).join(' + ') : 'no lever selected yet'}.`);
+    lines.push(`Read: ${v.headline} ${v.sentences.join(' ')}${v.versus ? ' ' + v.versus : ''}`, '');
+    lines.push('What has to be true:');
+    if (!activeLevers.length) lines.push('  - Nothing beyond the plan as written.');
+    for (const iv of activeLevers) {
+      if (iv.type === 'expediteHiring') lines.push(`  - The planned hires can be brought in with a ${iv.newLeadTimeMonths}-month lead time for ${money(iv.oneTimeCostUsd)}.`);
+      if (iv.type === 'hire') lines.push(`  - ${iv.headcount} more people for ${teamName(iv.teamId)} can be hired and land after ${iv.leadTimeMonths} months.`);
+      if (iv.type === 'automation') lines.push(`  - ${pct(iv.workloadReductionRate)} of ${teamName(iv.teamId)}'s hours can be removed, live ${iv.timeToImpactMonths} months after kickoff, for ${money(iv.implementationCostUsd)}.`);
+      if (iv.type === 'reallocation') lines.push(`  - ${iv.headcount} people from ${teamName(iv.fromTeamId)} can do ${teamName(iv.toTeamId)}'s work after ${iv.timeToImpactMonths} month${iv.timeToImpactMonths === 1 ? '' : 's'}.`);
+      if (iv.type === 'defer') lines.push(`  - ${initName(iv.initiativeId)} can move by ${iv.months} months without losing its value.`);
+      if (iv.type === 'cancel') lines.push(`  - ${initName(iv.initiativeId)} can be dropped.`);
+      if (iv.type === 'serviceLevelChange') lines.push(`  - ${teamName(iv.teamId)} can run at ${pct(iv.newTargetUtilization)} and the service level can take it.`);
+    }
+    lines.push('', 'What would change my mind:');
+    for (const t of th) lines.push(`  - ${t.text}`);
+    lines.push('', `Generated from the model on ${new Date().toISOString().slice(0, 10)}. Every figure is recomputable from the exported JSON.`);
+    return lines.join('\n');
+  }, [model, year, scen, activeLevers, v, th, teamName, initName]);
+  const [copied, setCopied] = useState(false);
+  const recordRef = useRef(record); recordRef.current = record;
+  const thRef = useRef(th.map((t) => t.text)); thRef.current = th.map((t) => t.text);
+
+  const beats: Beat[] = [
+    {
+      id: 'plan', eyebrow: `1 · The plan`, stage: () => ({ kind: 'map', focusTeam: null }),
+      body: (
+        <>
+          <h2>{model.name} plans {pct(model.strategy.growthTargetPct)} growth with {num(model.teams.reduce((a, t) => a + t.currentFte, 0))} people.</h2>
+          <p>{model.initiatives.length} strategic initiatives, {model.hiringPlan.length} planned hiring requests, a {money(model.budget.modeledAnnualBudgetUsd)} budget for the {model.teams.length} modeled teams. {isFixture ? 'Atlas Systems is fictional.' : 'These are your numbers.'} Every figure on this page is computed from the inputs, month by month; nothing is typed in.</p>
+          <Loop />
+          <p className="small">Strategy becomes work, work becomes hours, hours become people. Decisions change the strategy and the loop runs again. <button className="linkbtn" onClick={() => setOverride({ kind: 'about' })}>How it works and what it assumes →</button></p>
+        </>
+      ),
+    },
+    {
+      id: 'verdict', eyebrow: '2 · Can it work?', stage: () => ({ kind: 'map', focusTeam: s.firstBreakTeamId }),
+      body: (
+        <>
+          <h2>{v.headline}</h2>
+          <p>{v.sentences.join(' ')}</p>
+          {v.versus && <p className="small">{v.versus}</p>}
+          {!isBase && <p className="small">Scenario: <b>{scen.name}</b>{activeLevers.length ? <>; levers on: <b>{activeLevers.map((iv) => iv.name).join(', ')}</b></> : ''}. <button className="linkbtn" onClick={() => dispatch({ type: 'reset' })}>Reset to the base plan</button></p>}
+        </>
+      ),
+    },
+    {
+      id: 'breaks', eyebrow: '3 · What breaks, and when', stage: () => ({ kind: 'map', focusTeam: focusTeam }),
+      body: (
+        <>
+          <h2>{dated.length === 0 ? 'Nothing breaks.' : dated[0].teamId ? `${teamName(dated[0].teamId)}, in ${monthLabel(dated[0].firstMonth!)}.` : `${dated[0].title}.`}</h2>
+          <p className="small">In date order. Each one is computed from the inputs on its line. Click one to put it on the stage.</p>
+          <ol className="beat-cons">
+            {dated.map((c) => (
+              <li key={c.id} className={'bc' + ((c.teamId && c.teamId === focusTeam) ? ' on' : '')} data-kind={c.kind}>
+                <button onClick={() => { if (c.teamId) { dispatch({ type: 'team', id: c.teamId }); setOverride({ kind: 'team', teamId: c.teamId }); } else setOverride({ kind: 'initiatives' }); }}>
+                  <span className="bc-when">{c.firstMonth ? monthLabel(c.firstMonth) : '—'}</span>
+                  <span className="bc-t">{c.title}</span>
+                  <span className="bc-d">{c.detail}</span>
+                  <span className="bc-i">{c.businessImpactUsd > 0 ? `${money(c.businessImpactUsd)} at stake` : ''}</span>
+                </button>
+              </li>
+            ))}
+          </ol>
+        </>
+      ),
+    },
+    {
+      id: 'why', eyebrow: '4 · Why', stage: ({ team }) => ({ kind: 'team', teamId: team, ghost: false }),
+      body: (() => {
+        const t = result.teams.find((x) => x.teamId === focusTeam)!;
+        const land = t.months.find((m) => m.hiresLanded > 0);
+        const planned = model.hiringPlan.filter((h) => h.teamId === focusTeam).reduce((a, h) => a + h.headcount, 0);
+        return (
+          <>
+            <h2>{t.monthsConstrained ? 'The work arrives before the people do.' : `${teamName(focusTeam)} holds.`}</h2>
+            <p>Bars are hours of work each month; the line is what {teamName(focusTeam)} can handle at its {pct(t.months[0].targetUtilization)} target. {t.monthsConstrained ? <>It peaks at <b>{pct(t.peakUtilization)}</b> in {monthLabel(t.peakMonth)}, {people(t.peakWorkforceGap)} short.</> : <>It peaks at {pct(t.peakUtilization)} in {monthLabel(t.peakMonth)} and stays under.</>}</p>
+            {planned > 0 && land && <p>The plan already hires <b>{planned}</b> people for this team; they land in <b>{monthLabel(land.month)}</b>. Everything before that is the problem.</p>}
+            {planned > 0 && !land && <p>The plan had {planned} hires for this team; this scenario cancels them.</p>}
+            <div className="beat-links"><span>Also on the stage:</span>
+              <button className="linkbtn" onClick={() => setOverride({ kind: 'workforce' })}>the workforce</button>
+              <button className="linkbtn" onClick={() => setOverride({ kind: 'initiatives' })}>the initiatives</button>
+              <button className="linkbtn" onClick={() => setOverride({ kind: 'cost' })}>the cost</button>
+            </div>
+          </>
+        );
+      })(),
+    },
+    {
+      id: 'try', eyebrow: '5 · What would you try first?', stage: ({ team }) => ({ kind: 'team', teamId: team, ghost: true }),
+      body: (
+        <>
+          <h2>Pick a lever.</h2>
+          <p className="small">Each one runs through the same model. The line under each says what it does to {teamName(focusTeam)}. Pick one, then add more below; they stack.</p>
+          <div className="choices">
+            {choices.map((c) => (
+              <button key={c.id} className={'choice' + (chosen === c.id ? ' on' : '')} onClick={() => dispatch({ type: 'setInterventions', ids: c.ids })}>
+                <b>{c.label}</b><small>{choiceEffects.get(c.ids[0]) ?? ''}</small>
+              </button>
+            ))}
+          </div>
+          <details className="fold small" open={state.interventionIds.length > 0}>
+            <summary>All levers, with their sizes</summary>
+            <Levers teamId={focusTeam} compact />
+          </details>
+        </>
+      ),
+    },
+    {
+      id: 'whatif', eyebrow: '6 · What if', stage: () => ({ kind: 'scenarios' }),
+      body: (
+        <>
+          <h2>Now make the world harder.</h2>
+          <p className="small">Each scenario changes the conditions and reruns the whole model. Your levers stay on. The stage shows every scenario side by side.</p>
+          <div className="choices">
+            {model.scenarios.map((sc) => (
+              <button key={sc.id} className={'choice' + (state.scenarioId === sc.id ? ' on' : '')} onClick={() => dispatch({ type: 'scenario', id: sc.id })}><b>{sc.name}</b><small>{sc.description}</small></button>
+            ))}
+          </div>
+        </>
+      ),
+    },
+    {
+      id: 'weigh', eyebrow: '7 · Weigh it', stage: () => ({ kind: 'ranking' }),
+      body: (
+        <>
+          <h2>Which option, given what matters to you?</h2>
+          <p className="small">Every option is compared on added cost, on how much of the problem is still there and for how long, and on revenue at risk. Drag the weights; the ranking on the stage follows them.</p>
+          <WeightSliders weights={state.weights} onChange={(w) => dispatch({ type: 'weights', weights: w })} />
+        </>
+      ),
+    },
+    {
+      id: 'decide', eyebrow: '8 · Decide', stage: () => ({ kind: 'record', text: record, thresholds: th.map((t) => t.text) }),
+      body: (
+        <>
+          <h2>The record.</h2>
+          <p className="small">The model writes it from what you selected: the decision, what has to be true, and what would change its mind, with thresholds found by rerunning the model until the answer flips.</p>
+          <button className="btn small" onClick={() => { void navigator.clipboard.writeText(record).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1500); }); }}>{copied ? 'Copied' : 'Copy the record'}</button>
+          <ul className="th small">{th.map((t) => <li key={t.text}>{t.text}</li>)}</ul>
+        </>
+      ),
+    },
+    {
+      id: 'yours', eyebrow: '9 · Make it yours', stage: () => ({ kind: 'plan' }),
+      body: (
+        <>
+          <h2>Your organization.</h2>
+          <p className="small">Start from a template, drag the scale, or edit any team, workload, or hire on the stage. Everything above recomputes. Nothing leaves your browser.</p>
+          <div className="choices">
+            {TEMPLATES.map((t) => {
+              const on = model.id === t.id || model.id === `${t.id}-edited`;
+              return <button key={t.id} className={'choice' + (on ? ' on' : '')} onClick={() => dispatch({ type: 'model', model: t.build() })}><b>{t.name}</b><small>{t.blurb}</small></button>;
+            })}
+          </div>
+          <div className="beat-links"><span>Also:</span><button className="linkbtn" onClick={() => setOverride({ kind: 'organization' })}>pods or one pool</button><button className="linkbtn" onClick={() => setOverride({ kind: 'about' })}>how this works</button></div>
+        </>
+      ),
+    },
+  ];
+
+  // Scroll-spy on the beats; an override clears when the active beat changes.
+  useEffect(() => {
+    const on = () => {
+      const y = window.scrollY + window.innerHeight * 0.38;
+      let cur = 0;
+      beatRefs.current.forEach((el, i) => { if (el && el.offsetTop <= y) cur = i; });
+      setActive((prev) => { if (prev !== cur) setOverride(null); return cur; });
+    };
+    on();
+    window.addEventListener('scroll', on, { passive: true });
+    window.addEventListener('resize', on);
+    return () => { window.removeEventListener('scroll', on); window.removeEventListener('resize', on); };
+  }, [model]);
+
+  // Legacy links inside stage panels (#/?p=team:x, ?go=sec-options) become stage changes.
+  useEffect(() => {
+    const on = () => {
+      const q = new URLSearchParams(window.location.hash.split('?')[1] ?? '');
+      const p = q.get('p'), go = q.get('go'), team = q.get('team');
+      if (!p && !go && !team) return;
+      if (team) dispatch({ type: 'team', id: team });
+      if (p?.startsWith('team:')) { dispatch({ type: 'team', id: p.slice(5) }); setOverride({ kind: 'team', teamId: p.slice(5) }); }
+      else if (p === 'initiatives' || p === 'workforce' || p === 'cost' || p === 'organization' || p === 'plan' || p === 'about' || p === 'scenarios' || p === 'ranking') setOverride({ kind: p });
+      else if (p === 'record') setOverride({ kind: 'record', text: recordRef.current, thresholds: thRef.current });
+      if (go === 'sec-options') beatRefs.current[4]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      if (go === 'sec-whatif') beatRefs.current[5]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      if (go === 'sec-decide') beatRefs.current[7]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      q.delete('p'); q.delete('go'); q.delete('team');
+      const str = q.toString();
+      history.replaceState(null, '', '#/' + (str ? '?' + str : ''));
+    };
+    on();
+    window.addEventListener('hashchange', on);
+    return () => window.removeEventListener('hashchange', on);
+  }, [dispatch]);
+
+  // Deep links: #beat-<id> scrolls to that beat once the page exists.
+  useEffect(() => {
+    const m = /^#beat-([a-z]+)/.exec(window.location.hash);
+    if (!m) return;
+    const i = beats.findIndex((b) => b.id === m[1]);
+    if (i >= 0) setTimeout(() => beatRefs.current[i]?.scrollIntoView({ block: 'start' }), 60);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const view: StageView = override ?? beats[active].stage({ team: focusTeam });
+  const onTeam = (id: string) => { dispatch({ type: 'team', id }); setOverride({ kind: 'team', teamId: id, ghost: active >= 4 }); };
+  const goTo = (i: number) => beatRefs.current[i]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+  return (
+    <div className="shell">
+      <nav className="dots" aria-label="Story">
+        {beats.map((b, i) => <button key={b.id} className={i === active ? 'on' : i < active ? 'done' : ''} onClick={() => goTo(i)} title={b.eyebrow} aria-label={b.eyebrow} />)}
+      </nav>
+      <div className="story">
+        {beats.map((b, i) => (
+          <section key={b.id} ref={(el) => { beatRefs.current[i] = el; }} className={'beat' + (i === active ? ' on' : '')} id={`beat-${b.id}`}>
+            <div className="eyebrow">{b.eyebrow}</div>
+            {b.body}
+            {i < beats.length - 1 && <button className="next-beat" onClick={() => goTo(i + 1)}>Next: {beats[i + 1].eyebrow.replace(/^\d+ · /, '')} ↓</button>}
+          </section>
+        ))}
+      </div>
+      <div className="stage">
+        {override && <button className="stage-back" onClick={() => setOverride(null)}>← back to the story's view</button>}
+        <Stage view={view} onTeam={onTeam} onMap={() => setOverride({ kind: 'map', focusTeam })} />
+      </div>
+    </div>
+  );
+}
