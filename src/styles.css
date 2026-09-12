@@ -363,3 +363,19 @@ th .term:hover:after{font-weight:400}
 .errors.warn{border-left-color:var(--warm);background:var(--warm-soft);margin:0 0 22px}
 
 .purpose-method{display:block;margin-top:8px;font-size:12.5px;color:var(--muted);line-height:1.45}
+
+/* what breaks, and when */
+.sec-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:3px;overflow:hidden;flex:none;margin-top:4px}
+.seg button{font:500 12px/1 var(--sans);color:var(--muted);padding:7px 10px;background:var(--surface)}
+.seg button.on{background:var(--tint);color:var(--ink)}
+.con.dated{grid-template-columns:64px minmax(0,1fr) auto}
+.con .when{display:grid;align-content:start;gap:2px}
+.con .when b{font:600 18px/1.1 var(--display);color:var(--ink);letter-spacing:-.01em}
+.con .when span{font:500 10.5px/1 var(--mono);letter-spacing:.08em;color:var(--muted)}
+.con .when.same b,.con .when.same span{opacity:.35}
+.strip-t th.now{color:var(--alert);position:relative}
+.strip-t th.now em{display:block;font-style:normal;font:500 9px/1 var(--mono);letter-spacing:.14em;color:var(--alert);margin-top:3px}
+.strip-t td.now .cell{box-shadow:inset 0 0 0 1px var(--alert);}
+.strip-t td.now{background:var(--alert-soft)}
+.legend i.nowline{background:var(--alert-soft);border:1px solid var(--alert)}
