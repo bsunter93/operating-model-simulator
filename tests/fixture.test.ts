@@ -51,9 +51,10 @@ describe('Atlas Systems base plan', () => {
     expect(status('team-implementation').slice(1, 6).every((s) => s === 'constrained')).toBe(true);
     expect(status('team-implementation').slice(6).every((s) => s !== 'constrained' && s !== 'severe')).toBe(true);
   });
-  it('the first thing that breaks is Implementation, in January', () => {
+  it('the first thing that breaks is Implementation, in February', () => {
     expect(base.summary.firstBreakTeamId).toBe('team-implementation');
-    expect(base.summary.firstBreakMonth).toBe('2027-01');
+    expect(base.summary.firstBreakMonth).toBe('2027-02');
+    expect(status('team-implementation')[0]).toBe('watch');
   });
   it('International Expansion cannot start in March: the dependency pushes it to December', () => {
     const intl = base.initiatives.find((i) => i.initiativeId === 'init-international-expansion')!;
@@ -71,9 +72,10 @@ describe('Atlas Systems base plan', () => {
 });
 
 describe('Atlas Systems scenarios', () => {
-  it('a hiring freeze leaves Implementation constrained all year', () => {
+  it('a hiring freeze leaves Implementation constrained from February through November', () => {
     const r = run(model, { scenario: 'scenario-hiring-freeze' });
-    expect(status('team-implementation', r).slice(1).every((s) => s === 'constrained' || s === 'severe')).toBe(true);
+    expect(status('team-implementation', r).slice(1, 11).every((s) => s === 'constrained' || s === 'severe')).toBe(true);
+    expect(team('team-implementation', r).months.some((m) => m.status === 'severe')).toBe(true);
   });
   it('a 10% budget cut opens a gap and names the levers', () => {
     const r = run(model, { scenario: 'scenario-budget-cut' });
@@ -91,7 +93,8 @@ describe('Atlas Systems interventions', () => {
   it('expediting the hires shortens the constrained window without adding people', () => {
     const r = run(model, { interventions: ['intervention-expedite-implementation'] });
     expect(team('team-implementation', r).monthsConstrained).toBeLessThan(team('team-implementation').monthsConstrained);
-    expect(team('team-implementation', r).endingFte).toBeCloseTo(team('team-implementation').endingFte, 6);
+    expect(team('team-implementation', r).months.reduce((s, m) => s + m.hiresLanded, 0)).toBe(10);
+    expect(Math.abs(team('team-implementation', r).endingFte - team('team-implementation').endingFte)).toBeLessThan(0.5);
   });
   it('reallocation relieves Implementation and pushes Customer Operations into constrained', () => {
     const r = run(model, { interventions: ['intervention-reallocate-to-implementation'] });

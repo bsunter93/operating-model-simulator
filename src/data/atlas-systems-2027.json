@@ -32,7 +32,7 @@
   },
 
   "demandStreams": [
-    { "id": "demand-enterprise-implementation", "name": "Enterprise implementations", "teamId": "team-implementation", "unit": "implementations", "annualVolume": 480, "handlingMinutesPerUnit": 8000, "complexityFactor": 1.0, "workMix": { "reusable": 0.25, "configurable": 0.55, "bespoke": 0.20 }, "seasonality": "default" },
+    { "id": "demand-enterprise-implementation", "name": "Enterprise implementations", "teamId": "team-implementation", "unit": "implementations", "annualVolume": 480, "handlingMinutesPerUnit": 7900, "complexityFactor": 1.0, "workMix": { "reusable": 0.25, "configurable": 0.55, "bespoke": 0.20 }, "seasonality": "default" },
     { "id": "demand-enterprise-account-requests", "name": "Enterprise account requests", "teamId": "team-customer-ops", "unit": "requests", "annualVolume": 48000, "handlingMinutesPerUnit": 100, "complexityFactor": 1.0, "workMix": { "reusable": 0.55, "configurable": 0.30, "bespoke": 0.15 }, "seasonality": "default" },
     { "id": "demand-consumer-cases", "name": "Consumer operations cases", "teamId": "team-consumer-ops", "unit": "cases", "annualVolume": 420000, "handlingMinutesPerUnit": 26, "complexityFactor": 1.0, "workMix": { "reusable": 0.70, "configurable": 0.25, "bespoke": 0.05 }, "seasonality": "default" },
     { "id": "demand-enterprise-support", "name": "Enterprise support cases", "teamId": "team-enterprise-support", "unit": "cases", "annualVolume": 72000, "handlingMinutesPerUnit": 28, "complexityFactor": 1.0, "workMix": { "reusable": 0.65, "configurable": 0.25, "bespoke": 0.10 }, "seasonality": "default" },
