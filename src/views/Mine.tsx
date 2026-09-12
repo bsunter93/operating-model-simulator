@@ -40,28 +40,57 @@ export function Mine() {
       {errors.length > 0 && <div className="errors"><b>That file did not load.</b><ul>{errors.slice(0, 6).map((e) => <li key={e}>{e}</li>)}</ul></div>}
 
       <div className="mine-grid">
-        <div className="mine-inputs">
+        <div className="mine-inputs five">
           <section className="card tight">
-            <h5>Teams <span>{num(totalFte)} people</span></h5>
+            <h5>Business</h5>
+            <div className="kv">
+              <label>Revenue target<N value={Math.round(model.strategy.revenueTargetUsd / 1e6)} width={72} onChange={(x) => edit((m) => { m.strategy.revenueTargetUsd = x * 1e6; })} /><em>$M</em></label>
+              <label>Growth<N value={Math.round(model.strategy.growthTargetPct * 100)} width={54} onChange={(x) => edit((m) => { m.strategy.growthTargetPct = x / 100; })} /><em>% y/y</em></label>
+              <label>Employees<N value={model.strategy.employeeCount} width={72} onChange={(x) => edit((m) => { m.strategy.employeeCount = x; })} /><em>total</em></label>
+            </div>
+          </section>
+          <section className="card tight">
+            <h5>Economics</h5>
+            <div className="kv">
+              <label>Budget, modeled teams<N value={Math.round(model.budget.modeledAnnualBudgetUsd / 1e6)} width={72} onChange={(x) => edit((m) => { m.budget.modeledAnnualBudgetUsd = x * 1e6; })} /><em>$M / yr</em></label>
+              <label>Paid hours<N value={model.calendar.workHoursPerFteMonth} width={54} onChange={(x) => edit((m) => { m.calendar.workHoursPerFteMonth = Math.max(1, x); })} /><em>per person / mo</em></label>
+            </div>
             <div className="scroll">
-              <table className="tbl edit mini"><thead><tr><th>Team</th><th>People</th><th>Target %</th><th>Attrition %</th></tr></thead>
-                <tbody>{model.teams.map((t, i) => <tr key={t.id}><td className="ink left">{t.name}</td><td><N value={t.currentFte} onChange={(x) => edit((m) => { m.teams[i].currentFte = x; })} /></td><td><N value={Math.round(t.targetUtilization * 100)} min={1} width={54} onChange={(x) => edit((m) => { m.teams[i].targetUtilization = Math.min(100, x) / 100; })} /></td><td><N value={Math.round(t.annualAttrition * 100)} width={54} onChange={(x) => edit((m) => { m.teams[i].annualAttrition = Math.min(99, x) / 100; })} /></td></tr>)}</tbody>
+              <table className="tbl edit mini"><thead><tr><th>Team</th><th>$ / person / mo</th></tr></thead>
+                <tbody>{model.teams.map((t, i) => <tr key={t.id}><td className="ink left">{t.name}</td><td><N value={t.monthlyFteCostUsd} step={500} width={84} onChange={(x) => edit((m) => { m.teams[i].monthlyFteCostUsd = x; })} /></td></tr>)}</tbody>
               </table>
             </div>
           </section>
           <section className="card tight">
-            <h5>Work coming in</h5>
+            <h5>Customer demand</h5>
             <div className="scroll">
-              <table className="tbl edit mini"><thead><tr><th>Stream</th><th>Units / yr</th><th>Minutes each</th></tr></thead>
-                <tbody>{model.demandStreams.map((s, i) => <tr key={s.id}><td className="ink left">{s.name}</td><td><N value={s.annualVolume} width={84} onChange={(x) => edit((m) => { m.demandStreams[i].annualVolume = x; })} /></td><td><N value={s.handlingMinutesPerUnit} width={74} onChange={(x) => edit((m) => { m.demandStreams[i].handlingMinutesPerUnit = x; })} /></td></tr>)}</tbody>
+              <table className="tbl edit mini"><thead><tr><th>Stream</th><th>Units / yr</th></tr></thead>
+                <tbody>{model.demandStreams.map((s, i) => <tr key={s.id}><td className="ink left">{s.name}</td><td><N value={s.annualVolume} width={84} onChange={(x) => edit((m) => { m.demandStreams[i].annualVolume = x; })} /></td></tr>)}</tbody>
               </table>
             </div>
           </section>
           <section className="card tight">
-            <h5>Hiring plan</h5>
-            <table className="tbl edit mini"><thead><tr><th>Team</th><th>People</th><th>Lead, months</th></tr></thead>
-              <tbody>{model.hiringPlan.map((h, i) => <tr key={h.id}><td className="ink left">{teamName(h.teamId)}</td><td><N value={h.headcount} width={54} onChange={(x) => edit((m) => { m.hiringPlan[i].headcount = x; })} /></td><td><N value={h.leadTimeMonths} width={54} onChange={(x) => edit((m) => { m.hiringPlan[i].leadTimeMonths = x; })} /></td></tr>)}</tbody>
-            </table>
+            <h5>Work</h5>
+            <div className="scroll">
+              <table className="tbl edit mini"><thead><tr><th>Stream</th><th>Minutes each</th></tr></thead>
+                <tbody>{model.demandStreams.map((s, i) => <tr key={s.id}><td className="ink left">{s.name}</td><td><N value={s.handlingMinutesPerUnit} width={74} onChange={(x) => edit((m) => { m.demandStreams[i].handlingMinutesPerUnit = x; })} /></td></tr>)}</tbody>
+              </table>
+            </div>
+          </section>
+          <section className="card tight span2">
+            <h5>People <span>{num(totalFte)} today</span></h5>
+            <div className="scroll">
+              <table className="tbl edit mini"><thead><tr><th>Team</th><th>People</th><th>Target %</th><th>Attrition %</th><th>Hiring</th><th>Lead, mo</th></tr></thead>
+                <tbody>{model.teams.map((t, i) => { const hi = model.hiringPlan.findIndex((h) => h.teamId === t.id); const h = hi >= 0 ? model.hiringPlan[hi] : null; return (
+                  <tr key={t.id}><td className="ink left">{t.name}</td>
+                    <td><N value={t.currentFte} onChange={(x) => edit((m) => { m.teams[i].currentFte = x; })} /></td>
+                    <td><N value={Math.round(t.targetUtilization * 100)} min={1} width={54} onChange={(x) => edit((m) => { m.teams[i].targetUtilization = Math.min(100, x) / 100; })} /></td>
+                    <td><N value={Math.round(t.annualAttrition * 100)} width={54} onChange={(x) => edit((m) => { m.teams[i].annualAttrition = Math.min(99, x) / 100; })} /></td>
+                    <td>{h ? <N value={h.headcount} width={54} onChange={(x) => edit((m) => { m.hiringPlan[hi].headcount = x; })} /> : <span className="dim">—</span>}</td>
+                    <td>{h ? <N value={h.leadTimeMonths} width={54} onChange={(x) => edit((m) => { m.hiringPlan[hi].leadTimeMonths = x; })} /> : <span className="dim">—</span>}</td>
+                  </tr>); })}</tbody>
+              </table>
+            </div>
           </section>
         </div>
 

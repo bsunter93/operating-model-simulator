@@ -5,6 +5,7 @@ import { useStore } from '../state/store';
 import { TeamTimeline } from './charts/TeamTimeline';
 import { StatusPill } from './StatusPill';
 import { Term } from './Term';
+import { HowCalc } from './HowCalc';
 import { money, monthLabel, num, pct } from '../lib/format';
 import { verdict } from '../lib/verdict';
 import { Portfolio } from '../views/Portfolio';
@@ -59,6 +60,7 @@ function MapStage({ focusTeam, onTeam }: { focusTeam?: string | null; onTeam: (i
         </table>
       </div>
       <div className="legend"><span><i /> within capacity</span><span><i data-s="watch" /> <Term k="watch">watch</Term></span><span><i data-s="constrained" /> <Term k="constrained">over capacity</Term></span><span><i data-s="severe" /> <Term k="severe">over 100%</Term></span></div>
+      <HowCalc kind="map" />
     </div>
   );
 }
@@ -94,6 +96,7 @@ function TeamStage({ teamId, ghost, onTeam, onMap }: { teamId: string; ghost?: b
             : <><b>The plan has no hires for this team.</b> It runs over capacity from {monthLabel(firstOver.month)}{lastOver && lastOver !== firstOver ? ` through ${monthLabel(lastOver.month)}` : ''}, peaking at {pct(peak.utilization)} with {people(peak.workforceGap)} short.</>}
         </div>
       ) : <div className="callout ok"><b>{def.name} stays within capacity all year</b>{state.interventionIds.length ? ' with your levers on.' : '.'}</div>}
+      <HowCalc kind="team" />
     </div>
   );
 }
@@ -128,6 +131,7 @@ function ScenariosStage() {
           </tbody>
         </table>
       </div>
+      <HowCalc kind="scenarios" />
     </div>
   );
 }
@@ -160,6 +164,7 @@ function RankingStage() {
         </table>
       </div>
       <p className="note">Scores are relative to the options on this table, including doing nothing. An option that only moves the target scores like doing nothing: the work did not move.</p>
+      <HowCalc kind="ranking" />
     </div>
   );
 }
@@ -171,6 +176,7 @@ function RecordStage({ text, thresholds }: { text: string; thresholds: string[] 
       <pre className="record">{text}</pre>
       <h4 className="h4">What would change my mind</h4>
       <ul className="th">{thresholds.map((t) => <li key={t}>{t}</li>)}</ul>
+      <HowCalc kind="record" />
     </div>
   );
 }

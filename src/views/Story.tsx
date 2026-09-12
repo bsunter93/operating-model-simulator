@@ -10,6 +10,7 @@ import { Term } from '../components/Term';
 import { verdict } from '../lib/verdict';
 import { thresholds } from '../lib/thresholds';
 import { effectsFor } from '../lib/effects';
+import { whatChanged } from '../lib/whatChanged';
 import { money, monthLabel, num, pct } from '../lib/format';
 
 const people = (n: number) => (Math.round(n) === 1 ? '1 person' : `${Math.round(n)} people`);
@@ -43,6 +44,7 @@ export function Story() {
   const activeLevers = useMemo(() => interventions.filter((iv) => state.interventionIds.includes(iv.id)), [interventions, state.interventionIds]);
   const th = useMemo(() => thresholds(model, state.scenarioId, activeLevers, teamName), [model, state.scenarioId, activeLevers, teamName]);
   const scen = model.scenarios.find((x) => x.id === state.scenarioId)!;
+  const changed = useMemo(() => (isBase ? null : whatChanged(model, scen, activeLevers, result, base, teamName, initName)), [isBase, model, scen, activeLevers, result, base, teamName, initName]);
 
   // Constraints in date order for beat 3.
   const dated = useMemo(() => [...result.constraints].sort((a, b) => ((a.firstMonth ? idx(a.firstMonth) : 99) - (b.firstMonth ? idx(b.firstMonth) : 99)) || b.businessImpactUsd - a.businessImpactUsd), [result.constraints, model.calendar.startMonth]);
@@ -95,26 +97,25 @@ export function Story() {
 
   const beats: Beat[] = [
     {
-      id: 'plan', eyebrow: `1 · The plan`, stage: () => ({ kind: 'map', focusTeam: null }),
+      id: 'verdict', eyebrow: `1 · Can ${model.name} execute the ${year} plan?`, stage: () => ({ kind: 'map', focusTeam: s.firstBreakTeamId }),
       body: (
         <>
-          <h2>{model.name} plans {pct(model.strategy.growthTargetPct)} growth with {num(model.teams.reduce((a, t) => a + t.currentFte, 0))} people.</h2>
-          <p>{model.initiatives.length} initiatives, {model.hiringPlan.length} hiring requests, a {money(model.budget.modeledAnnualBudgetUsd)} budget. {isFixture ? 'Fictional. ' : ''}Every number here is computed from those inputs, month by month. <button className="linkbtn" onClick={() => setOverride({ kind: 'about' })}>How it works →</button></p>
+          <h2 className="verdict-big">{v.headline}</h2>
+          <p className="verdict-read">{v.sentences.slice(0, 2).join(' ')}</p>
+          {changed && (
+            <div className="changed">
+              <b>What changed</b>
+              <p className="changed-cause">{changed.cause}</p>
+              <ul>{changed.effects.map((e) => <li key={e}>{e}</li>)}</ul>
+              <button className="linkbtn small" onClick={() => dispatch({ type: 'reset' })}>Back to the base plan</button>
+            </div>
+          )}
+          <p className="small plan-line">{isFixture ? `${model.name} is fictional: ` : ''}{pct(model.strategy.growthTargetPct)} growth, {num(model.teams.reduce((a, t) => a + t.currentFte, 0))} people in {model.teams.length} teams, {model.initiatives.length} initiatives, {model.hiringPlan.length} hiring requests, a {money(model.budget.modeledAnnualBudgetUsd)} budget. Every number is computed from those inputs, month by month. <button className="linkbtn" onClick={() => setOverride({ kind: 'about' })}>How it works →</button></p>
         </>
       ),
     },
     {
-      id: 'verdict', eyebrow: '2 · Can it work?', stage: () => ({ kind: 'map', focusTeam: s.firstBreakTeamId }),
-      body: (
-        <>
-          <h2>{v.headline}</h2>
-          <p>{v.sentences.slice(0, 2).join(' ')}</p>
-          {v.versus && <p className="small">{v.versus}</p>}
-        </>
-      ),
-    },
-    {
-      id: 'breaks', eyebrow: '3 · What breaks, and when', stage: () => ({ kind: 'map', focusTeam: focusTeam }),
+      id: 'breaks', eyebrow: '2 · What breaks, and when', stage: () => ({ kind: 'map', focusTeam: focusTeam }),
       body: (
         <>
           <h2>{dated.length === 0 ? 'Nothing breaks.' : dated[0].teamId ? `${teamName(dated[0].teamId)}, in ${monthLabel(dated[0].firstMonth!)}.` : `${dated[0].title}.`}</h2>
@@ -134,7 +135,7 @@ export function Story() {
       ),
     },
     {
-      id: 'why', eyebrow: '4 · Why', stage: ({ team }) => ({ kind: 'team', teamId: team, ghost: false }),
+      id: 'why', eyebrow: '3 · Why', stage: ({ team }) => ({ kind: 'team', teamId: team, ghost: false }),
       body: (() => {
         const t = result.teams.find((x) => x.teamId === focusTeam)!;
         const land = t.months.find((m) => m.hiresLanded > 0);
@@ -151,7 +152,7 @@ export function Story() {
       })(),
     },
     {
-      id: 'try', eyebrow: '5 · What would you try first?', stage: ({ team }) => ({ kind: 'team', teamId: team, ghost: true }),
+      id: 'try', eyebrow: '4 · What would you try first?', stage: ({ team }) => ({ kind: 'team', teamId: team, ghost: true }),
       body: (
         <>
           <h2>Pick a lever.</h2>
@@ -168,7 +169,7 @@ export function Story() {
       ),
     },
     {
-      id: 'whatif', eyebrow: '6 · What if', stage: () => ({ kind: 'scenarios' }),
+      id: 'whatif', eyebrow: '5 · What if', stage: () => ({ kind: 'scenarios' }),
       body: (
         <>
           <h2>Now make the world harder.</h2>
@@ -182,7 +183,7 @@ export function Story() {
       ),
     },
     {
-      id: 'weigh', eyebrow: '7 · Weigh it', stage: () => ({ kind: 'ranking' }),
+      id: 'weigh', eyebrow: '6 · Weigh it', stage: () => ({ kind: 'ranking' }),
       body: (
         <>
           <h2>Which option, given what matters to you?</h2>
@@ -192,7 +193,7 @@ export function Story() {
       ),
     },
     {
-      id: 'decide', eyebrow: '8 · Decide', stage: () => ({ kind: 'record', text: record, thresholds: th.map((t) => t.text) }),
+      id: 'decide', eyebrow: '7 · Decide', stage: () => ({ kind: 'record', text: record, thresholds: th.map((t) => t.text) }),
       body: (
         <>
           <h2>The record.</h2>
@@ -203,7 +204,7 @@ export function Story() {
       ),
     },
     {
-      id: 'yours', eyebrow: '9 · Make it yours', stage: () => ({ kind: 'map', focusTeam: null }),
+      id: 'yours', eyebrow: '8 · Make it yours', stage: () => ({ kind: 'map', focusTeam: null }),
       body: (
         <>
           <h2>Try it with your own numbers.</h2>
@@ -240,9 +241,9 @@ export function Story() {
       if (p?.startsWith('team:')) { dispatch({ type: 'team', id: p.slice(5) }); setOverride({ kind: 'team', teamId: p.slice(5) }); }
       else if (p === 'initiatives' || p === 'workforce' || p === 'cost' || p === 'organization' || p === 'plan' || p === 'about' || p === 'scenarios' || p === 'ranking') setOverride({ kind: p });
       else if (p === 'record') setOverride({ kind: 'record', text: recordRef.current, thresholds: thRef.current });
-      if (go === 'sec-options') beatRefs.current[4]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      if (go === 'sec-whatif') beatRefs.current[5]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      if (go === 'sec-decide') beatRefs.current[7]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      if (go === 'sec-options') beatRefs.current[3]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      if (go === 'sec-whatif') beatRefs.current[4]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      if (go === 'sec-decide') beatRefs.current[6]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       q.delete('p'); q.delete('go'); q.delete('team');
       const str = q.toString();
       history.replaceState(null, '', '#/' + (str ? '?' + str : ''));
@@ -262,7 +263,7 @@ export function Story() {
   }, []);
 
   const view: StageView = override ?? beats[active].stage({ team: focusTeam });
-  const onTeam = (id: string) => { dispatch({ type: 'team', id }); setOverride({ kind: 'team', teamId: id, ghost: active >= 4 }); };
+  const onTeam = (id: string) => { dispatch({ type: 'team', id }); setOverride({ kind: 'team', teamId: id, ghost: active >= 3 }); };
   const goTo = (i: number) => beatRefs.current[i]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
   return (
