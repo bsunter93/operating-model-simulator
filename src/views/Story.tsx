@@ -5,10 +5,8 @@ import type { DecisionWeights } from '../models/types';
 import { customIntervention, useStore } from '../state/store';
 import { Stage } from '../components/Stage';
 import type { StageView } from '../components/Stage';
-import { Levers } from '../components/Levers';
+import { Controls } from '../components/Controls';
 import { Term } from '../components/Term';
-import { Loop } from '../components/Loop';
-import { TEMPLATES } from '../data/templates';
 import { verdict } from '../lib/verdict';
 import { thresholds } from '../lib/thresholds';
 import { effectsFor } from '../lib/effects';
@@ -101,9 +99,7 @@ export function Story() {
       body: (
         <>
           <h2>{model.name} plans {pct(model.strategy.growthTargetPct)} growth with {num(model.teams.reduce((a, t) => a + t.currentFte, 0))} people.</h2>
-          <p>{model.initiatives.length} strategic initiatives, {model.hiringPlan.length} planned hiring requests, a {money(model.budget.modeledAnnualBudgetUsd)} budget for the {model.teams.length} modeled teams. {isFixture ? 'Atlas Systems is fictional.' : 'These are your numbers.'} Every figure on this page is computed from the inputs, month by month; nothing is typed in.</p>
-          <Loop />
-          <p className="small">Strategy becomes work, work becomes hours, hours become people. Decisions change the strategy and the loop runs again. <button className="linkbtn" onClick={() => setOverride({ kind: 'about' })}>How it works and what it assumes →</button></p>
+          <p>{model.initiatives.length} initiatives, {model.hiringPlan.length} hiring requests, a {money(model.budget.modeledAnnualBudgetUsd)} budget. {isFixture ? 'Fictional. ' : ''}Every number here is computed from those inputs, month by month. <button className="linkbtn" onClick={() => setOverride({ kind: 'about' })}>How it works →</button></p>
         </>
       ),
     },
@@ -112,9 +108,8 @@ export function Story() {
       body: (
         <>
           <h2>{v.headline}</h2>
-          <p>{v.sentences.join(' ')}</p>
+          <p>{v.sentences.slice(0, 2).join(' ')}</p>
           {v.versus && <p className="small">{v.versus}</p>}
-          {!isBase && <p className="small">Scenario: <b>{scen.name}</b>{activeLevers.length ? <>; levers on: <b>{activeLevers.map((iv) => iv.name).join(', ')}</b></> : ''}. <button className="linkbtn" onClick={() => dispatch({ type: 'reset' })}>Reset to the base plan</button></p>}
         </>
       ),
     },
@@ -123,14 +118,13 @@ export function Story() {
       body: (
         <>
           <h2>{dated.length === 0 ? 'Nothing breaks.' : dated[0].teamId ? `${teamName(dated[0].teamId)}, in ${monthLabel(dated[0].firstMonth!)}.` : `${dated[0].title}.`}</h2>
-          <p className="small">In date order. Each one is computed from the inputs on its line. Click one to put it on the stage.</p>
+          <p className="small">In date order. Click one to see it on the stage.</p>
           <ol className="beat-cons">
             {dated.map((c) => (
               <li key={c.id} className={'bc' + ((c.teamId && c.teamId === focusTeam) ? ' on' : '')} data-kind={c.kind}>
                 <button onClick={() => { if (c.teamId) { dispatch({ type: 'team', id: c.teamId }); setOverride({ kind: 'team', teamId: c.teamId }); } else setOverride({ kind: 'initiatives' }); }}>
                   <span className="bc-when">{c.firstMonth ? monthLabel(c.firstMonth) : '—'}</span>
                   <span className="bc-t">{c.title}</span>
-                  <span className="bc-d">{c.detail}</span>
                   <span className="bc-i">{c.businessImpactUsd > 0 ? `${money(c.businessImpactUsd)} at stake` : ''}</span>
                 </button>
               </li>
@@ -151,11 +145,7 @@ export function Story() {
             <p>Bars are hours of work each month; the line is what {teamName(focusTeam)} can handle at its {pct(t.months[0].targetUtilization)} target. {t.monthsConstrained ? <>It peaks at <b>{pct(t.peakUtilization)}</b> in {monthLabel(t.peakMonth)}, {people(t.peakWorkforceGap)} short.</> : <>It peaks at {pct(t.peakUtilization)} in {monthLabel(t.peakMonth)} and stays under.</>}</p>
             {planned > 0 && land && <p>The plan already hires <b>{planned}</b> people for this team; they land in <b>{monthLabel(land.month)}</b>. Everything before that is the problem.</p>}
             {planned > 0 && !land && <p>The plan had {planned} hires for this team; this scenario cancels them.</p>}
-            <div className="beat-links"><span>Also on the stage:</span>
-              <button className="linkbtn" onClick={() => setOverride({ kind: 'workforce' })}>the workforce</button>
-              <button className="linkbtn" onClick={() => setOverride({ kind: 'initiatives' })}>the initiatives</button>
-              <button className="linkbtn" onClick={() => setOverride({ kind: 'cost' })}>the cost</button>
-            </div>
+            <p className="small">More on the stage: <button className="linkbtn" onClick={() => setOverride({ kind: 'workforce' })}>workforce</button> · <button className="linkbtn" onClick={() => setOverride({ kind: 'initiatives' })}>initiatives</button> · <button className="linkbtn" onClick={() => setOverride({ kind: 'cost' })}>cost</button></p>
           </>
         );
       })(),
@@ -165,7 +155,7 @@ export function Story() {
       body: (
         <>
           <h2>Pick a lever.</h2>
-          <p className="small">Each one runs through the same model. The line under each says what it does to {teamName(focusTeam)}. Pick one, then add more below; they stack.</p>
+          <p className="small">Each runs through the same model. Fine-tune or stack more in the Levers box under the stage.</p>
           <div className="choices">
             {choices.map((c) => (
               <button key={c.id} className={'choice' + (chosen === c.id ? ' on' : '')} onClick={() => dispatch({ type: 'setInterventions', ids: c.ids })}>
@@ -173,10 +163,7 @@ export function Story() {
               </button>
             ))}
           </div>
-          <details className="fold small" open={state.interventionIds.length > 0}>
-            <summary>All levers, with their sizes</summary>
-            <Levers teamId={focusTeam} compact />
-          </details>
+
         </>
       ),
     },
@@ -185,10 +172,10 @@ export function Story() {
       body: (
         <>
           <h2>Now make the world harder.</h2>
-          <p className="small">Each scenario changes the conditions and reruns the whole model. Your levers stay on. The stage shows every scenario side by side.</p>
-          <div className="choices">
+          <p className="small">Each one changes the conditions and reruns the model. Your levers stay on.</p>
+          <div className="choices grid2">
             {model.scenarios.map((sc) => (
-              <button key={sc.id} className={'choice' + (state.scenarioId === sc.id ? ' on' : '')} onClick={() => dispatch({ type: 'scenario', id: sc.id })}><b>{sc.name}</b><small>{sc.description}</small></button>
+              <button key={sc.id} className={'choice' + (state.scenarioId === sc.id ? ' on' : '')} onClick={() => dispatch({ type: 'scenario', id: sc.id })} title={sc.description}><b>{sc.name}</b></button>
             ))}
           </div>
         </>
@@ -199,7 +186,7 @@ export function Story() {
       body: (
         <>
           <h2>Which option, given what matters to you?</h2>
-          <p className="small">Every option is compared on added cost, on how much of the problem is still there and for how long, and on revenue at risk. Drag the weights; the ranking on the stage follows them.</p>
+          <p className="small">Cost, speed, revenue at risk. Drag; the ranking on the stage follows.</p>
           <WeightSliders weights={state.weights} onChange={(w) => dispatch({ type: 'weights', weights: w })} />
         </>
       ),
@@ -209,25 +196,20 @@ export function Story() {
       body: (
         <>
           <h2>The record.</h2>
-          <p className="small">The model writes it from what you selected: the decision, what has to be true, and what would change its mind, with thresholds found by rerunning the model until the answer flips.</p>
+          <p className="small">Written by the model from what you selected, including what would change its mind.</p>
           <button className="btn small" onClick={() => { void navigator.clipboard.writeText(record).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1500); }); }}>{copied ? 'Copied' : 'Copy the record'}</button>
-          <ul className="th small">{th.map((t) => <li key={t.text}>{t.text}</li>)}</ul>
+
         </>
       ),
     },
     {
-      id: 'yours', eyebrow: '9 · Make it yours', stage: () => ({ kind: 'plan' }),
+      id: 'yours', eyebrow: '9 · Make it yours', stage: () => ({ kind: 'map', focusTeam: null }),
       body: (
         <>
-          <h2>Your organization.</h2>
-          <p className="small">Start from a template, drag the scale, or edit any team, workload, or hire on the stage. Everything above recomputes. Nothing leaves your browser.</p>
-          <div className="choices">
-            {TEMPLATES.map((t) => {
-              const on = model.id === t.id || model.id === `${t.id}-edited`;
-              return <button key={t.id} className={'choice' + (on ? ' on' : '')} onClick={() => dispatch({ type: 'model', model: t.build() })}><b>{t.name}</b><small>{t.blurb}</small></button>;
-            })}
-          </div>
-          <div className="beat-links"><span>Also:</span><button className="linkbtn" onClick={() => setOverride({ kind: 'organization' })}>pods or one pool</button><button className="linkbtn" onClick={() => setOverride({ kind: 'about' })}>how this works</button></div>
+          <h2>Try it with your own numbers.</h2>
+          <p className="small">A fresh, one-screen version: your teams, your work, your hires, and the answer beside them.</p>
+          <a className="btn" href="#/mine">Open Your numbers →</a>
+          <p className="small" style={{ marginTop: 10 }}>Also: <button className="linkbtn" onClick={() => setOverride({ kind: 'organization' })}>pods or one pool</button> · <button className="linkbtn" onClick={() => setOverride({ kind: 'about' })}>how this works</button></p>
         </>
       ),
     },
@@ -297,8 +279,11 @@ export function Story() {
         ))}
       </div>
       <div className="stage">
-        {override && <button className="stage-back" onClick={() => setOverride(null)}>← back to the story's view</button>}
-        <Stage view={view} onTeam={onTeam} onMap={() => setOverride({ kind: 'map', focusTeam })} />
+        <div className="stage-pic">
+          {override && <button className="stage-back" onClick={() => setOverride(null)}>← back to the story's view</button>}
+          <Stage view={view} onTeam={onTeam} onMap={() => setOverride({ kind: 'map', focusTeam })} />
+        </div>
+        <Controls teamId={focusTeam} onTeam={(id) => { dispatch({ type: 'team', id }); if (override?.kind === 'team') setOverride({ kind: 'team', teamId: id, ghost: override.ghost }); }} />
       </div>
     </div>
   );

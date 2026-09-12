@@ -36,10 +36,7 @@ function peakShortfall(r: ModelResult): number {
 }
 
 function MapStage({ focusTeam, onTeam }: { focusTeam?: string | null; onTeam: (id: string) => void }) {
-  const { result, model, teamName } = useStore();
-  const s = result.summary;
-  let peak: { team: string; month: string; fte: number } | null = null;
-  for (const t of result.teams) for (const m of t.months) if (!peak || m.workforceGap > peak.fte) peak = { team: t.teamId, month: m.month, fte: m.workforceGap };
+  const { result, teamName } = useStore();
   const now = new Date();
   const nowKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   const nowIdx = result.months.indexOf(nowKey);
@@ -62,14 +59,6 @@ function MapStage({ focusTeam, onTeam }: { focusTeam?: string | null; onTeam: (i
         </table>
       </div>
       <div className="legend"><span><i /> within capacity</span><span><i data-s="watch" /> <Term k="watch">watch</Term></span><span><i data-s="constrained" /> <Term k="constrained">over capacity</Term></span><span><i data-s="severe" /> <Term k="severe">over 100%</Term></span></div>
-      <div className="big4">
-        <div><b className={peak ? 'alert' : ''}>{peak ? people(peak.fte) : 'none'}</b><span><Term k="peakShortfall">peak shortfall</Term>{peak ? `, ${teamName(peak.team)}, ${monthLabel(peak.month)}` : ''}</span></div>
-        <div><b className={s.teamsConstrained ? 'alert' : ''}>{s.teamsConstrained} of {model.teams.length}</b><span>teams <Term k="constrained">over capacity</Term></span></div>
-        <div><b>{Math.round(s.startingFte)} → {Math.round(s.endingFte)}</b><span><Term k="headcount">people, Jan to Dec</Term></span></div>
-        <div><b className="warm">{money(s.revenueExposureUsd)}</b><span><Term k="exposure">revenue exposure</Term></span></div>
-        <div><b className={s.annualBudgetVarianceUsd > 0 ? 'alert' : ''}>{money(s.annualBudgetVarianceUsd, { sign: true })}</b><span><Term k="budget">against the {money(result.financials.annualBudgetUsd)} budget</Term></span></div>
-        <div><b className={s.initiativesDelayed ? 'warm' : ''}>{s.initiativesDelayed} of {model.initiatives.length}</b><span>initiatives <Term k="delayed">delayed</Term></span></div>
-      </div>
     </div>
   );
 }
@@ -92,13 +81,6 @@ function TeamStage({ teamId, ghost, onTeam, onMap }: { teamId: string; ghost?: b
         <b><select className="teampick" value={teamId} onChange={(e) => onTeam(e.target.value)} aria-label="Team">{model.teams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</select> <StatusPill status={team.worstStatus} /></b>
         <span><button className="linkbtn" onClick={onMap}>← all teams</button></span>
       </div>
-      <ul className="facts">
-        <li><b>{Math.round(team.startingFte)} → {Math.round(team.endingFte)}</b><Term k="headcount">people, Jan to Dec</Term></li>
-        <li><b>{pct(team.peakUtilization)}</b><Term k="utilization">peak</Term>, {monthLabel(team.peakMonth)}</li>
-        <li><b>{team.monthsConstrained}</b>month{team.monthsConstrained === 1 ? '' : 's'} over capacity (<Term k="target">{pct(def.targetUtilization)} target</Term>)</li>
-        <li><b>{team.peakWorkforceGap.toFixed(1)}</b><Term k="shortfall">people short</Term> at peak</li>
-        {landing.length > 0 && <li><b>{landing.map((m) => `+${Math.round(m.hiresLanded)} ${monthLabel(m.month)}`).join(', ')}</b>hires landing</li>}
-      </ul>
       <div className="chart">
         <div className="chart-title"><b>Hours of work against what the team can handle</b><span>{streams.length ? streams.map((s) => { const h = s.handlingMinutesPerUnit / 60; return `${num(s.annualVolume)} ${s.unit} × ${h >= 1 ? `${parseFloat(h.toFixed(1))} h` : `${s.handlingMinutesPerUnit} min`}`; }).join(' · ') : 'initiative work only'}</span></div>
         <TeamTimeline team={team} ghost={showGhost ? g : undefined} />

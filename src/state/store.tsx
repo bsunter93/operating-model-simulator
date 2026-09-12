@@ -177,8 +177,9 @@ function writeQuery(s: State): void {
   if (s.scenarioId !== baseId(s.model)) p.set('s', s.scenarioId);
   if (s.interventionIds.length) p.set('i', s.interventionIds.map((id) => (s.overrides[id] !== undefined ? `${id}:${s.overrides[id]}` : id)).join(','));
   const q = p.toString();
-  const next = '#/' + (q ? '?' + q : '');
-  if (next !== window.location.hash && (path === '#/' || path === '#' || path === '')) history.replaceState(null, '', next);
+  const base = path.startsWith('#/mine') ? '#/mine' : '#/';
+  const next = base + (q ? '?' + q : '');
+  if (next !== window.location.hash && (path === '#/' || path === '#' || path === '' || path.startsWith('#/mine'))) history.replaceState(null, '', next);
 }
 
 export function StoreProvider({ children }: { children: ReactNode }) {

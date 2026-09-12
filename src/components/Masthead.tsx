@@ -16,7 +16,7 @@ export function Masthead() {
           <span className="strip-l">Levers on</span>{on.length === 0 ? <span className="chip dim">none</span> : on.map((iv) => <span key={iv.id} className="chip on" title={iv.name}>{iv.name}</span>)}
           {!isBase && <button className="strip-reset" onClick={() => dispatch({ type: 'reset' })}>Reset</button>}
         </div>
-        <a className="brand-home" href="https://bensunter.com/">bensunter.com</a>
+        <a className="brand-home" href={/^#\/mine/.test(window.location.hash) ? '#/' : '#/mine'}>{/^#\/mine/.test(window.location.hash) ? '← The story' : 'Your numbers →'}</a>
       </div>
     </header>
   );
