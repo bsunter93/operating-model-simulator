@@ -1,6 +1,6 @@
 import { useEffect, useMemo } from 'react';
 import { run } from '../engine';
-import { useStore } from '../state/store';
+import { href, useStore } from '../state/store';
 import { TOUR } from '../lib/tour';
 import type { TourCtx } from '../lib/tour';
 import { effectsFor } from '../lib/effects';
@@ -36,9 +36,7 @@ export function Tour() {
     dispatch({ type: 'tour', step: i });
     dispatch({ type: 'tourChoice', id: null });
     if (i === 0) { dispatch({ type: 'reset' }); }
-    const q = window.location.hash.split('?')[1];
-    const route = next.route(ctx);
-    window.location.hash = route + (q ? '?' + q : '');
+    window.location.hash = href(next.route(ctx));
   };
 
   const choose = (id: string) => {
@@ -83,7 +81,7 @@ export function Tour() {
         <button className="btn ghost small" onClick={() => go(step! === 0 ? null : step! - 1)}>{step === 0 ? 'Close' : 'Back'}</button>
         {step! < TOUR.length - 1
           ? <button className="btn small" onClick={() => go(step! + 1)} disabled={choices.length > 0 && !chosen}>{choices.length > 0 && !chosen ? 'Pick one to continue' : 'Next'}</button>
-          : <button className="btn small" onClick={() => { go(null); dispatch({ type: 'reset' }); window.location.hash = '#/'; }}>Finish</button>}
+          : <button className="btn small" onClick={() => { go(null); dispatch({ type: 'reset' }); window.location.hash = href('#/'); }}>Finish</button>}
       </div>
     </aside>
   );

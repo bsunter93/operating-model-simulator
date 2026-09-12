@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import type { OperatingModel } from '../models/types';
 import { FIXTURE, parseImportedModel, useStore } from '../state/store';
+import { TEMPLATES } from '../data/templates';
 import { modelWarnings } from '../engine';
 import { Term } from '../components/Term';
 import { num } from '../lib/format';
@@ -25,14 +26,16 @@ export function ModelView() {
 
   const applyScale = (k: number) => {
     setScale(k);
+    const tpl = TEMPLATES.find((t) => model.id === t.id || model.id === `${t.id}-edited`) ?? TEMPLATES[0];
+    const base = tpl.build();
     const m = structuredClone(model);
-    for (const t of m.teams) t.currentFte = Math.round(FIXTURE.teams.find((x) => x.id === t.id)!.currentFte * k);
-    for (const s of m.demandStreams) s.annualVolume = Math.round(FIXTURE.demandStreams.find((x) => x.id === s.id)!.annualVolume * k);
-    for (const h of m.hiringPlan) h.headcount = Math.max(0, Math.round(FIXTURE.hiringPlan.find((x) => x.id === h.id)!.headcount * k));
-    for (const i of m.initiatives) for (const tid of Object.keys(i.requiredFteByTeam)) i.requiredFteByTeam[tid] = Math.max(0, Math.round(FIXTURE.initiatives.find((x) => x.id === i.id)!.requiredFteByTeam[tid] * k));
-    m.budget.modeledAnnualBudgetUsd = Math.round(FIXTURE.budget.modeledAnnualBudgetUsd * k);
-    m.id = FIXTURE.id + (k === 1 ? '' : '-edited');
-    m.status = k === 1 ? 'calibrated' : 'provisional';
+    for (const t of m.teams) t.currentFte = Math.max(1, Math.round((base.teams.find((x) => x.id === t.id)?.currentFte ?? t.currentFte) * k));
+    for (const s of m.demandStreams) s.annualVolume = Math.max(1, Math.round((base.demandStreams.find((x) => x.id === s.id)?.annualVolume ?? s.annualVolume) * k));
+    for (const h of m.hiringPlan) h.headcount = Math.max(0, Math.round((base.hiringPlan.find((x) => x.id === h.id)?.headcount ?? h.headcount) * k));
+    for (const i of m.initiatives) for (const tid of Object.keys(i.requiredFteByTeam)) i.requiredFteByTeam[tid] = Math.max(0, Math.round((base.initiatives.find((x) => x.id === i.id)?.requiredFteByTeam[tid] ?? i.requiredFteByTeam[tid]) * k));
+    m.budget.modeledAnnualBudgetUsd = Math.round(base.budget.modeledAnnualBudgetUsd * k);
+    m.id = tpl.id + (k === 1 ? '' : '-edited');
+    m.status = k === 1 && tpl.id === FIXTURE.id ? 'calibrated' : 'provisional';
     dispatch({ type: 'editModel', model: m });
   };
 
@@ -71,14 +74,31 @@ export function ModelView() {
           <ul>{warnings.map((w) => <li key={w}>{w}</li>)}</ul>
         </div>
       )}
+      <section className="sec" data-tour="templates">
+        <h2>Start from a template</h2>
+        <p className="sub">Each one repopulates every field below with a different organization. All are fictional and fully editable.</p>
+        <div className="tpl">
+          {TEMPLATES.map((t) => {
+            const on = model.id === t.id || model.id === `${t.id}-edited`;
+            return (
+              <button key={t.id} className={'tpl-card' + (on ? ' on' : '')} onClick={() => { setScale(1); setErrors([]); dispatch({ type: 'model', model: t.build() }); }}>
+                <b>{t.name}</b>
+                <span>{t.blurb}</span>
+                {on && <em>loaded</em>}
+              </button>
+            );
+          })}
+        </div>
+      </section>
+
       <section className="sec">
         <h2>Scale</h2>
         <p className="sub">Drag to resize the whole organization. Headcount, volumes, hiring, initiative staffing, and budget all scale together, so the same story plays out at your size. Currently <b>{num(totalFte)} people</b>.</p>
-        {isFixture || model.id.startsWith(FIXTURE.id) ? (
+        {isFixture || model.id.startsWith('atlas') ? (
           <label className="wrow scale" data-tour="scale">
             <span className="wl">×{scale.toFixed(2)}</span>
             <input type="range" min={0.1} max={10} step={0.05} value={scale} onChange={(e) => applyScale(Number(e.target.value))} />
-            <span className="wv">{num(Math.round(FIXTURE.teams.reduce((s, t) => s + t.currentFte, 0) * scale))} people</span>
+            <span className="wv">{num(totalFte)} people</span>
           </label>
         ) : <p className="note">Scaling applies to the Atlas model. Your imported model keeps its own numbers; edit them below.</p>}
       </section>

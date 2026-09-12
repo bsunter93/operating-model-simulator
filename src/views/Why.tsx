@@ -1,4 +1,4 @@
-import { href, useStore } from '../state/store';
+import { href, openPanel, useStore } from '../state/store';
 import { TeamTimeline } from '../components/charts/TeamTimeline';
 import { StatusPill } from '../components/StatusPill';
 import { Term } from '../components/Term';
@@ -32,7 +32,6 @@ export function Why({ teamId: requested }: { teamId: string }) {
   const peak = team.months.find((m) => m.month === team.peakMonth)!;
   const planned = model.hiringPlan.filter((h) => h.teamId === teamId);
   const streams = model.demandStreams.filter((s) => s.teamId === teamId);
-  const q = window.location.hash.split('?')[1];
 
   return (
     <main className="main one">
@@ -40,7 +39,7 @@ export function Why({ teamId: requested }: { teamId: string }) {
       <WhyTabs active="team" />
       <div className="teamhead">
         <h1 className="title">{def.name}</h1>
-        <select className="teampick" value={teamId} onChange={(e) => { window.location.hash = `#/why/${e.target.value}` + (q ? '?' + q : ''); }} aria-label="Team">
+        <select className="teampick" value={teamId} onChange={(e) => openPanel({ kind: 'team', teamId: e.target.value })} aria-label="Team">
           {model.teams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
         </select>
         <StatusPill status={team.worstStatus} />

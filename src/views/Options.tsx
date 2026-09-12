@@ -12,7 +12,6 @@ export function Options({ teamId: requested }: { teamId: string }) {
   const def = model.teams.find((t) => t.id === teamId)!;
   const team = result.teams.find((t) => t.teamId === teamId)!;
   const ghost = doNothing.teams.find((t) => t.teamId === teamId)!;
-  const q = window.location.hash.split('?')[1];
 
   const active = useMemo(() => interventions.filter((iv) => state.interventionIds.includes(iv.id)), [interventions, state.interventionIds]);
   const levers = useMemo(() => {
@@ -43,11 +42,11 @@ export function Options({ teamId: requested }: { teamId: string }) {
   };
 
   return (
-    <main className="main one">
+    <section className="page-sec" id="sec-options">
       <div className="eyebrow">4 · What to do</div>
       <div className="teamhead">
         <h1 className="title">What could we do about {def.name}?</h1>
-        <select className="teampick" value={teamId} onChange={(e) => { window.location.hash = `#/options/${e.target.value}` + (q ? '?' + q : ''); }} aria-label="Team">
+        <select className="teampick" value={teamId} onChange={(e) => dispatch({ type: 'team', id: e.target.value })} aria-label="Team">
           {model.teams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
         </select>
         <StatusPill status={team.worstStatus} />
@@ -77,6 +76,6 @@ export function Options({ teamId: requested }: { teamId: string }) {
       <nav className="next">
         <a className="btn" href={href('#/decide')}>Next: weigh the options →</a>
       </nav>
-    </main>
+    </section>
   );
 }

@@ -18,6 +18,8 @@ export interface State {
   weights: DecisionWeights;
   tourStep: number | null;
   tourChoice: string | null;
+  /** Team in focus for the levers section and the team drawer. */
+  teamId: string | null;
 }
 
 type Action =
@@ -30,12 +32,13 @@ type Action =
   | { type: 'editModel'; model: OperatingModel }
   | { type: 'tour'; step: number | null }
   | { type: 'tourChoice'; id: string | null }
+  | { type: 'team'; id: string }
   | { type: 'reset' };
 
 const baseId = (m: OperatingModel) => m.scenarios.find((s) => s.type === 'base')!.id;
 
 function fresh(model: OperatingModel): State {
-  return { model, scenarioId: baseId(model), interventionIds: [], overrides: {}, weights: model.decisionWeights, tourStep: null, tourChoice: null };
+  return { model, scenarioId: baseId(model), interventionIds: [], overrides: {}, weights: model.decisionWeights, tourStep: null, tourChoice: null, teamId: null };
 }
 
 function reducer(s: State, a: Action): State {
@@ -50,7 +53,8 @@ function reducer(s: State, a: Action): State {
     case 'editModel': return { ...s, model: a.model, scenarioId: a.model.scenarios.some((x) => x.id === s.scenarioId) ? s.scenarioId : baseId(a.model), interventionIds: s.interventionIds.filter((id) => (isCustomId(id) ? a.model.teams.some((t) => t.id === id.split(':')[0]) : a.model.interventions.some((x) => x.id === id))) };
     case 'tour': return { ...s, tourStep: a.step, tourChoice: a.step === null ? null : s.tourChoice };
     case 'tourChoice': return { ...s, tourChoice: a.id };
-    case 'reset': return { ...fresh(s.model), tourStep: s.tourStep, tourChoice: s.tourChoice };
+    case 'team': return { ...s, teamId: a.id };
+    case 'reset': return { ...fresh(s.model), tourStep: s.tourStep, tourChoice: s.tourChoice, teamId: s.teamId };
   }
 }
 
@@ -169,11 +173,12 @@ function writeQuery(s: State): void {
   const curP = new URLSearchParams(cur ?? '');
   const p = new URLSearchParams();
   if (curP.get('theme')) p.set('theme', curP.get('theme')!);
+  for (const k of ['p', 'go', 'team']) if (curP.get(k)) p.set(k, curP.get(k)!);
   if (s.scenarioId !== baseId(s.model)) p.set('s', s.scenarioId);
   if (s.interventionIds.length) p.set('i', s.interventionIds.map((id) => (s.overrides[id] !== undefined ? `${id}:${s.overrides[id]}` : id)).join(','));
   const q = p.toString();
-  const next = (path || '#/') + (q ? '?' + q : '');
-  if (next !== window.location.hash) history.replaceState(null, '', next);
+  const next = '#/' + (q ? '?' + q : '');
+  if (next !== window.location.hash && (path === '#/' || path === '#' || path === '')) history.replaceState(null, '', next);
 }
 
 export function StoreProvider({ children }: { children: ReactNode }) {
@@ -213,56 +218,101 @@ export function parseImportedModel(text: string): { model: OperatingModel } | { 
   return errors.length ? { errors } : { model: m };
 }
 
-// ── routing ────────────────────────────────────────────────────────────────
-export type Route =
-  | { view: 'hold' }
-  | { view: 'why'; teamId: string }
-  | { view: 'initiatives' }
-  | { view: 'workforce' }
-  | { view: 'cost' }
-  | { view: 'organization' }
-  | { view: 'whatif' }
-  | { view: 'options'; teamId: string }
-  | { view: 'decide' }
-  | { view: 'plan' }
-  | { view: 'about' };
+// ── routing: one page, plus an optional panel (drawer) in the hash query ──
+export type Panel =
+  | { kind: 'team'; teamId: string }
+  | { kind: 'initiatives' }
+  | { kind: 'workforce' }
+  | { kind: 'cost' }
+  | { kind: 'organization' }
+  | { kind: 'plan' }
+  | { kind: 'about' };
 
-export const STEPS: { view: Route['view']; label: string; path: string }[] = [
-  { view: 'hold', label: 'Can the plan work?', path: '#/' },
-  { view: 'why', label: 'Why', path: '#/why' },
-  { view: 'whatif', label: 'What if', path: '#/whatif' },
-  { view: 'options', label: 'What to do', path: '#/options' },
-  { view: 'decide', label: 'Decide', path: '#/decide' },
-  { view: 'plan', label: 'Your numbers', path: '#/plan' },
-  { view: 'about', label: 'How this works', path: '#/about' },
+export const STEPS: { id: string; label: string }[] = [
+  { id: 'sec-hold', label: 'Can the plan work?' },
+  { id: 'sec-whatif', label: 'What if' },
+  { id: 'sec-options', label: 'What to do' },
+  { id: 'sec-decide', label: 'Decide' },
 ];
 
-function parseHash(model: OperatingModel): Route {
-  const h = window.location.hash.replace(/^#\/?/, '').split('?')[0];
-  const [view, arg] = h.split('/');
-  const team = (id?: string) => (id && model.teams.some((t) => t.id === id) ? id : '');
-  if (view === 'why') return arg === 'initiatives' ? { view: 'initiatives' } : arg === 'workforce' ? { view: 'workforce' } : arg === 'cost' ? { view: 'cost' } : arg === 'organization' ? { view: 'organization' } : { view: 'why', teamId: team(arg) };
-  if (view === 'whatif') return { view: 'whatif' };
-  if (view === 'options') return { view: 'options', teamId: team(arg) };
-  if (view === 'decide') return { view: 'decide' };
-  if (view === 'plan') return { view: 'plan' };
-  if (view === 'about') return { view: 'about' };
-  return { view: 'hold' };
+export function parsePanel(model: OperatingModel): Panel | null {
+  const q = window.location.hash.split('?')[1];
+  const p = new URLSearchParams(q ?? '').get('p');
+  if (!p) return null;
+  const [kind, arg] = p.split(':');
+  if (kind === 'team') return { kind: 'team', teamId: arg && model.teams.some((t) => t.id === arg) ? arg : model.teams[0].id };
+  if (kind === 'initiatives' || kind === 'workforce' || kind === 'cost' || kind === 'organization' || kind === 'plan' || kind === 'about') return { kind };
+  return null;
 }
 
-export function useRoute(): Route {
+export function panelKey(p: Panel): string {
+  return p.kind === 'team' ? `team:${p.teamId}` : p.kind;
+}
+
+/** Hash for opening a panel (or closing it with null) while keeping scenario and levers. */
+export function panelHref(p: Panel | null): string {
+  const q = new URLSearchParams(window.location.hash.split('?')[1] ?? '');
+  if (p) q.set('p', panelKey(p)); else q.delete('p');
+  const s = q.toString();
+  return '#/' + (s ? '?' + s : '');
+}
+
+export function usePanel(): Panel | null {
   const { model } = useStore();
-  const [route, setRoute] = useState<Route>(() => parseHash(model));
+  const [panel, setPanel] = useState<Panel | null>(() => parsePanel(model));
   useEffect(() => {
-    const on = () => setRoute(parseHash(model));
+    const on = () => setPanel(parsePanel(model));
     on();
     window.addEventListener('hashchange', on);
     return () => window.removeEventListener('hashchange', on);
   }, [model]);
-  return route;
+  return panel;
 }
 
+export function openPanel(p: Panel | null): void {
+  window.location.hash = panelHref(p);
+}
+
+/** Scroll to a section on the one page. */
+export function scrollToSection(id: string): void {
+  const el = document.getElementById(id);
+  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+/** Legacy links keep working: #/why/x, #/options/x, #/whatif, #/decide, #/plan, #/about. */
+export function migrateLegacyHash(model: OperatingModel): void {
+  const h = window.location.hash.replace(/^#\/?/, '');
+  const [path, q] = h.split('?');
+  const [view, arg] = path.split('/');
+  if (!view || view === '') return;
+  const qs = new URLSearchParams(q ?? '');
+  const team = arg && model.teams.some((t) => t.id === arg) ? arg : null;
+  if (view === 'why') qs.set('p', arg === 'initiatives' || arg === 'workforce' || arg === 'cost' || arg === 'organization' ? arg : `team:${team ?? model.teams[0].id}`);
+  else if (view === 'plan' || view === 'about') qs.set('p', view);
+  else if (view === 'whatif' || view === 'options' || view === 'decide') { qs.delete('p'); setTimeout(() => scrollToSection(`sec-${view}`), 150); }
+  const s = qs.toString();
+  history.replaceState(null, '', '#/' + (s ? '?' + s : ''));
+}
+
+/**
+ * Links. Legacy paths are accepted so every view can keep writing
+ * `href('#/why/team-x')`: panels become `?p=`, sections become `?go=` which
+ * App turns into a scroll (and a team selection for `#/options/<team>`).
+ */
 export function href(path: string): string {
-  const q = window.location.hash.split('?')[1];
-  return path + (q ? '?' + q : '');
+  const seg = path.split('?')[0].replace(/^#\/?/, '').split('/');
+  const view = seg[0] ?? '', arg = seg[1];
+  const q = new URLSearchParams(window.location.hash.split('?')[1] ?? '');
+  q.delete('go'); q.delete('team');
+  if (view === 'why') {
+    q.set('p', arg === 'initiatives' || arg === 'workforce' || arg === 'cost' || arg === 'organization' ? arg : `team:${arg}`);
+  } else if (view === 'plan' || view === 'about') {
+    q.set('p', view);
+  } else {
+    q.delete('p');
+    q.set('go', view === 'whatif' || view === 'options' || view === 'decide' ? `sec-${view}` : 'sec-hold');
+    if (view === 'options' && arg) q.set('team', arg);
+  }
+  const s = q.toString();
+  return '#/' + (s ? '?' + s : '');
 }

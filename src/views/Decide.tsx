@@ -71,7 +71,7 @@ export function Decide() {
   }, [model, scen, active, v, rows, state.weights, th, teamName, initName]);
 
   return (
-    <main className="main one">
+    <section className="page-sec" id="sec-decide">
       <div className="eyebrow">5 · Decide</div>
       <h1 className="title">Which option, given what matters to you?</h1>
       <p className="lede">Every option is compared on three things: what it adds in cost, how much of the problem is still there and for how long, and revenue at risk. Set the weights; the ranking follows them. Under <b>{scen.name}</b>{active.length ? `, with ${active.length} lever${active.length > 1 ? 's' : ''} on` : ''}.</p>
@@ -119,6 +119,6 @@ export function Decide() {
       <nav className="next">
         <a className="btn ghost" href={href('#/plan')}>Next: make it your organization →</a>
       </nav>
-    </main>
+    </section>
   );
 }

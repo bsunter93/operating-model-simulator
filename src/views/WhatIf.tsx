@@ -20,7 +20,7 @@ export function WhatIf() {
   const v = verdict(cur.result, teamName, initName, cur.scenario.type === 'base' ? undefined : base);
 
   return (
-    <main className="main one">
+    <section className="page-sec" id="sec-whatif">
       <div className="eyebrow">3 · What if</div>
       <h1 className="title">What if the world is different from the plan?</h1>
       <p className="lede">Pick a scenario to see how the plan holds up when conditions change. The whole model reruns under it{active.length ? `, with your ${active.length} lever${active.length > 1 ? 's' : ''} still on` : ''}. It stays selected as you move through the other steps.</p>
@@ -80,6 +80,6 @@ export function WhatIf() {
       <nav className="next">
         <a className="btn" href={href(`#/options/${cur.result.summary.firstBreakTeamId ?? model.teams[0].id}`)}>Next: what to do about it →</a>
       </nav>
-    </main>
+    </section>
   );
 }
