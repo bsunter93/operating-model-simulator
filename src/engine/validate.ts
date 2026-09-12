@@ -1,4 +1,4 @@
-import type { OperatingModel } from '../models/types';
+import type { OperatingModel, ScenarioEffect } from '../models/types';
 import { isMonthKey, expandMonths, monthIndex } from './calendar';
 
 export class ModelValidationError extends Error {
@@ -134,13 +134,22 @@ export function validateModel(m: OperatingModel): string[] {
   if (!(pool.contextPenalty >= 0)) say('pooling.contextPenalty cannot be negative');
 
   const scenIds = new Set<string>();
+  const checkEffect = (id: string, e: ScenarioEffect) => {
+    if ('fromMonth' in e && e.fromMonth !== undefined && !isMonthKey(e.fromMonth)) say(`scenario ${id}: fromMonth is not YYYY-MM`);
+    if (e.type === 'demandMultiplier') {
+      if (!(e.demandMultiplier >= 0)) say(`scenario ${id}: demandMultiplier cannot be negative`);
+      for (const sid of e.streamIds ?? []) if (!streamIds.has(sid)) say(`scenario ${id} references unknown demand stream "${sid}"`);
+    }
+    if (e.type === 'budgetConstraint' && !(e.budgetMultiplier >= 0)) say(`scenario ${id}: budgetMultiplier cannot be negative`);
+    if (e.type === 'productivityMultiplier' && !(e.multiplier > 0)) say(`scenario ${id}: productivity multiplier must be positive`);
+    if ((e.type === 'productivityMultiplier' || e.type === 'attritionMultiplier') && e.teamIds) for (const tid of e.teamIds) if (!teamIds.has(tid)) say(`scenario ${id} references unknown team "${tid}"`);
+    if (e.type === 'attritionMultiplier' && !(e.multiplier >= 0)) say(`scenario ${id}: attrition multiplier cannot be negative`);
+  };
   for (const s of m.scenarios) {
     if (scenIds.has(s.id)) say(`duplicate scenario id "${s.id}"`);
     scenIds.add(s.id);
-    if ('fromMonth' in s && s.fromMonth !== undefined && !isMonthKey(s.fromMonth)) say(`scenario ${s.id}: fromMonth is not YYYY-MM`);
-    if (s.type === 'demandMultiplier' && !(s.demandMultiplier >= 0)) say(`scenario ${s.id}: demandMultiplier cannot be negative`);
-    if (s.type === 'budgetConstraint' && !(s.budgetMultiplier >= 0)) say(`scenario ${s.id}: budgetMultiplier cannot be negative`);
-    if (s.type === 'productivityMultiplier' && !(s.multiplier > 0)) say(`scenario ${s.id}: productivity multiplier must be positive`);
+    if (s.type === 'combined') { if (!s.effects.length) say(`scenario ${s.id}: combined scenario has no effects`); s.effects.forEach((e) => checkEffect(s.id, e)); }
+    else if (s.type !== 'base') checkEffect(s.id, s);
   }
   if (m.scenarios.filter((s) => s.type === 'base').length !== 1) say('exactly one scenario of type "base" is required');
 
@@ -185,4 +194,36 @@ export function validateModel(m: OperatingModel): string[] {
 export function assertValid(m: OperatingModel): void {
   const problems = validateModel(m);
   if (problems.length) throw new ModelValidationError(problems);
+}
+
+/**
+ * Non-fatal inconsistencies between the model's own numbers. Shown to the
+ * reader; they never stop a run.
+ */
+export function modelWarnings(m: OperatingModel): string[] {
+  const w: string[] = [];
+  const modeled = m.teams.reduce((s, t) => s + t.currentFte, 0);
+  if (modeled > m.strategy.employeeCount) w.push(`The modeled teams hold ${Math.round(modeled)} people but the company is said to have ${m.strategy.employeeCount}.`);
+  const cost = m.teams.reduce((s, t) => s + t.currentFte * t.monthlyFteCostUsd * 12, 0);
+  if (m.budget.modeledAnnualBudgetUsd > m.strategy.operatingCostTargetUsd) w.push(`The budget for the modeled teams exceeds the company's whole operating cost target.`);
+  if (cost > m.budget.modeledAnnualBudgetUsd * 1.25) w.push(`Starting headcount alone costs ${Math.round(cost / 1e6)}M a year against a ${Math.round(m.budget.modeledAnnualBudgetUsd / 1e6)}M budget; the plan is over budget before anything happens.`);
+  const season = Object.values(m.seasonality);
+  const avg = season.reduce((a, b) => a + b, 0) / season.length;
+  if (Math.abs(avg - 1) > 0.02) w.push(`Seasonality multipliers average ${avg.toFixed(2)}, not 1.0; they are normalized to shares, so only the shape matters, but the numbers may not mean what you intended.`);
+  for (const t of m.teams) {
+    if (t.targetUtilization > 0.9) w.push(`${t.name} targets ${Math.round(t.targetUtilization * 100)}% utilization, which leaves almost no room for peaks.`);
+    if (t.annualAttrition > 0.3) w.push(`${t.name} loses ${Math.round(t.annualAttrition * 100)}% of its people a year; check that is intended.`);
+  }
+  for (const h of m.hiringPlan) {
+    const t = m.teams.find((x) => x.id === h.teamId);
+    if (t && h.headcount > t.currentFte) w.push(`The hiring request for ${t.name} (${h.headcount}) is larger than the team (${t.currentFte}).`);
+  }
+  for (const i of m.initiatives) {
+    for (const [tid, f] of Object.entries(i.requiredFteByTeam)) {
+      const t = m.teams.find((x) => x.id === tid);
+      if (t && f > t.currentFte * 0.5) w.push(`${i.name} takes ${f} of ${t.name}'s ${t.currentFte} people; more than half the team.`);
+    }
+    if (i.revenueAtRiskUsd > i.financialValueUsd) w.push(`${i.name} has more revenue at risk than value; check the two numbers.`);
+  }
+  return w;
 }

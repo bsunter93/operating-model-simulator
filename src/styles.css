@@ -226,7 +226,7 @@ th .term:hover:after{font-weight:400}
 .tbl.cmp th.sel button,.tbl.cmp th.sel{color:var(--ink)}
 .tbl.cmp td.sel,.tbl.cmp th.sel{background:var(--accent-soft)}
 .tbl.cmp th.sel button:after{content:" ●";color:var(--accent)}
-.tbl.dec td.left,.tbl.edit td.left{text-align:left}
+.tbl td.left{text-align:left}
 .tbl.dec tr.stack td{background:var(--accent-soft)}
 .weights{display:grid;gap:6px;max-width:520px;margin:0 0 16px}
 .wrow{display:grid;grid-template-columns:150px 1fr 48px;gap:12px;align-items:center;font-size:13px;color:var(--body)}
@@ -352,3 +352,12 @@ th .term:hover:after{font-weight:400}
 .orgin{display:grid;grid-template-columns:118px 76px 1fr;gap:8px;align-items:center;font-size:12.5px;color:var(--body);padding:5px 0}
 .orgin em{font-style:normal;font-size:11.5px;color:var(--muted)}
 .metrics.three.org{margin-bottom:14px}
+
+/* about */
+.how{margin:0;padding-left:22px;font-size:14px;line-height:1.55;color:var(--body)}
+.how li{margin:0 0 8px} .how b{color:var(--ink)}
+.about .loop{max-width:560px;margin:0 0 8px}
+.tbl.assum td{white-space:normal;line-height:1.45;text-align:left}
+.tbl.assum td:first-child{width:130px;white-space:nowrap;vertical-align:top}
+.steps a.aside2{margin-left:0}
+.errors.warn{border-left-color:var(--warm);background:var(--warm-soft);margin:0 0 22px}

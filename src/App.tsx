@@ -10,6 +10,7 @@ import { WhatIf } from './views/WhatIf';
 import { Options } from './views/Options';
 import { Decide } from './views/Decide';
 import { ModelView } from './views/ModelView';
+import { About } from './views/About';
 import { StoreProvider, useRoute } from './state/store';
 
 function Screen() {
@@ -24,6 +25,7 @@ function Screen() {
     case 'options': return <Options teamId={route.teamId} />;
     case 'decide': return <Decide />;
     case 'plan': return <ModelView />;
+    case 'about': return <About />;
     default: return <Hold />;
   }
 }
@@ -36,7 +38,7 @@ export default function App() {
         <div className="page one"><Screen /></div>
         <Tour />
         <footer className="foot">
-          Atlas Systems is fictional. Every number on these pages is computed by a deterministic monthly model from one JSON file; nothing is stored as a result.
+          Atlas Systems is fictional. This is an illustrative operating model, not a financial forecast. Every number on these pages is computed by a deterministic monthly model from one JSON file; nothing is stored as a result. <a href="#/about">How it works</a>.
           {' '}Built by <a href="https://bensunter.com/">Ben Sunter</a>. The pods-versus-pooled math comes from <a href="https://bensunter.com/pods-or-pooled.html">Half a Day of Nothing</a>. <a href="https://github.com/bsunter93/operating-model-simulator">Source on GitHub</a>.
         </footer>
       </div>

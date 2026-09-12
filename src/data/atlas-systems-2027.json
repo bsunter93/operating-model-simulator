@@ -70,7 +70,10 @@
     { "id": "scenario-budget-cut", "name": "Budget -10%", "type": "budgetConstraint", "budgetMultiplier": 0.90, "description": "The modeled budget cap drops to 90% of plan. The engine names the levers; it does not pull them." },
     { "id": "scenario-productivity-15", "name": "Productivity +15%", "type": "productivityMultiplier", "multiplier": 1.15, "description": "The same work takes 15% fewer hours everywhere." },
     { "id": "scenario-attrition-shock", "name": "Attrition shock", "type": "attritionMultiplier", "multiplier": 1.5, "description": "Attrition runs 50% above plan on every team." },
-    { "id": "scenario-revenue-exposure", "name": "Execution risk +50%", "type": "failureProbabilityMultiplier", "multiplier": 1.5, "description": "Every initiative's failure probability rises by half." }
+    { "id": "scenario-revenue-exposure", "name": "Execution risk +50%", "type": "failureProbabilityMultiplier", "multiplier": 1.5, "description": "Every initiative's failure probability rises by half." },
+    { "id": "scenario-enterprise-wins", "name": "Enterprise wins big", "type": "demandMultiplier", "demandMultiplier": 1.25, "fromMonth": "2027-03", "streamIds": ["demand-enterprise-implementation", "demand-enterprise-account-requests", "demand-enterprise-support"], "description": "Enterprise sales lands 25% more than plan from March. Only the enterprise streams move; consumer and platform work is unchanged." },
+    { "id": "scenario-downturn", "name": "Downturn: demand -15% and a hiring freeze", "type": "combined", "effects": [ { "type": "demandMultiplier", "demandMultiplier": 0.85, "fromMonth": "2027-04" }, { "type": "hiringFreeze" } ], "description": "Demand falls 15% from April and every planned hire is cancelled. Less work, fewer people, and attrition keeps running." },
+    { "id": "scenario-implementation-attrition", "name": "Implementation loses people", "type": "attritionMultiplier", "multiplier": 2.5, "teamIds": ["team-implementation"], "description": "Attrition on the one team already over capacity runs at two and a half times plan. Nothing else changes." }
   ],
 
   "interventions": [

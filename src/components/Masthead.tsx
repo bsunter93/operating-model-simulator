@@ -23,8 +23,8 @@ export function Masthead() {
       </div>
       <nav className="steps" aria-label="Steps">
         {STEPS.map((s, i) => (
-          <a key={s.view} href={href(pathFor(s.view, s.path))} aria-current={current === s.view ? 'page' : undefined} className={s.view === 'plan' ? 'aside' : ''}>
-            {s.view !== 'plan' && <i>{i + 1}</i>}{s.label}
+          <a key={s.view} href={href(pathFor(s.view, s.path))} aria-current={current === s.view ? 'page' : undefined} className={s.view === 'plan' ? 'aside' : s.view === 'about' ? 'aside2' : ''}>
+            {s.view !== 'plan' && s.view !== 'about' && <i>{i + 1}</i>}{s.label}
           </a>
         ))}
       </nav>

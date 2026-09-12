@@ -115,14 +115,18 @@ export interface PoolingAssumptions {
   contextPenalty: number;
 }
 
-export type Scenario = { id: string; name: string; description?: string } & (
-  | { type: 'base' }
-  | { type: 'demandMultiplier'; demandMultiplier: number; fromMonth?: MonthKey }
+export type ScenarioEffect =
+  | { type: 'demandMultiplier'; demandMultiplier: number; fromMonth?: MonthKey; /** Limit to these streams; all when absent. */ streamIds?: string[] }
   | { type: 'hiringFreeze'; fromMonth?: MonthKey }
   | { type: 'budgetConstraint'; budgetMultiplier: number }
   | { type: 'failureProbabilityMultiplier'; multiplier: number }
-  | { type: 'productivityMultiplier'; multiplier: number }
-  | { type: 'attritionMultiplier'; multiplier: number }
+  | { type: 'productivityMultiplier'; multiplier: number; /** Limit to these teams; all when absent. */ teamIds?: string[] }
+  | { type: 'attritionMultiplier'; multiplier: number; /** Limit to these teams; all when absent. */ teamIds?: string[] };
+
+export type Scenario = { id: string; name: string; description?: string } & (
+  | { type: 'base' }
+  | ScenarioEffect
+  | { type: 'combined'; effects: ScenarioEffect[] }
 );
 
 export type Intervention = {

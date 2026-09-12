@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import type { OperatingModel } from '../models/types';
 import { FIXTURE, parseImportedModel, useStore } from '../state/store';
+import { modelWarnings } from '../engine';
 import { Term } from '../components/Term';
 import { num } from '../lib/format';
 
@@ -54,6 +55,7 @@ export function ModelView() {
   };
 
   const totalFte = model.teams.reduce((s, t) => s + t.currentFte, 0);
+  const warnings = modelWarnings(model);
 
   return (
     <main className="main">
@@ -63,6 +65,12 @@ export function ModelView() {
         Every page runs on the numbers below. Change a team's headcount or a stream's volume and the whole model recomputes. For a different organization altogether, export this model as JSON, edit it, and import it back.
       </p>
 
+      {warnings.length > 0 && (
+        <div className="errors warn">
+          <b>These numbers disagree with each other.</b> The model still runs; the results may not mean what you intend.
+          <ul>{warnings.map((w) => <li key={w}>{w}</li>)}</ul>
+        </div>
+      )}
       <section className="sec">
         <h2>Scale</h2>
         <p className="sub">Drag to resize the whole organization. Headcount, volumes, hiring, initiative staffing, and budget all scale together, so the same story plays out at your size. Currently <b>{num(totalFte)} people</b>.</p>

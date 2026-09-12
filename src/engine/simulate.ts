@@ -7,7 +7,7 @@
  * The input model is never mutated; run() works on a structured clone.
  */
 import type {
-  DemandStream, HiringRequest, Intervention, MonthKey, OperatingModel, Scenario, Team,
+  DemandStream, HiringRequest, Intervention, MonthKey, OperatingModel, Scenario, ScenarioEffect, Team,
 } from '../models/types';
 import type {
   BudgetLever, Constraint, Exposure, ExposureItem, FinancialMonth, Financials,
@@ -41,12 +41,12 @@ function worse(a: TeamStatus, b: TeamStatus): TeamStatus {
 }
 
 interface Effective {
-  demandMult: number[];          // by month index
-  hiringPlan: HiringRequest[];   // after freeze and expedite
+  demandMult: Map<string, number[]>;   // streamId -> multiplier by month index
+  hiringPlan: HiringRequest[];         // after freeze and expedite
   budgetMult: number;
   failureMult: number;
-  productivityMult: number;
-  attritionMult: number;
+  productivityMult: Map<string, number>; // teamId -> multiplier
+  attritionMult: Map<string, number>;    // teamId -> multiplier
   targetUtil: Map<string, number>;
   automationMult: Map<string, number[]>;  // teamId -> multiplier by month
   reallocDelta: Map<string, number[]>;    // teamId -> FTE delta by month (signed, persistent)
@@ -79,12 +79,12 @@ function buildEffective(model: OperatingModel, scenario: Scenario, interventions
   const start = model.calendar.startMonth;
   const idx = (k: MonthKey) => monthIndex(start, k);
   const eff: Effective = {
-    demandMult: new Array(n).fill(1),
+    demandMult: new Map(model.demandStreams.map((s) => [s.id, new Array(n).fill(1)])),
     hiringPlan: model.hiringPlan.map((h) => ({ ...h })),
     budgetMult: 1,
     failureMult: 1,
-    productivityMult: 1,
-    attritionMult: 1,
+    productivityMult: new Map(model.teams.map((t) => [t.id, 1])),
+    attritionMult: new Map(model.teams.map((t) => [t.id, 1])),
     targetUtil: new Map(model.teams.map((t) => [t.id, t.targetUtilization])),
     automationMult: new Map(model.teams.map((t) => [t.id, new Array(n).fill(1)])),
     reallocDelta: new Map(model.teams.map((t) => [t.id, new Array(n).fill(0)])),
@@ -93,24 +93,34 @@ function buildEffective(model: OperatingModel, scenario: Scenario, interventions
     cancelled: new Set(),
   };
 
-  switch (scenario.type) {
-    case 'base': break;
-    case 'demandMultiplier': {
-      const from = scenario.fromMonth ? Math.max(0, idx(scenario.fromMonth)) : 0;
-      for (let m = from; m < n; m++) eff.demandMult[m] = scenario.demandMultiplier;
-      break;
+  const apply = (e: ScenarioEffect) => {
+    switch (e.type) {
+      case 'demandMultiplier': {
+        const from = e.fromMonth ? Math.max(0, idx(e.fromMonth)) : 0;
+        for (const [sid, arr] of eff.demandMult) {
+          if (e.streamIds && !e.streamIds.includes(sid)) continue;
+          for (let m = from; m < n; m++) arr[m] *= e.demandMultiplier;
+        }
+        break;
+      }
+      case 'hiringFreeze': {
+        const from = e.fromMonth ? idx(e.fromMonth) : 0;
+        // Requests made before the freeze are in flight and complete; the rest are cancelled.
+        eff.hiringPlan = eff.hiringPlan.filter((h) => idx(h.requestMonth) < from);
+        break;
+      }
+      case 'budgetConstraint': eff.budgetMult *= e.budgetMultiplier; break;
+      case 'failureProbabilityMultiplier': eff.failureMult *= e.multiplier; break;
+      case 'productivityMultiplier':
+        for (const [tid, v] of eff.productivityMult) if (!e.teamIds || e.teamIds.includes(tid)) eff.productivityMult.set(tid, v * e.multiplier);
+        break;
+      case 'attritionMultiplier':
+        for (const [tid, v] of eff.attritionMult) if (!e.teamIds || e.teamIds.includes(tid)) eff.attritionMult.set(tid, v * e.multiplier);
+        break;
     }
-    case 'hiringFreeze': {
-      const from = scenario.fromMonth ? idx(scenario.fromMonth) : 0;
-      // Requests made before the freeze are in flight and complete; the rest are cancelled.
-      eff.hiringPlan = eff.hiringPlan.filter((h) => idx(h.requestMonth) < from);
-      break;
-    }
-    case 'budgetConstraint': eff.budgetMult = scenario.budgetMultiplier; break;
-    case 'failureProbabilityMultiplier': eff.failureMult = scenario.multiplier; break;
-    case 'productivityMultiplier': eff.productivityMult = scenario.multiplier; break;
-    case 'attritionMultiplier': eff.attritionMult = scenario.multiplier; break;
-  }
+  };
+  if (scenario.type === 'combined') scenario.effects.forEach(apply);
+  else if (scenario.type !== 'base') apply(scenario);
 
   for (const iv of interventions) {
     const s0 = iv.startMonth ? Math.max(0, idx(iv.startMonth)) : 0;
@@ -180,9 +190,11 @@ export function run(input: OperatingModel, opts: RunOptions = {}): ModelResult {
     const shares = seasonShares(model, s, months);
     const arr = runHours.get(s.teamId)!;
     const auto = eff.automationMult.get(s.teamId)!;
+    const dm = eff.demandMult.get(s.id)!;
+    const prod = eff.productivityMult.get(s.teamId)!;
     for (let m = 0; m < n; m++) {
-      const volume = s.annualVolume * shares[m] * eff.demandMult[m];
-      arr[m] += (volume * s.handlingMinutesPerUnit * s.complexityFactor / 60) * auto[m] / eff.productivityMult;
+      const volume = s.annualVolume * shares[m] * dm[m];
+      arr[m] += (volume * s.handlingMinutesPerUnit * s.complexityFactor / 60) * auto[m] / prod;
     }
   }
 
@@ -208,7 +220,7 @@ export function run(input: OperatingModel, opts: RunOptions = {}): ModelResult {
 
   const teamResults: TeamResult[] = [];
   for (const t of model.teams) {
-    const ma = annualToMonthlyRate(Math.min(0.99, t.annualAttrition * eff.attritionMult));
+    const ma = annualToMonthlyRate(Math.min(0.99, t.annualAttrition * eff.attritionMult.get(t.id)!));
     const prod = productivePerFte(t);
     const target = eff.targetUtil.get(t.id)!;
     const rows: TeamMonth[] = [];

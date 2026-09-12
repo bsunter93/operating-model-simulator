@@ -224,7 +224,8 @@ export type Route =
   | { view: 'whatif' }
   | { view: 'options'; teamId: string }
   | { view: 'decide' }
-  | { view: 'plan' };
+  | { view: 'plan' }
+  | { view: 'about' };
 
 export const STEPS: { view: Route['view']; label: string; path: string }[] = [
   { view: 'hold', label: 'Can the plan work?', path: '#/' },
@@ -233,6 +234,7 @@ export const STEPS: { view: Route['view']; label: string; path: string }[] = [
   { view: 'options', label: 'What to do', path: '#/options' },
   { view: 'decide', label: 'Decide', path: '#/decide' },
   { view: 'plan', label: 'Your numbers', path: '#/plan' },
+  { view: 'about', label: 'How this works', path: '#/about' },
 ];
 
 function parseHash(model: OperatingModel): Route {
@@ -244,6 +246,7 @@ function parseHash(model: OperatingModel): Route {
   if (view === 'options') return { view: 'options', teamId: team(arg) };
   if (view === 'decide') return { view: 'decide' };
   if (view === 'plan') return { view: 'plan' };
+  if (view === 'about') return { view: 'about' };
   return { view: 'hold' };
 }
 
