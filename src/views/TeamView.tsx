@@ -37,7 +37,11 @@ export function TeamView({ teamId }: { teamId: string }) {
       <div className="chart">
         <div className="chart-title">
           <b>Monthly workload against capacity</b>
-          <span>{streams.length ? streams.map((s) => `${num(s.annualVolume)} ${s.unit}/yr at ${s.handlingMinutesPerUnit >= 60 ? `${(s.handlingMinutesPerUnit / 60).toFixed(0)} h` : `${s.handlingMinutesPerUnit} min`} each`).join(' · ') : 'Portfolio-only team: workload is initiative assignments'}</span>
+          <span>{streams.length ? streams.map((s) => {
+            const hoursEach = s.handlingMinutesPerUnit / 60;
+            const each = hoursEach >= 1 ? `${parseFloat(hoursEach.toFixed(1))} hours` : `${s.handlingMinutesPerUnit} minutes`;
+            return `${num(s.annualVolume)} ${s.unit} a year × ${each} each = ${num(s.annualVolume * hoursEach * s.complexityFactor)} hours`;
+          }).join(' · ') : 'Portfolio-only team: workload is initiative assignments'}</span>
         </div>
         <TeamTimeline team={team} ghost={state.interventionIds.length ? ghost : undefined} />
         <div className="legend">
