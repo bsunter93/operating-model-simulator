@@ -1,4 +1,4 @@
-import { useStore } from '../state/store';
+import { href, useStore } from '../state/store';
 import { TeamTimeline } from '../components/charts/TeamTimeline';
 import { StatusPill } from '../components/StatusPill';
 import { Term } from '../components/Term';
@@ -6,8 +6,20 @@ import { monthLabel, num, pct } from '../lib/format';
 
 const people = (n: number) => (Math.round(n) === 1 ? '1 person' : `${Math.round(n)} people`);
 
-export function TeamView({ teamId }: { teamId: string }) {
+export function WhyTabs({ active }: { active: 'team' | 'initiatives' }) {
+  const { result } = useStore();
+  const team = result.summary.firstBreakTeamId ?? result.teams[0].teamId;
+  return (
+    <div className="tabs" role="tablist">
+      <a role="tab" aria-selected={active === 'team'} href={href(`#/why/${team}`)}>A team's year</a>
+      <a role="tab" aria-selected={active === 'initiatives'} href={href('#/why/initiatives')}>The initiatives</a>
+    </div>
+  );
+}
+
+export function Why({ teamId: requested }: { teamId: string }) {
   const { result, doNothing, state, model } = useStore();
+  const teamId = requested || result.summary.firstBreakTeamId || model.teams[0].id;
   const team = result.teams.find((t) => t.teamId === teamId)!;
   const ghost = doNothing.teams.find((t) => t.teamId === teamId)!;
   const def = model.teams.find((t) => t.id === teamId)!;
@@ -20,28 +32,27 @@ export function TeamView({ teamId }: { teamId: string }) {
   const q = window.location.hash.split('?')[1];
 
   return (
-    <main className="main">
-      <div className="eyebrow">Capacity timeline</div>
+    <main className="main one">
+      <div className="eyebrow">2 · Why</div>
+      <WhyTabs active="team" />
       <div className="teamhead">
         <h1 className="title">{def.name}</h1>
-        <select className="teampick" value={teamId} onChange={(e) => { window.location.hash = `#/capacity/${e.target.value}` + (q ? '?' + q : ''); }} aria-label="Team">
+        <select className="teampick" value={teamId} onChange={(e) => { window.location.hash = `#/why/${e.target.value}` + (q ? '?' + q : ''); }} aria-label="Team">
           {model.teams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
         </select>
         <StatusPill status={team.worstStatus} />
       </div>
-      <p className="lede small">
-        Bars are hours of work each month; the line is what this team can handle at its target. Where a bar rises above the line, work is queuing.
-      </p>
+      <p className="lede small">Bars are hours of work each month; the line is what this team can handle at its target. Where a bar rises above the line, work is queuing.</p>
       <ul className="facts">
         <li><b>{Math.round(team.startingFte)} → {Math.round(team.endingFte)}</b><Term k="headcount">people, Jan to Dec</Term></li>
         <li><b>{pct(team.peakUtilization)}</b><Term k="utilization">peak utilization</Term>, {monthLabel(team.peakMonth)}</li>
-        <li><b>{team.monthsConstrained}</b>months over the <Term k="target">{pct(def.targetUtilization)} target</Term></li>
+        <li><b>{team.monthsConstrained}</b>month{team.monthsConstrained === 1 ? '' : 's'} over the <Term k="target">{pct(def.targetUtilization)} target</Term></li>
         <li><b>{team.peakWorkforceGap.toFixed(1)}</b><Term k="shortfall">people short</Term> at peak</li>
         <li><b>{pct(1 - def.shrinkage)}</b>of paid hours <Term k="productive">productive</Term></li>
         {landing.length > 0 && <li><b>{landing.map((m) => `+${Math.round(m.hiresLanded)} ${monthLabel(m.month)}`).join(', ')}</b>hires landing</li>}
       </ul>
 
-      <div className="chart">
+      <div className="chart" data-tour="chart">
         <div className="chart-title">
           <b>Monthly workload against capacity</b>
           <span>{streams.length ? streams.map((s) => {
@@ -57,7 +68,7 @@ export function TeamView({ teamId }: { teamId: string }) {
           <span><i data-s="severe" /> <Term k="gap">over target</Term></span>
           <span><i className="tline" /> <Term k="target">target capacity</Term> ({pct(def.targetUtilization)} of productive hours)</span>
           <span><i className="aline" /> <Term k="productive">all productive hours</Term></span>
-          {state.interventionIds.length > 0 && <span><i className="ghost" /> before interventions</span>}
+          {state.interventionIds.length > 0 && <span><i className="ghost" /> before your levers</span>}
         </div>
       </div>
 
@@ -89,6 +100,7 @@ export function TeamView({ teamId }: { teamId: string }) {
           {landing[0].monthIndex > 0 && <> Nothing changes before {monthLabel(landing[0].month)}; that is the lead time.</>}
         </div>
       )}
+      {!firstOver && <div className="callout ok"><b>{def.name} stays within its target all year</b>{state.interventionIds.length ? ' with your levers on.' : '.'}</div>}
 
       <details className="fold">
         <summary>Month by month, in numbers</summary>
@@ -117,6 +129,11 @@ export function TeamView({ teamId }: { teamId: string }) {
           </table>
         </div>
       </details>
+
+      <nav className="next">
+        <a className="btn ghost" href={href('#/whatif')}>Next: what if the world is different →</a>
+        <a className="btn" href={href(`#/options/${teamId}`)}>Or: what to do about {def.name} →</a>
+      </nav>
     </main>
   );
 }

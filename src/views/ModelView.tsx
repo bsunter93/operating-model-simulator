@@ -57,7 +57,7 @@ export function ModelView() {
 
   return (
     <main className="main">
-      <div className="eyebrow">Your numbers</div>
+      <div className="eyebrow">6 · Your numbers</div>
       <h1 className="title">Make it your organization</h1>
       <p className="lede">
         Every page runs on the numbers below. Change a team's headcount or a stream's volume and the whole model recomputes. For a different organization altogether, export this model as JSON, edit it, and import it back.
@@ -67,7 +67,7 @@ export function ModelView() {
         <h2>Scale</h2>
         <p className="sub">Drag to resize the whole organization. Headcount, volumes, hiring, initiative staffing, and budget all scale together, so the same story plays out at your size. Currently <b>{num(totalFte)} people</b>.</p>
         {isFixture || model.id.startsWith(FIXTURE.id) ? (
-          <label className="wrow scale">
+          <label className="wrow scale" data-tour="scale">
             <span className="wl">×{scale.toFixed(2)}</span>
             <input type="range" min={0.1} max={10} step={0.05} value={scale} onChange={(e) => applyScale(Number(e.target.value))} />
             <span className="wv">{num(Math.round(FIXTURE.teams.reduce((s, t) => s + t.currentFte, 0) * scale))} people</span>

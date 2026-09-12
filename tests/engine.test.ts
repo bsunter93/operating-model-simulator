@@ -161,11 +161,11 @@ describe('demand and productivity', () => {
     for (const t of p.teams) t.months.forEach((m, i) => expect(m.requiredFte).toBeLessThanOrEqual(team(base, t.teamId).months[i].requiredFte + 1e-9));
   });
   it('automation reduces workload only after time to impact', () => {
-    const r = run(model, { interventions: ['intervention-automate-implementation'] });
-    const a = team(r, 'team-implementation'), b = team(base, 'team-implementation');
-    for (let m = 0; m < 2; m++) expect(a.months[m].runHours).toBeCloseTo(b.months[m].runHours, 6);
-    for (let m = 2; m < 12; m++) expect(a.months[m].runHours).toBeCloseTo(b.months[m].runHours * 0.85, 6);
-    expect(r.financials.annualChangeCostUsd).toBe(900000);
+    const r = run(model, { interventions: ['intervention-automate-consumer'] });
+    const a = team(r, 'team-consumer-ops'), b = team(base, 'team-consumer-ops');
+    for (let m = 0; m < 3; m++) expect(a.months[m].runHours).toBeCloseTo(b.months[m].runHours, 6);
+    for (let m = 3; m < 12; m++) expect(a.months[m].runHours).toBeCloseTo(b.months[m].runHours * 0.85, 6);
+    expect(r.financials.annualChangeCostUsd).toBe(1200000);
   });
 });
 

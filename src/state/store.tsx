@@ -17,6 +17,7 @@ export interface State {
   overrides: Overrides;
   weights: DecisionWeights;
   tourStep: number | null;
+  tourChoice: string | null;
 }
 
 type Action =
@@ -28,12 +29,13 @@ type Action =
   | { type: 'model'; model: OperatingModel }
   | { type: 'editModel'; model: OperatingModel }
   | { type: 'tour'; step: number | null }
+  | { type: 'tourChoice'; id: string | null }
   | { type: 'reset' };
 
 const baseId = (m: OperatingModel) => m.scenarios.find((s) => s.type === 'base')!.id;
 
 function fresh(model: OperatingModel): State {
-  return { model, scenarioId: baseId(model), interventionIds: [], overrides: {}, weights: model.decisionWeights, tourStep: null };
+  return { model, scenarioId: baseId(model), interventionIds: [], overrides: {}, weights: model.decisionWeights, tourStep: null, tourChoice: null };
 }
 
 function reducer(s: State, a: Action): State {
@@ -46,8 +48,9 @@ function reducer(s: State, a: Action): State {
     case 'weights': return { ...s, weights: a.weights };
     case 'model': return fresh(a.model);
     case 'editModel': return { ...s, model: a.model, scenarioId: a.model.scenarios.some((x) => x.id === s.scenarioId) ? s.scenarioId : baseId(a.model), interventionIds: s.interventionIds.filter((id) => (isCustomId(id) ? a.model.teams.some((t) => t.id === id.split(':')[0]) : a.model.interventions.some((x) => x.id === id))) };
-    case 'tour': return { ...s, tourStep: a.step };
-    case 'reset': return { ...fresh(s.model), tourStep: s.tourStep };
+    case 'tour': return { ...s, tourStep: a.step, tourChoice: a.step === null ? null : s.tourChoice };
+    case 'tourChoice': return { ...s, tourChoice: a.id };
+    case 'reset': return { ...fresh(s.model), tourStep: s.tourStep, tourChoice: s.tourChoice };
   }
 }
 
@@ -169,7 +172,7 @@ function writeQuery(s: State): void {
   if (s.scenarioId !== baseId(s.model)) p.set('s', s.scenarioId);
   if (s.interventionIds.length) p.set('i', s.interventionIds.map((id) => (s.overrides[id] !== undefined ? `${id}:${s.overrides[id]}` : id)).join(','));
   const q = p.toString();
-  const next = (path || '#/overview') + (q ? '?' + q : '');
+  const next = (path || '#/') + (q ? '?' + q : '');
   if (next !== window.location.hash) history.replaceState(null, '', next);
 }
 
@@ -211,15 +214,34 @@ export function parseImportedModel(text: string): { model: OperatingModel } | { 
 }
 
 // ── routing ────────────────────────────────────────────────────────────────
-export type Route = { view: 'overview' } | { view: 'capacity'; teamId: string } | { view: 'scenarios' } | { view: 'model' };
+export type Route =
+  | { view: 'hold' }
+  | { view: 'why'; teamId: string }
+  | { view: 'initiatives' }
+  | { view: 'whatif' }
+  | { view: 'options'; teamId: string }
+  | { view: 'decide' }
+  | { view: 'plan' };
+
+export const STEPS: { view: Route['view']; label: string; path: string }[] = [
+  { view: 'hold', label: 'Does it hold?', path: '#/' },
+  { view: 'why', label: 'Why', path: '#/why' },
+  { view: 'whatif', label: 'What if', path: '#/whatif' },
+  { view: 'options', label: 'What to do', path: '#/options' },
+  { view: 'decide', label: 'Decide', path: '#/decide' },
+  { view: 'plan', label: 'Your numbers', path: '#/plan' },
+];
 
 function parseHash(model: OperatingModel): Route {
   const h = window.location.hash.replace(/^#\/?/, '').split('?')[0];
   const [view, arg] = h.split('/');
-  if (view === 'capacity') return { view: 'capacity', teamId: arg && model.teams.some((t) => t.id === arg) ? arg : model.teams[0].id };
-  if (view === 'scenarios') return { view: 'scenarios' };
-  if (view === 'model') return { view: 'model' };
-  return { view: 'overview' };
+  const team = (id?: string) => (id && model.teams.some((t) => t.id === id) ? id : '');
+  if (view === 'why') return arg === 'initiatives' ? { view: 'initiatives' } : { view: 'why', teamId: team(arg) };
+  if (view === 'whatif') return { view: 'whatif' };
+  if (view === 'options') return { view: 'options', teamId: team(arg) };
+  if (view === 'decide') return { view: 'decide' };
+  if (view === 'plan') return { view: 'plan' };
+  return { view: 'hold' };
 }
 
 export function useRoute(): Route {
