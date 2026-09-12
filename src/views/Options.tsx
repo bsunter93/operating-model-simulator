@@ -28,21 +28,16 @@ export function Options({ teamId: requested }: { teamId: string }) {
     const eff = effects.get(iv.id) ?? '';
     const knob = knobFor(iv);
     return (
-      <li key={iv.id} className={'iv' + (on ? ' on' : '')}>
-        <label className="iv-main">
-          <input type="checkbox" checked={on} onChange={() => dispatch({ type: 'toggleIntervention', id: iv.id })} />
-          <span>
-            <b>{iv.name}{iv.description && <span className="term info" tabIndex={0} data-tip={iv.description} aria-label="What this is">?</span>}</b>
-            <span className={'effect' + (isQuietEffect(eff) ? ' none' : '')}>{eff}</span>
-          </span>
-        </label>
-        {knob && (
-          <label className="knob">
-            <span>{knob.label}</span>
-            <input type="number" min={knob.min} max={knob.max} step={knob.step} value={knob.get(iv)} onChange={(e) => dispatch({ type: 'override', id: iv.id, value: Math.min(knob.max, Math.max(knob.min, Number(e.target.value))) })} />
+      <li key={iv.id} className={'iv row' + (on ? ' on' : '')}>
+        <input id={`iv-${iv.id}`} type="checkbox" checked={on} onChange={() => dispatch({ type: 'toggleIntervention', id: iv.id })} />
+        <label htmlFor={`iv-${iv.id}`} className="iv-name">{iv.name}{iv.description && <span className="term info" tabIndex={0} data-tip={iv.description} aria-label="What this is">?</span>}</label>
+        {knob ? (
+          <label className="knob inline">
+            <input type="number" min={knob.min} max={knob.max} step={knob.step} value={knob.get(iv)} onChange={(e) => dispatch({ type: 'override', id: iv.id, value: Math.min(knob.max, Math.max(knob.min, Number(e.target.value))) })} aria-label={knob.label} />
             <span>{knob.unit}</span>
           </label>
-        )}
+        ) : <span />}
+        <span className={'effect' + (isQuietEffect(eff) ? ' none' : '')}>{eff}</span>
       </li>
     );
   };
@@ -59,28 +54,25 @@ export function Options({ teamId: requested }: { teamId: string }) {
       </div>
       <p className="lede">Turn a lever on and the chart moves. Each line under a lever says what it changes on top of the others already on. Set the size with the number next to it. None of this is a recommendation; the next step is where you weigh them.</p>
 
-      <div className="two">
-        <div className="two-controls">
-          <div className="card" data-tour="levers">
-            <h3>Try on {def.name}</h3>
-            <p className="note top">Three things any team can do: add people, remove work, or accept a higher target.</p>
-            <ul className="ivs">{levers.map(item)}</ul>
-          </div>
-          <div className="card">
-            <h3>Already on the table</h3>
-            <p className="note top">Options written into this plan.</p>
-            <ul className="ivs">{planned.map(item)}</ul>
-          </div>
-          {(state.interventionIds.length > 0 || Object.keys(state.overrides).length > 0) && <button className="reset" onClick={() => { dispatch({ type: 'setInterventions', ids: [] }); }}>Turn everything off</button>}
+      <div className="chart">
+        <div className="chart-title"><b>{def.name}, month by month</b><span>{team.monthsConstrained} month{team.monthsConstrained === 1 ? '' : 's'} over capacity at a {pct(def.targetUtilization)} target · peak {pct(team.peakUtilization)}</span></div>
+        <TeamTimeline team={team} ghost={active.length ? ghost : undefined} />
+        <div className="legend"><span><i className="bar" /> run work</span><span><i className="bar2" /> initiative work</span><span><i data-s="severe" /> over capacity</span><span><i className="tline" /> target capacity</span>{active.length > 0 && <span><i className="ghost" /> before your levers</span>}</div>
+      </div>
+
+      <div className="levers">
+        <div className="card" data-tour="levers">
+          <h3>Try on {def.name}</h3>
+          <p className="note top">Three things any team can do: add people, remove work, or accept a higher target.</p>
+          <ul className="ivs">{levers.map(item)}</ul>
         </div>
-        <div className="two-chart">
-          <div className="chart sticky">
-            <div className="chart-title"><b>{def.name}, month by month</b><span>{team.monthsConstrained} month{team.monthsConstrained === 1 ? '' : 's'} over capacity at a {pct(def.targetUtilization)} target · peak {pct(team.peakUtilization)}</span></div>
-            <TeamTimeline team={team} ghost={active.length ? ghost : undefined} />
-            <div className="legend"><span><i className="bar" /> run work</span><span><i className="bar2" /> initiative work</span><span><i data-s="severe" /> over capacity</span><span><i className="tline" /> target capacity</span>{active.length > 0 && <span><i className="ghost" /> before your levers</span>}</div>
-          </div>
+        <div className="card">
+          <h3>Already on the table</h3>
+          <p className="note top">Options written into this plan.</p>
+          <ul className="ivs">{planned.map(item)}</ul>
         </div>
       </div>
+      {(state.interventionIds.length > 0 || Object.keys(state.overrides).length > 0) && <button className="reset" onClick={() => { dispatch({ type: 'setInterventions', ids: [] }); }}>Turn everything off</button>}
 
       <nav className="next">
         <a className="btn" href={href('#/decide')}>Next: weigh the options →</a>

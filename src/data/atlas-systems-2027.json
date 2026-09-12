@@ -81,7 +81,6 @@
     { "id": "intervention-automate-consumer", "name": "Automate 15% of consumer case handling", "type": "automation", "teamId": "team-consumer-ops", "workloadReductionRate": 0.15, "timeToImpactMonths": 3, "implementationCostUsd": 1200000, "description": "Self-service and auto-resolution for the most common case types remove 15% of hands-on hours, starting three months after kickoff." },
     { "id": "intervention-reallocate-to-implementation", "name": "Move 5 people from Customer Operations to Implementation", "type": "reallocation", "fromTeamId": "team-customer-ops", "toTeamId": "team-implementation", "headcount": 5, "timeToImpactMonths": 1, "implementationCostUsd": 150000, "description": "Five experienced account people cross-train and move within a month." },
     { "id": "intervention-defer-international", "name": "Defer International Expansion by 3 months", "type": "defer", "initiativeId": "init-international-expansion", "months": 3, "description": "Push the start from March to June." },
-    { "id": "intervention-accept-higher-utilization", "name": "Accept 88% utilization on Implementation", "type": "serviceLevelChange", "teamId": "team-implementation", "newTargetUtilization": 0.88, "description": "Trade slack for throughput. The service level absorbs the difference." },
     { "id": "intervention-cancel-self-service", "name": "Cancel the Self-Service Portal", "type": "cancel", "initiativeId": "init-self-service", "description": "Drop the portal for this year and release six people-worth of capacity in Customer and Consumer Operations." }
   ],
 

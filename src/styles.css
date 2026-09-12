@@ -379,3 +379,13 @@ th .term:hover:after{font-weight:400}
 .strip-t td.now .cell{box-shadow:inset 0 0 0 1px var(--alert);}
 .strip-t td.now{background:var(--alert-soft)}
 .legend i.nowline{background:var(--alert-soft);border:1px solid var(--alert)}
+
+/* options: chart on top, levers in two columns */
+.levers{display:grid;grid-template-columns:repeat(auto-fit,minmax(360px,1fr));gap:16px;margin-top:18px;align-items:start}
+.iv.row{display:grid;grid-template-columns:18px minmax(0,1fr) auto;gap:4px 10px;align-items:center;padding:9px 8px}
+.iv.row input[type=checkbox]{margin:0;accent-color:var(--accent)}
+.iv-name{font:500 13.5px/1.35 var(--sans);color:var(--ink);cursor:pointer}
+.knob.inline{margin:0;gap:6px}
+.knob.inline input{width:58px}
+.iv.row .effect{grid-column:2 / -1;font:500 11.5px/1.4 var(--mono);color:var(--accent);margin:0}
+.iv.row .effect.none{color:var(--muted)}

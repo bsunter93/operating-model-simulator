@@ -28,8 +28,9 @@ describe('decision comparison', () => {
     expect([...rows.map((r) => r.rank)].sort((a, b) => a - b)).toEqual(rows.map((_, i) => i + 1));
   });
   it('raising a utilization target moves no work and scores like doing nothing', () => {
-    const rows = compareOptions(doNothing, options, model.decisionWeights);
-    const accept = rows.find((r) => r.id === 'intervention-accept-higher-utilization')!;
+    const accept88 = { id: 'accept', label: 'Accept 88% on Implementation', result: run(model, { interventions: [{ id: 'accept', name: 'accept', type: 'serviceLevelChange' as const, teamId: 'team-implementation', newTargetUtilization: 0.88 }] }) };
+    const rows = compareOptions(doNothing, [...options, accept88], model.decisionWeights);
+    const accept = rows.find((r) => r.id === 'accept')!;
     const dn = rows.find((r) => r.id === 'do-nothing')!;
     expect(accept.residualGapHours).toBeCloseTo(dn.residualGapHours, 6);
     expect(accept.residualExposureUsd).toBeCloseTo(dn.residualExposureUsd, 6);
