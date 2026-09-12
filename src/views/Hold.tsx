@@ -4,6 +4,7 @@ import { money, monthLabel, pct, signed, num } from '../lib/format';
 import { verdict } from '../lib/verdict';
 import { Term } from '../components/Term';
 import type { TermKey } from '../lib/glossary';
+import { Loop } from '../components/Loop';
 
 function peakShortfall(r: ModelResult): { team: TeamResult; month: string; fte: number } | null {
   let best: { team: TeamResult; month: string; fte: number } | null = null;
@@ -42,11 +43,9 @@ export function Hold() {
     <main className="main one">
       <div className="purpose">
         <div className="purpose-text">
-          <b>What this is.</b> A month-by-month model of one company's operating plan. It turns the strategy into work, the work into hours, and the hours into people, then shows where the plan runs out of people, when, and what would change that. Follow the steps in order or jump around. Every number recomputes as you go. No conclusion on these pages is written by hand; all of it is computed.
+          <b>A month-by-month model of one company's plan.</b> Strategy becomes work, work becomes hours, hours become people. Decisions change the strategy and the loop runs again. Change anything; every number recomputes.
         </div>
-        <ol className="chain" aria-label="How the model flows">
-          {['Strategy', 'Demand', 'Workload', 'Capacity', 'Workforce', 'Portfolio', 'Decision'].map((x) => <li key={x}>{x}</li>)}
-        </ol>
+        <Loop />
       </div>
 
       <div className="eyebrow">1 · Can the plan work?</div>
