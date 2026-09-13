@@ -700,3 +700,77 @@ button.cell{cursor:pointer}
 .choice.on small.plain{color:var(--ink)}
 .picked{font-size:13.5px;line-height:1.5;color:var(--body);background:var(--accent-soft);border-left:3px solid var(--accent);padding:10px 12px;border-radius:0 3px 3px 0;margin:10px 0 0}
 .picked b{color:var(--ink)}
+
+/* ── stepper: one control per concept, no page scroll ──────────────────── */
+.app{height:100vh;overflow:hidden;grid-template-rows:auto 1fr}
+.shell{grid-template-columns:38px minmax(360px,420px) minmax(0,1fr);height:100%;min-height:0;max-width:none;gap:0}
+.dots{position:static;padding:16px 0;gap:9px}
+.stepper{display:grid;grid-template-rows:auto minmax(0,1fr) auto;border-right:1px solid var(--line);min-height:0;background:var(--surface)}
+.st-head{padding:18px 22px 10px;border-bottom:1px solid var(--hair)}
+.st-n{font:500 10.5px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--accent)}
+.st-head h2{font:600 22px/1.18 var(--display);color:var(--ink);margin:8px 0 0;letter-spacing:-.012em;text-wrap:balance}
+.st-head .big-verdict{font-size:28px;line-height:1.08;display:block}
+.st-body{overflow-y:auto;padding:14px 22px 18px;min-height:0}
+.st-body p{font-size:13.5px;line-height:1.55;color:var(--body);margin:0 0 10px}
+.st-body p.hint{font-size:12.5px;color:var(--muted)}
+.st-body .loop{max-width:100%;margin:4px 0 10px}
+.st-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 22px;border-top:1px solid var(--hair);background:var(--tint)}
+.st-dots{display:flex;gap:5px}
+.st-dots i{width:6px;height:6px;border-radius:50%;background:var(--line)}
+.st-dots i.on{background:var(--warm)}
+.st-foot .btn{white-space:nowrap}
+
+details.tuck{margin:10px 0;border-top:1px solid var(--hair);padding-top:8px}
+details.tuck summary{font:500 12px/1.3 var(--sans);color:var(--accent);cursor:pointer;list-style:none}
+details.tuck summary::-webkit-details-marker{display:none}
+details.tuck summary:before{content:"+ ";font-family:var(--mono)}
+details.tuck[open] summary:before{content:"− "}
+details.tuck p{font-size:12.5px;color:var(--muted);margin:8px 0 6px}
+
+.pick{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin:4px 0 8px}
+.pk{text-align:left;font:500 12.5px/1.3 var(--sans);color:var(--ink);background:var(--paper);border:1px solid var(--line);border-radius:3px;padding:8px 9px}
+.pk:hover{border-color:var(--accent)}
+.pk.on{border-color:var(--accent);background:var(--accent-soft);color:var(--accent)}
+
+.levs{display:grid;gap:5px;margin:6px 0}
+.lev{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;background:var(--paper);border:1px solid var(--line);border-radius:3px;padding:7px 9px}
+.lev.on{border-color:var(--accent);background:var(--accent-soft)}
+.lev-pick{text-align:left;min-width:0}
+.lev-pick b{display:block;font:500 13px/1.3 var(--sans);color:var(--ink)}
+.lev-pick small{display:block;font:500 11px/1.35 var(--mono);color:var(--accent);margin-top:2px}
+.lev.on .lev-pick b{color:var(--accent)}
+.lev-knob{display:flex;align-items:center;gap:4px;flex:none}
+.lev-knob input{width:48px;font:500 12px/1 var(--mono);color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:3px;padding:3px 5px;text-align:right}
+.lev-knob em{font-style:normal;font-size:10.5px;color:var(--muted)}
+
+.st-body .beat-cons{gap:4px}
+.st-body .bc button{grid-template-columns:40px minmax(0,1fr);padding:7px 8px}
+.st-body .bc-when{font-size:13px}
+.st-body .bc-t{font-size:12.5px}
+.st-body .chain-v li{grid-template-columns:96px minmax(0,1fr);padding:4px 0}
+.st-body .chain-v .cv{font-size:12px}
+.st-body .weights{margin:4px 0 10px}
+.st-body .wrow{grid-template-columns:110px 1fr 40px;font-size:12.5px}
+
+.stage{position:static;height:100%;max-height:none;overflow-y:auto;padding:14px 22px 24px}
+.board{gap:12px}
+.foot{display:none}
+@media (max-width:980px){
+  .app{height:auto;overflow:visible}
+  .shell{grid-template-columns:1fr;height:auto}
+  .stepper{border-right:0;border-bottom:1px solid var(--line)}
+  .st-body{overflow:visible}
+  .stage{height:auto;overflow:visible}
+  .foot{display:block}
+}
+.shell{align-items:stretch}
+.stepper{height:100%}
+.stage{height:100%}
+.board-team .chart svg{max-height:210px}
+.board-map .strip-t.big .cell{height:24px;line-height:24px}
+.board-team .stage-q h3{font-size:15px}
+.board .stage-q h3{font-size:16px}
+.board .howcalc{margin-top:8px;padding-top:6px}
+.app{grid-template-rows:auto minmax(0,1fr)}
+.shell{min-height:0}
+.stage{min-height:0}

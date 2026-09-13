@@ -4,7 +4,6 @@ import { TeamTimeline } from './charts/TeamTimeline';
 import { StatusPill } from './StatusPill';
 import { Term } from './Term';
 import { HowCalc } from './HowCalc';
-import { Controls } from './Controls';
 import { monthLabel, num, pct } from '../lib/format';
 import { Portfolio } from '../views/Portfolio';
 import { Workforce } from '../views/Workforce';
@@ -122,8 +121,6 @@ export function Board({ teamId, onTeam, detail, onDetail }: { teamId: string; on
           </div>
         )}
       </div>
-
-      <Controls teamId={teamId} onTeam={onTeam} />
     </div>
   );
 }
