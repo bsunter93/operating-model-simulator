@@ -39,6 +39,23 @@ describe('money follows the model, not the developer', () => {
     expect(makeFmt().money(0, { precise: true })).toBe('$0');
   });
 
+  it('stops being precise below the scale where precision means anything', () => {
+    // "$345.00K" is two trailing zeros claiming a ten-dollar resolution no operating
+    // model has. Under a million it falls back to the ordinary compact form.
+    const f = makeFmt();
+    expect(f.money(345_000, { precise: true })).toMatch(/^\$345K$/i);
+    expect(f.money(96_000, { precise: true })).toMatch(/^\$96K$/i);
+    expect(f.money(450, { precise: true })).toBe('$450');
+    // and it keeps the decimal where one still carries information
+    expect(f.money(535_590, { precise: true })).toMatch(/^\$535\.6K$/i);
+    expect(f.money(5_200, { precise: true })).toMatch(/^\$5\.2K$/i);
+  });
+
+  it('keeps both decimals at the scale the dashboard reads in', () => {
+    expect(makeFmt().money(1_450_000, { precise: true })).toMatch(/^\$1\.45M$/i);
+    expect(makeFmt().money(43_570_000, { precise: true })).toMatch(/^\$43\.57M$/i);
+  });
+
   it('follows the currency the model declares', () => {
     expect(makeFmt('GBP', 'en-GB').money(1_870_000)).toMatch(/^£1\.9M$/i);
     expect(makeFmt('EUR', 'de-DE').money(1_870_000)).toContain('€');

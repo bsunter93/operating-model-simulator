@@ -57,9 +57,15 @@ export function makeFmt(currency = 'USD', locale = 'en-US'): Fmt {
   return {
     currency, locale,
     money(v, { sign = false, compact = true, precise = false } = {}) {
-      // Two decimals are for telling close figures apart. Nothing is close to nothing,
-      // and "$0.00" in a row of millions reads as a rounding artefact.
-      if (precise && v === 0) precise = false;
+      /*
+       * Two decimals are for telling close figures apart at the scale money is actually
+       * reported at: $47.04M against $43.57M. Below a million they stop buying anything
+       * and start costing something, because "$345.00K" and "$96.00K" are trailing zeros
+       * claiming a ten-dollar resolution no operating model has. Under a million this
+       * falls back to the ordinary compact form, which still carries a decimal where one
+       * means something: $535.6K, $5.2K, $450.
+       */
+      if (precise && (v === 0 || Math.abs(v) < 1e6)) precise = false;
       const opts: Intl.NumberFormatOptions = {
         style: 'currency', currency,
         signDisplay: sign ? 'exceptZero' : 'auto',
