@@ -703,12 +703,17 @@ function Scorecard({ model, spec, picks, result, doNothing, onReset, trail, clou
      about materially different years. */
   const riskCut = n.revenueExposure - s.revenueExposure;
   const svcUp = (s.serviceLevelPct ?? 0) - (n.serviceLevelPct ?? 0);
+  /* In the organisation's own nouns. A studio does not have customers and a health
+     service does not have revenue, and a verdict that says otherwise is talking about
+     somebody else's year. */
+  const money = (model.lexicon?.revenueNoun ?? 'revenue').toLowerCase();
+  const served = (model.lexicon?.customerNoun ?? 'the customer').toLowerCase();
   const verdict =
     took === 0 ? 'You changed nothing, which is the cheapest year available and leaves every constraint exactly where it was.'
     : svcUp > 0.05 && riskCut > 0 ? 'You got the work answered and protected the money behind it, and you paid for both.'
     : svcUp > 0.05 ? 'You got the queue answered. What the portfolio was worth is roughly where it started.'
-    : svcUp < -0.05 ? 'You protected the portfolio by taking people off the queue, and the customer waited for it. That is a real trade, not a mistake.'
-    : riskCut > 0 ? 'You protected revenue without changing what the customer experienced.'
+    : svcUp < -0.05 ? `You protected the portfolio by taking people off the queue, and ${served} waited for it. That is a real trade, not a mistake.`
+    : riskCut > 0 ? `You protected ${money} without changing what ${served} experienced.`
     : 'You spent money and the year came out much as it would have anyway.';
 
   return (
