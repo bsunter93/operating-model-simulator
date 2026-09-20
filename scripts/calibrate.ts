@@ -23,11 +23,11 @@ for (const i of r.initiatives) {
   console.log(`  ${pad(init.name, 28)} ${i.status.padEnd(9)} planned ${i.plannedStart}  start ${i.effectiveStart ?? '-'}  done ${i.completion ?? '-'}  delay ${i.delayMonths}${i.pushedBy ? ' (pushed by ' + i.pushedBy.predecessorId + ')' : ''}${i.truncated ? ' TRUNCATED' : ''}`);
 }
 console.log('\nConstraints (ranked)');
-for (const c of r.constraints) console.log(`  [${c.kind}] ${c.title}  impact $${Math.round(c.businessImpactUsd).toLocaleString()}\n      ${c.detail}`);
+for (const c of r.constraints) console.log(`  [${c.kind}] ${c.title}  impact $${Math.round(c.businessImpact).toLocaleString()}\n      ${c.detail}`);
 console.log('\nFinancials');
-console.log(`  run $${Math.round(r.financials.annualRunCostUsd).toLocaleString()}  change $${Math.round(r.financials.annualChangeCostUsd).toLocaleString()}  budget $${Math.round(r.financials.annualBudgetUsd).toLocaleString()}  variance $${Math.round(r.financials.annualVarianceUsd).toLocaleString()}`);
-for (const l of r.financials.budgetLevers) console.log(`  lever: ${l.label}  cash $${Math.round(l.cashReleasedUsd).toLocaleString()}  ${l.fteMonthsReleased} FTE-months`);
+console.log(`  run $${Math.round(r.financials.annualRunCost).toLocaleString()}  change $${Math.round(r.financials.annualChangeCost).toLocaleString()}  budget $${Math.round(r.financials.annualBudget).toLocaleString()}  variance $${Math.round(r.financials.annualVariance).toLocaleString()}`);
+for (const l of r.financials.budgetLevers) console.log(`  lever: ${l.label}  cash $${Math.round(l.cashReleased).toLocaleString()}  ${l.fteMonthsReleased} FTE-months`);
 console.log('\nRevenue exposure');
-for (const e of r.exposure.items) console.log(`  ${pad(e.initiativeId, 30)} p=${e.baseProbability.toFixed(2)} scen=${e.scenarioProbability.toFixed(2)} shortfall=${e.capacityShortfall.toFixed(2)} pEff=${e.effectiveProbability.toFixed(2)}  $${Math.round(e.exposureUsd).toLocaleString()}`);
-console.log(`  total $${Math.round(r.exposure.totalUsd).toLocaleString()}`);
+for (const e of r.exposure.items) console.log(`  ${pad(e.initiativeId, 30)} p=${e.baseProbability.toFixed(2)} scen=${e.scenarioProbability.toFixed(2)} shortfall=${e.capacityShortfall.toFixed(2)} pEff=${e.effectiveProbability.toFixed(2)}  $${Math.round(e.exposure).toLocaleString()}`);
+console.log(`  total $${Math.round(r.exposure.total).toLocaleString()}`);
 console.log('\nSummary', JSON.stringify(r.summary, null, 1).replace(/\n\s*/g, ' '));

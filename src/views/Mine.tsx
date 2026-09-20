@@ -44,7 +44,7 @@ export function Mine() {
           <section className="card tight">
             <h5>Business</h5>
             <div className="kv">
-              <label>Revenue target<N value={Math.round(model.strategy.revenueTargetUsd / 1e6)} width={72} onChange={(x) => edit((m) => { m.strategy.revenueTargetUsd = x * 1e6; })} /><em>$M</em></label>
+              <label>Revenue target<N value={Math.round(model.strategy.revenueTarget / 1e6)} width={72} onChange={(x) => edit((m) => { m.strategy.revenueTarget = x * 1e6; })} /><em>$M</em></label>
               <label>Growth<N value={Math.round(model.strategy.growthTargetPct * 100)} width={54} onChange={(x) => edit((m) => { m.strategy.growthTargetPct = x / 100; })} /><em>% y/y</em></label>
               <label>Employees<N value={model.strategy.employeeCount} width={72} onChange={(x) => edit((m) => { m.strategy.employeeCount = x; })} /><em>total</em></label>
             </div>
@@ -52,12 +52,12 @@ export function Mine() {
           <section className="card tight">
             <h5>Economics</h5>
             <div className="kv">
-              <label>Budget, modeled teams<N value={Math.round(model.budget.modeledAnnualBudgetUsd / 1e6)} width={72} onChange={(x) => edit((m) => { m.budget.modeledAnnualBudgetUsd = x * 1e6; })} /><em>$M / yr</em></label>
+              <label>Budget, modeled teams<N value={Math.round(model.budget.modeledAnnualBudget / 1e6)} width={72} onChange={(x) => edit((m) => { m.budget.modeledAnnualBudget = x * 1e6; })} /><em>$M / yr</em></label>
               <label>Paid hours<N value={model.calendar.workHoursPerFteMonth} width={54} onChange={(x) => edit((m) => { m.calendar.workHoursPerFteMonth = Math.max(1, x); })} /><em>per person / mo</em></label>
             </div>
             <div className="scroll">
               <table className="tbl edit mini"><thead><tr><th>Team</th><th>$ / person / mo</th></tr></thead>
-                <tbody>{model.teams.map((t, i) => <tr key={t.id}><td className="ink left">{t.name}</td><td><N value={t.monthlyFteCostUsd} step={500} width={84} onChange={(x) => edit((m) => { m.teams[i].monthlyFteCostUsd = x; })} /></td></tr>)}</tbody>
+                <tbody>{model.teams.map((t, i) => <tr key={t.id}><td className="ink left">{t.name}</td><td><N value={t.monthlyFteCost} step={500} width={84} onChange={(x) => edit((m) => { m.teams[i].monthlyFteCost = x; })} /></td></tr>)}</tbody>
               </table>
             </div>
           </section>
@@ -104,7 +104,7 @@ export function Mine() {
               </table>
             </div>
             <ol className="top3">
-              {top3.length === 0 ? <li className="dim">Nothing breaks. Every team stays within capacity.</li> : top3.map((c) => <li key={c.id} data-kind={c.kind}><b>{c.firstMonth ? monthLabel(c.firstMonth) : '—'}</b> {c.title}{c.businessImpactUsd > 0 ? <span> · {fmt.money(c.businessImpactUsd)}</span> : null}</li>)}
+              {top3.length === 0 ? <li className="dim">Nothing breaks. Every team stays within capacity.</li> : top3.map((c) => <li key={c.id} data-kind={c.kind}><b>{c.firstMonth ? monthLabel(c.firstMonth) : '—'}</b> {c.title}{c.businessImpact > 0 ? <span> · {fmt.money(c.businessImpact)}</span> : null}</li>)}
             </ol>
           </section>
           <Controls teamId={focus} onTeam={(id) => dispatch({ type: 'team', id })} compact />

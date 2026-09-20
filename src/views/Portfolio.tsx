@@ -47,7 +47,7 @@ export function Portfolio() {
             return (
               <g key={init.id}>
                 <text x={0} y={y + 17} fontSize={13} fontWeight={600} fontFamily="var(--sans)" fill="var(--ink)">{init.name}</text>
-                <text x={0} y={y + 32} fontSize={11} fontFamily="var(--sans)" fill="var(--muted)">{fte} people · {fmt.money(init.revenueAtRiskUsd)} at risk{init.discretionary ? ' · discretionary' : ''}</text>
+                <text x={0} y={y + 32} fontSize={11} fontFamily="var(--sans)" fill="var(--muted)">{fte} people · {fmt.money(init.revenueAtRisk)} at risk{init.discretionary ? ' · discretionary' : ''}</text>
                 {/* planned */}
                 <rect x={x(p0)} y={y + 8} width={Math.max(0, x(p1) - x(p0))} height={10} fill="var(--accent-soft)" stroke="var(--accent)" strokeDasharray={s.delayMonths > 0 || s.status === 'cancelled' ? '3 3' : undefined} strokeWidth={1} rx={2} />
                 {/* feasible */}
@@ -106,7 +106,7 @@ export function Portfolio() {
                     <td className={s.delayMonths > 0 ? 'ink' : ''}>{s.status === 'cancelled' ? 'cancelled' : monthLabel(s.effectiveStart!)}</td>
                     <td>{s.completion ? monthLabel(s.completion, s.truncated) : '—'}</td>
                     <td>{s.delayMonths > 0 ? `+${s.delayMonths} mo` : '—'}</td>
-                    <td>{e ? fmt.money(e.exposureUsd) : '—'}</td>
+                    <td>{e ? fmt.money(e.exposure) : '—'}</td>
                   </tr>
                 );
               })}

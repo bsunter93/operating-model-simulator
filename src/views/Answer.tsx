@@ -33,7 +33,7 @@ type Objective = {
 
 const strain = (r: ModelResult) =>
   r.teams.reduce((a, t) => a + t.months.filter((m) => m.utilization > m.targetUtilization).length, 0);
-const spend = (r: ModelResult) => r.financials.monthly.reduce((a, m) => a + m.changeCostUsd, 0);
+const spend = (r: ModelResult) => r.financials.monthly.reduce((a, m) => a + m.changeCost, 0);
 const lateness = (r: ModelResult) => r.initiatives.reduce((a, i) => a + (i.delayMonths ?? 0), 0);
 const shedByTeam = (r: ModelResult) => r.teams
   .map((t) => ({ id: t.teamId, hours: t.months.reduce((a, m) => a + m.shedHours, 0) }))
@@ -43,8 +43,8 @@ const cash = (fmt: Fmt, n: number) => fmt.money(n, { precise: true });
 
 const OBJECTIVES: Objective[] = [
   { id: 'revenue', label: 'Revenue', who: 'a sales or GTM organisation',
-    score: (r) => r.summary.revenueExposureUsd,
-    read: (r, fmt) => `${cash(fmt, r.summary.revenueExposureUsd)} of revenue still at risk` },
+    score: (r) => r.summary.revenueExposure,
+    read: (r, fmt) => `${cash(fmt, r.summary.revenueExposure)} of revenue still at risk` },
   { id: 'people', label: 'Your people', who: 'anyone who has watched a team burn out',
     score: strain,
     read: (r) => `${strain(r)} team-months over capacity, and ${Math.round(r.summary.peopleLostToAttrition)} people gone by year end` },
@@ -58,8 +58,8 @@ const OBJECTIVES: Objective[] = [
   { id: 'budget', label: 'The budget', who: 'a non-profit, or anyone with a hard cap',
     score: spend, read: (r, fmt) => `${cash(fmt, spend(r))} spent on changes` },
   { id: 'portfolio', label: 'What you promised', who: 'a product or delivery organisation',
-    score: (r) => -r.summary.portfolioValueUsd,
-    read: (r, fmt) => `${cash(fmt, r.summary.portfolioValueUsd)} of the portfolio delivered` },
+    score: (r) => -r.summary.portfolioValue,
+    read: (r, fmt) => `${cash(fmt, r.summary.portfolioValue)} of the portfolio delivered` },
   { id: 'service', label: 'The customer', who: 'anyone whose queue is somebody waiting',
     score: (r) => -(r.summary.serviceLevelPct ?? 1),
     read: (r) => r.summary.serviceLevelPct === null ? 'no queueing work in this model'

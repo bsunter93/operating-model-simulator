@@ -33,7 +33,7 @@ export function ModelView() {
     for (const s of m.demandStreams) s.annualVolume = Math.max(1, Math.round((base.demandStreams.find((x) => x.id === s.id)?.annualVolume ?? s.annualVolume) * k));
     for (const h of m.hiringPlan) h.headcount = Math.max(0, Math.round((base.hiringPlan.find((x) => x.id === h.id)?.headcount ?? h.headcount) * k));
     for (const i of m.initiatives) for (const tid of Object.keys(i.requiredFteByTeam)) i.requiredFteByTeam[tid] = Math.max(0, Math.round((base.initiatives.find((x) => x.id === i.id)?.requiredFteByTeam[tid] ?? i.requiredFteByTeam[tid]) * k));
-    m.budget.modeledAnnualBudgetUsd = Math.round(base.budget.modeledAnnualBudgetUsd * k);
+    m.budget.modeledAnnualBudget = Math.round(base.budget.modeledAnnualBudget * k);
     m.id = tpl.id + (k === 1 ? '' : '-edited');
     m.status = k === 1 && tpl.id === FIXTURE.id ? 'calibrated' : 'provisional';
     dispatch({ type: 'editModel', model: m });
@@ -117,7 +117,7 @@ export function ModelView() {
                   <td><NumberCell value={Math.round(t.targetUtilization * 100)} min={1} onChange={(v) => edit((m) => { m.teams[i].targetUtilization = Math.min(100, v) / 100; })} width={64} /></td>
                   <td><NumberCell value={Math.round(t.shrinkage * 100)} onChange={(v) => edit((m) => { m.teams[i].shrinkage = Math.min(99, v) / 100; })} width={64} /></td>
                   <td><NumberCell value={Math.round(t.annualAttrition * 100)} onChange={(v) => edit((m) => { m.teams[i].annualAttrition = Math.min(99, v) / 100; })} width={64} /></td>
-                  <td><NumberCell value={t.monthlyFteCostUsd} step={500} onChange={(v) => edit((m) => { m.teams[i].monthlyFteCostUsd = v; })} width={96} /></td>
+                  <td><NumberCell value={t.monthlyFteCost} step={500} onChange={(v) => edit((m) => { m.teams[i].monthlyFteCost = v; })} width={96} /></td>
                 </tr>
               ))}
             </tbody>

@@ -51,7 +51,7 @@ describe('nothing appears or disappears', () => {
 describe('a model that never sets a policy is untouched', () => {
   it('matches the old behaviour exactly on the base plan', () => {
     const a = run(noPolicy), b = run(M);
-    expect(b.summary.revenueExposureUsd).toBeCloseTo(a.summary.revenueExposureUsd, 6);
+    expect(b.summary.revenueExposure).toBeCloseTo(a.summary.revenueExposure, 6);
     expect(b.summary.peopleLostToAttrition).toBeCloseTo(a.summary.peopleLostToAttrition, 6);
     expect(b.summary.closingBacklogHours).toBeCloseTo(0, 6);
   });

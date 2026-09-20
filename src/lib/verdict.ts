@@ -26,7 +26,7 @@ export function verdict(r: ModelResult, fmt: Fmt, teamName: (id: string) => stri
   const severe = r.teams.filter((t) => t.worstStatus === 'severe');
   const over = r.teams.filter((t) => t.worstStatus === 'severe' || t.worstStatus === 'constrained');
   const seq = r.constraints.filter((c) => c.kind === 'sequencing');
-  const budgetGap = r.financials.annualVarianceUsd > 0;
+  const budgetGap = r.financials.annualVariance > 0;
   const s = r.summary;
 
   let headline: string;
@@ -55,7 +55,7 @@ export function verdict(r: ModelResult, fmt: Fmt, teamName: (id: string) => stri
   for (const t of r.teams) for (const m of t.months) if (!peak || m.workforceGap > peak.fte) peak = { team: t.teamId, month: m.month, fte: m.workforceGap };
   if (peak && peak.fte >= 0.5) sentences.push(`The largest single shortfall is ${Math.round(peak.fte) === 1 ? '1 person' : `${Math.round(peak.fte)} people`} in ${teamName(peak.team)} in ${monthLabel(peak.month)}.`);
 
-  if (budgetGap) sentences.push(`The modeled cost runs ${money(r.financials.annualVarianceUsd)} over the budget cap.`);
+  if (budgetGap) sentences.push(`The modeled cost runs ${money(r.financials.annualVariance)} over the budget cap.`);
 
   let versus: string | null = null;
   if (base && base !== r) {
@@ -67,8 +67,8 @@ export function verdict(r: ModelResult, fmt: Fmt, teamName: (id: string) => stri
     if (Math.round(bpeak) !== Math.round(peak?.fte ?? 0)) parts.push(`peak shortfall ${Math.round(bpeak)} → ${Math.round(peak?.fte ?? 0)} people`);
     const gapB = base.teams.reduce((a, t) => a + t.totalGapVsPlanHours, 0), gapR = r.teams.reduce((a, t) => a + t.totalGapVsPlanHours, 0);
     if (Math.abs(gapB - gapR) > 50) parts.push(`hours over capacity ${num(gapB)} → ${num(gapR)}`);
-    if (Math.abs(base.summary.revenueExposureUsd - s.revenueExposureUsd) > 1e5) parts.push(`revenue exposure ${money(base.summary.revenueExposureUsd)} → ${money(s.revenueExposureUsd)}`);
-    if (Math.abs(base.financials.annualTotalCostUsd - r.financials.annualTotalCostUsd) > 1e4) parts.push(`cost ${money(base.financials.annualTotalCostUsd)} → ${money(r.financials.annualTotalCostUsd)}`);
+    if (Math.abs(base.summary.revenueExposure - s.revenueExposure) > 1e5) parts.push(`revenue exposure ${money(base.summary.revenueExposure)} → ${money(s.revenueExposure)}`);
+    if (Math.abs(base.financials.annualTotalCost - r.financials.annualTotalCost) > 1e4) parts.push(`cost ${money(base.financials.annualTotalCost)} → ${money(r.financials.annualTotalCost)}`);
     versus = parts.length ? `Against the base plan: ${parts.join('; ')}.` : 'No material change from the base plan.';
   }
 

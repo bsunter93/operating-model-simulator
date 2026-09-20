@@ -60,7 +60,7 @@ export function allEndings(model: OperatingModel, spec: RunSpec): ModelResult[] 
 export type TriCal = { spend: [number, number]; value: [number, number]; late: [number, number] };
 export type TriPos = { x: number; y: number; cost: number; scope: number; time: number };
 
-const spendOf = (r: ModelResult) => r.financials.monthly.reduce((a, m) => a + m.changeCostUsd, 0);
+const spendOf = (r: ModelResult) => r.financials.monthly.reduce((a, m) => a + m.changeCost, 0);
 const lateOf = (r: ModelResult) => r.initiatives.reduce((a, i) => a + (i.delayMonths ?? 0), 0);
 
 export function calibrate(endings: ModelResult[]): TriCal {
@@ -68,7 +68,7 @@ export function calibrate(endings: ModelResult[]): TriCal {
     const v = endings.map(f);
     return [Math.min(...v), Math.max(...v)];
   };
-  return { spend: span(spendOf), value: span((r) => r.summary.portfolioValueUsd), late: span(lateOf) };
+  return { spend: span(spendOf), value: span((r) => r.summary.portfolioValue), late: span(lateOf) };
 }
 
 export function triangleOf(r: ModelResult, cal: TriCal): TriPos {
@@ -81,7 +81,7 @@ export function triangleOf(r: ModelResult, cal: TriCal): TriPos {
     return goodIsLow ? 1 - t : t;
   };
   const cost = norm(spendOf(r), cal.spend, true);
-  const scope = norm(r.summary.portfolioValueUsd, cal.value, false);
+  const scope = norm(r.summary.portfolioValue, cal.value, false);
   const time = norm(lateOf(r), cal.late, true);
   const sum = cost + scope + time || 1;
   // cost at the apex, scope bottom-left, time bottom-right
@@ -210,7 +210,7 @@ function FocusLine({ model, result, teamId }:
 function InitiativeRisk({ model, result }: { model: OperatingModel; result: ModelResult }) {
   const { fmt } = useStore();
   const named = (id: string) => model.initiatives.find((i) => i.id === id)?.name ?? id;
-  const items = [...result.exposure.items].sort((a, b) => b.exposureUsd - a.exposureUsd);
+  const items = [...result.exposure.items].sort((a, b) => b.exposure - a.exposure);
   return (
     <ul className="rb-risks">
       {items.map((e) => {
@@ -222,7 +222,7 @@ function InitiativeRisk({ model, result }: { model: OperatingModel; result: Mode
               {pct(e.baseProbability)}
               {added > 0.005 && <i> &rarr; {pct(e.effectiveProbability)}</i>}
             </span>
-            <span className="rb-rcash">{cash(fmt, e.exposureUsd)}</span>
+            <span className="rb-rcash">{cash(fmt, e.exposure)}</span>
           </li>
         );
       })}
@@ -253,7 +253,7 @@ function Kpis({ result, prev }: { result: ModelResult; prev?: ModelResult }) {
                p?.serviceLevelPct != null ? s.serviceLevelPct - p.serviceLevelPct : undefined, false)
         : cell('Teams over capacity', String(s.teamsConstrained), p && s.teamsConstrained - p.teamsConstrained)}
       {cell('People, year end', String(Math.round(s.endingFte)), p && s.endingFte - p.endingFte)}
-      {cell('Revenue at risk', cash(fmt, s.revenueExposureUsd), p && s.revenueExposureUsd - p.revenueExposureUsd)}
+      {cell('Revenue at risk', cash(fmt, s.revenueExposure), p && s.revenueExposure - p.revenueExposure)}
       {cell('Spent on changes', cash(fmt, spendOf(result)), undefined)}
     </div>
   );
@@ -291,8 +291,8 @@ function consequence(model: OperatingModel, fmt: Fmt, before: ModelResult, after
   const dShed = after.summary.shedHours - before.summary.shedHours;
   if (Math.abs(dShed) > 100) out.push(`Work that never gets done ${dShed < 0 ? 'falls' : 'rises'} to ${fmt.hours(after.summary.shedHours)}.`);
 
-  const dRisk = after.summary.revenueExposureUsd - before.summary.revenueExposureUsd;
-  if (Math.abs(dRisk) > 50000) out.push(`Revenue at risk ${dRisk < 0 ? 'falls' : 'rises'} to ${cash(fmt, after.summary.revenueExposureUsd)}.`);
+  const dRisk = after.summary.revenueExposure - before.summary.revenueExposure;
+  if (Math.abs(dRisk) > 50000) out.push(`Revenue at risk ${dRisk < 0 ? 'falls' : 'rises'} to ${cash(fmt, after.summary.revenueExposure)}.`);
 
   return out.length === 1 && !moved.length ? ['Nothing changed. That is an answer too.'] : out;
 }
@@ -597,7 +597,7 @@ function Replay({ model, spec, picks, trail }:
           <ul className="rb-replay-kpi">
             <li><b>{Math.round((states[at].summary.serviceLevelPct ?? 1) * 100)}%</b><span>answered in time</span></li>
             <li><b>{Math.round(states[at].summary.endingFte)}</b><span>people</span></li>
-            <li><b>{cash(fmt, states[at].summary.revenueExposureUsd)}</b><span>at risk</span></li>
+            <li><b>{cash(fmt, states[at].summary.revenueExposure)}</b><span>at risk</span></li>
             <li><b>{(states[at].summary.retentionRate * 100).toFixed(1)}%</b><span>retention</span></li>
           </ul>
         </div>
@@ -622,7 +622,7 @@ function Scorecard({ model, spec, picks, result, doNothing, onReset, trail, clou
      service level and revenue, not the count of teams over capacity: on a year with real
      pressure in it that count barely moves, so a verdict hung on it said the same sentence
      about materially different years. */
-  const riskCut = n.revenueExposureUsd - s.revenueExposureUsd;
+  const riskCut = n.revenueExposure - s.revenueExposure;
   const svcUp = (s.serviceLevelPct ?? 0) - (n.serviceLevelPct ?? 0);
   const verdict =
     took === 0 ? 'You changed nothing, which is the cheapest year available and leaves every constraint exactly where it was.'
@@ -652,7 +652,7 @@ function Scorecard({ model, spec, picks, result, doNothing, onReset, trail, clou
         <tbody>
           <tr><td>Teams over capacity</td><td>{n.teamsConstrained}</td><td>{s.teamsConstrained}</td></tr>
           <tr><td>People at year end</td><td>{Math.round(n.endingFte)}</td><td>{Math.round(s.endingFte)}</td></tr>
-          <tr><td>Revenue at risk</td><td>{cash(fmt, n.revenueExposureUsd)}</td><td>{cash(fmt, s.revenueExposureUsd)}</td></tr>
+          <tr><td>Revenue at risk</td><td>{cash(fmt, n.revenueExposure)}</td><td>{cash(fmt, s.revenueExposure)}</td></tr>
           <tr><td>Kept their people</td><td>{(n.retentionRate * 100).toFixed(1)}%</td><td>{(s.retentionRate * 100).toFixed(1)}%</td></tr>
           <tr><td>Months a team ran over</td><td>{n.strainMonths}</td><td>{s.strainMonths}</td></tr>
           {s.serviceLevelPct !== null && (

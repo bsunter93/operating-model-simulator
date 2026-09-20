@@ -20,12 +20,12 @@ export interface Calendar {
 }
 
 export interface Strategy {
-  revenueTargetUsd: number;
+  revenueTarget: number;
   growthTargetPct: number;
   employeeCount: number;
   enterpriseCustomers: number;
-  /** Company-wide context only. The modeled budget is `budget.modeledAnnualBudgetUsd`. */
-  operatingCostTargetUsd: number;
+  /** Company-wide context only. The modeled budget is `budget.modeledAnnualBudget`. */
+  operatingCostTarget: number;
   strategicPriorities: string[];
 }
 
@@ -61,7 +61,7 @@ export interface Team {
   shrinkage: number;
   targetUtilization: number;
   /** Single authoritative fully loaded monthly cost per FTE. */
-  monthlyFteCostUsd: number;
+  monthlyFteCost: number;
 }
 
 export interface WorkMix {
@@ -134,10 +134,10 @@ export interface Initiative {
   durationMonths: number;
   requiredFteByTeam: Record<string, number>;
   strategicValue: number;
-  financialValueUsd: number;
+  financialValue: number;
   urgency: number;
   confidence: number;
-  revenueAtRiskUsd: number;
+  revenueAtRisk: number;
   executionFailureProbability: number;
   discretionary: boolean;
 }
@@ -151,7 +151,7 @@ export interface Dependency {
 
 export interface Budget {
   /** Covers the modeled teams only, not the company-wide operating cost target. */
-  modeledAnnualBudgetUsd: number;
+  modeledAnnualBudget: number;
 }
 
 export interface DecisionWeights {
@@ -193,10 +193,10 @@ export type Intervention = {
   /** Defaults to the calendar start. */
   startMonth?: MonthKey;
 } & (
-  | { type: 'expediteHiring'; hiringRequestId: string; newLeadTimeMonths: number; oneTimeCostUsd: number }
-  | { type: 'hire'; teamId: string; headcount: number; leadTimeMonths: number; recruitingCostPerHeadUsd: number }
-  | { type: 'automation'; teamId: string; workloadReductionRate: number; timeToImpactMonths: number; implementationCostUsd: number }
-  | { type: 'reallocation'; fromTeamId: string; toTeamId: string; headcount: number; timeToImpactMonths: number; implementationCostUsd: number }
+  | { type: 'expediteHiring'; hiringRequestId: string; newLeadTimeMonths: number; oneTimeCost: number }
+  | { type: 'hire'; teamId: string; headcount: number; leadTimeMonths: number; recruitingCostPerHead: number }
+  | { type: 'automation'; teamId: string; workloadReductionRate: number; timeToImpactMonths: number; implementationCost: number }
+  | { type: 'reallocation'; fromTeamId: string; toTeamId: string; headcount: number; timeToImpactMonths: number; implementationCost: number }
   | { type: 'defer'; initiativeId: string; months: number }
   | { type: 'cancel'; initiativeId: string }
   /**
@@ -209,7 +209,7 @@ export type Intervention = {
    * survives the change: finishing later usually earns less inside the year.
    */
   | { type: 'restaff'; initiativeId: string; durationMultiplier: number; fteMultiplier: number;
-      valueMultiplier?: number; oneTimeCostUsd?: number }
+      valueMultiplier?: number; oneTimeCost?: number }
   /**
    * Delivers part of an initiative instead of all of it: fewer people, proportionally
    * less of what it was worth, same dates. Cancelling was previously the only way to
@@ -289,12 +289,11 @@ export interface OperatingModel {
   interventions: Intervention[];
   decisionWeights: DecisionWeights;
   /**
-   * ISO 4217 code for every money figure in this model. Absent means USD.
+   * ISO 4217 code for every amount in this model. Absent means USD.
    *
-   * The `...Usd` suffix on the amount fields is historical and says nothing about the
-   * unit: the unit is whatever this says. Renaming those thirty fields touches the
-   * engine, the results, every view and every fixture without changing one number, so it
-   * is a separate job from getting the figures to render in the right currency.
+   * No field name carries a currency: they are `monthlyFteCost`, not `monthlyFteCostUsd`,
+   * because the unit is declared here once and a name that disagrees with it is worse
+   * than a name that says nothing.
    */
   currency?: string;
   /**

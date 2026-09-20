@@ -86,9 +86,9 @@ describe('base run', () => {
   it('annual figures are sums of monthly ones', () => {
     for (const t of base.teams) {
       expect(t.annualWorkloadHours).toBeCloseTo(t.months.reduce((s, m) => s + m.workloadHours, 0), 6);
-      expect(t.annualRunCostUsd).toBeCloseTo(t.months.reduce((s, m) => s + m.runCostUsd, 0), 6);
+      expect(t.annualRunCost).toBeCloseTo(t.months.reduce((s, m) => s + m.runCost, 0), 6);
     }
-    expect(base.financials.annualTotalCostUsd).toBeCloseTo(base.financials.monthly.reduce((s, f) => s + f.totalCostUsd, 0), 6);
+    expect(base.financials.annualTotalCost).toBeCloseTo(base.financials.monthly.reduce((s, f) => s + f.totalCost, 0), 6);
   });
   it('seasonality redistributes but preserves the annual total', () => {
     const flat = clone();
@@ -135,10 +135,10 @@ describe('workforce timing', () => {
     expect(impl.months[3].hiresLanded).toBe(10);
     expect(impl.months.reduce((s, m) => s + m.hiresLanded, 0)).toBe(10);
     expect(totalGap(r)).toBeLessThan(totalGap(base));
-    expect(r.financials.annualChangeCostUsd).toBe(120000);
+    expect(r.financials.annualChangeCost).toBe(120000);
   });
   it('adding FTE cannot increase the capacity gap', () => {
-    const iv: Intervention = { id: 'x', name: 'x', type: 'hire', teamId: 'team-consumer-ops', headcount: 20, leadTimeMonths: 0, recruitingCostPerHeadUsd: 0 };
+    const iv: Intervention = { id: 'x', name: 'x', type: 'hire', teamId: 'team-consumer-ops', headcount: 20, leadTimeMonths: 0, recruitingCostPerHead: 0 };
     expect(totalGap(run(model, { interventions: [iv] }))).toBeLessThanOrEqual(totalGap(base));
   });
 });
@@ -165,7 +165,7 @@ describe('demand and productivity', () => {
     const a = team(r, 'team-consumer-ops'), b = team(base, 'team-consumer-ops');
     for (let m = 0; m < 3; m++) expect(a.months[m].runHours).toBeCloseTo(b.months[m].runHours, 6);
     for (let m = 3; m < 12; m++) expect(a.months[m].runHours).toBeCloseTo(b.months[m].runHours * 0.85, 6);
-    expect(r.financials.annualChangeCostUsd).toBe(1200000);
+    expect(r.financials.annualChangeCost).toBe(1200000);
   });
 });
 
@@ -225,15 +225,15 @@ describe('budget and exposure', () => {
   const base = run(model);
   it('a lower budget cannot raise the cap and surfaces levers without applying them', () => {
     const r = run(model, { scenario: 'scenario-budget-cut' });
-    expect(r.financials.annualBudgetUsd).toBeCloseTo(base.financials.annualBudgetUsd * 0.9, 6);
-    expect(r.financials.annualRunCostUsd).toBeCloseTo(base.financials.annualRunCostUsd, 6);
+    expect(r.financials.annualBudget).toBeCloseTo(base.financials.annualBudget * 0.9, 6);
+    expect(r.financials.annualRunCost).toBeCloseTo(base.financials.annualRunCost, 6);
     expect(r.financials.budgetLevers.length).toBeGreaterThan(0);
     expect(r.financials.budgetLevers.some((l) => l.kind === 'defer-discretionary-initiative' && l.id === 'init-self-service')).toBe(true);
     expect(r.financials.budgetLevers.some((l) => l.kind === 'defer-discretionary-initiative' && l.id === 'init-enterprise-growth')).toBe(false);
   });
   it('raising execution-failure probability cannot reduce exposure', () => {
     const r = run(model, { scenario: 'scenario-revenue-exposure' });
-    expect(r.exposure.totalUsd).toBeGreaterThanOrEqual(base.exposure.totalUsd);
+    expect(r.exposure.total).toBeGreaterThanOrEqual(base.exposure.total);
     for (const e of r.exposure.items) expect(e.scenarioProbability).toBeCloseTo(Math.min(1, e.baseProbability * 1.5), 10);
   });
   it('probability is capped at one', () => {

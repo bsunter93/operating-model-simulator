@@ -27,14 +27,14 @@ describe('verdict moves with the model', () => {
     const m = structuredClone(model);
     for (const t of m.teams) t.currentFte *= 1.6;
     m.dependencies = [];
-    m.budget.modeledAnnualBudgetUsd *= 2;
+    m.budget.modeledAnnualBudget *= 2;
     const v = verdict(run(m), fmt, tn, inn);
     expect(v.headline).toBe('Yes.');
   });
   it('one or two teams over: mostly', () => {
     const m = structuredClone(model);
     for (const t of m.teams) if (t.id !== 'team-implementation') t.currentFte *= 1.4;
-    m.budget.modeledAnnualBudgetUsd *= 2;
+    m.budget.modeledAnnualBudget *= 2;
     const v = verdict(run(m), fmt, tn, inn);
     expect(v.headline).toBe('Mostly.');
     expect(v.sentences.join(' ')).toMatch(/1 of 8 teams runs over capacity/);

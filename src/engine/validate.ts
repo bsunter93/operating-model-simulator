@@ -36,7 +36,7 @@ export function validateModel(m: OperatingModel): string[] {
     if (!inRange(t.shrinkage, 0, 0.99)) say(`team ${t.id}: shrinkage must be between 0 and 0.99`);
     if (!inRange(t.targetUtilization, 0.01, 1)) say(`team ${t.id}: targetUtilization must be between 0.01 and 1`);
     if (!inRange(t.annualAttrition, 0, 0.99)) say(`team ${t.id}: annualAttrition must be between 0 and 0.99`);
-    if (!(t.monthlyFteCostUsd >= 0)) say(`team ${t.id}: monthlyFteCostUsd cannot be negative`);
+    if (!(t.monthlyFteCost >= 0)) say(`team ${t.id}: monthlyFteCost cannot be negative`);
   }
 
   // Seasonality: the model-level profile must name all twelve calendar months.
@@ -93,7 +93,7 @@ export function validateModel(m: OperatingModel): string[] {
     }
     if (!inRange(i.executionFailureProbability, 0, 1)) say(`initiative ${i.id}: executionFailureProbability must be between 0 and 1`);
     if (!inRange(i.confidence, 0, 1)) say(`initiative ${i.id}: confidence must be between 0 and 1`);
-    if (!(i.revenueAtRiskUsd >= 0)) say(`initiative ${i.id}: revenueAtRiskUsd cannot be negative`);
+    if (!(i.revenueAtRisk >= 0)) say(`initiative ${i.id}: revenueAtRisk cannot be negative`);
     if (typeof i.discretionary !== 'boolean') say(`initiative ${i.id}: discretionary must be true or false`);
   }
 
@@ -120,7 +120,7 @@ export function validateModel(m: OperatingModel): string[] {
   };
   for (const id of initIds) visit(id, []);
 
-  if (!(m.budget.modeledAnnualBudgetUsd >= 0)) say('budget.modeledAnnualBudgetUsd cannot be negative');
+  if (!(m.budget.modeledAnnualBudget >= 0)) say('budget.modeledAnnualBudget cannot be negative');
 
   const w = m.decisionWeights;
   const wsum = w.cost + w.speed + w.revenueExposure;
@@ -251,9 +251,9 @@ export function modelWarnings(m: OperatingModel): string[] {
   const w: string[] = [];
   const modeled = m.teams.reduce((s, t) => s + t.currentFte, 0);
   if (modeled > m.strategy.employeeCount) w.push(`The modeled teams hold ${Math.round(modeled)} people but the company is said to have ${m.strategy.employeeCount}.`);
-  const cost = m.teams.reduce((s, t) => s + t.currentFte * t.monthlyFteCostUsd * 12, 0);
-  if (m.budget.modeledAnnualBudgetUsd > m.strategy.operatingCostTargetUsd) w.push(`The budget for the modeled teams exceeds the company's whole operating cost target.`);
-  if (cost > m.budget.modeledAnnualBudgetUsd * 1.25) w.push(`Starting headcount alone costs ${Math.round(cost / 1e6)}M a year against a ${Math.round(m.budget.modeledAnnualBudgetUsd / 1e6)}M budget; the plan is over budget before anything happens.`);
+  const cost = m.teams.reduce((s, t) => s + t.currentFte * t.monthlyFteCost * 12, 0);
+  if (m.budget.modeledAnnualBudget > m.strategy.operatingCostTarget) w.push(`The budget for the modeled teams exceeds the company's whole operating cost target.`);
+  if (cost > m.budget.modeledAnnualBudget * 1.25) w.push(`Starting headcount alone costs ${Math.round(cost / 1e6)}M a year against a ${Math.round(m.budget.modeledAnnualBudget / 1e6)}M budget; the plan is over budget before anything happens.`);
   const season = Object.values(m.seasonality);
   const avg = season.reduce((a, b) => a + b, 0) / season.length;
   if (Math.abs(avg - 1) > 0.02) w.push(`Seasonality multipliers average ${avg.toFixed(2)}, not 1.0; they are normalized to shares, so only the shape matters, but the numbers may not mean what you intended.`);
@@ -270,7 +270,7 @@ export function modelWarnings(m: OperatingModel): string[] {
       const t = m.teams.find((x) => x.id === tid);
       if (t && f > t.currentFte * 0.5) w.push(`${i.name} takes ${f} of ${t.name}'s ${t.currentFte} people; more than half the team.`);
     }
-    if (i.revenueAtRiskUsd > i.financialValueUsd) w.push(`${i.name} has more revenue at risk than value; check the two numbers.`);
+    if (i.revenueAtRisk > i.financialValue) w.push(`${i.name} has more revenue at risk than value; check the two numbers.`);
   }
   return w;
 }

@@ -75,8 +75,8 @@ describe('the run year is the one the decisions can be judged on', () => {
   });
 
   it('widens what is at stake rather than flattening it', () => {
-    expect(spread((r) => r.summary.revenueExposureUsd))
-      .toBeGreaterThan(spread((r) => r.summary.revenueExposureUsd, flat));
+    expect(spread((r) => r.summary.revenueExposure))
+      .toBeGreaterThan(spread((r) => r.summary.revenueExposure, flat));
   });
 });
 
@@ -148,11 +148,11 @@ describe('the claims the write-up makes about this year', () => {
   });
 
   it('still has a lever that does nothing at all, which is its own lesson', () => {
-    const base = runWith(M, SPEC).summary.revenueExposureUsd;
+    const base = runWith(M, SPEC).summary.revenueExposure;
     const inert = SPEC.decisions
       .flatMap((d) => d.options.map((o) => o.interventionId))
       .filter((x): x is string => !!x)
-      .filter((iv) => Math.abs(runWith(M, SPEC, [iv]).summary.revenueExposureUsd - base) < 1);
+      .filter((iv) => Math.abs(runWith(M, SPEC, [iv]).summary.revenueExposure - base) < 1);
     expect(inert.length).toBeGreaterThan(0);
   });
 });

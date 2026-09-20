@@ -139,25 +139,25 @@ function buildEffective(model: OperatingModel, scenario: Scenario, interventions
     switch (iv.type) {
       case 'expediteHiring': {
         const h = eff.hiringPlan.find((x) => x.id === iv.hiringRequestId);
-        if (h) { h.leadTimeMonths = iv.newLeadTimeMonths; if (s0 < n) eff.changeCost[s0] += iv.oneTimeCostUsd; }
+        if (h) { h.leadTimeMonths = iv.newLeadTimeMonths; if (s0 < n) eff.changeCost[s0] += iv.oneTimeCost; }
         break;
       }
       case 'hire': {
         eff.hiringPlan.push({ id: `${iv.id}:hire`, teamId: iv.teamId, requestMonth: addMonths(start, s0), headcount: iv.headcount, leadTimeMonths: iv.leadTimeMonths });
-        if (s0 < n) eff.changeCost[s0] += iv.recruitingCostPerHeadUsd * iv.headcount;
+        if (s0 < n) eff.changeCost[s0] += iv.recruitingCostPerHead * iv.headcount;
         break;
       }
       case 'automation': {
         const arr = eff.automationMult.get(iv.teamId)!;
         for (let m = s0 + iv.timeToImpactMonths; m < n; m++) arr[m] *= 1 - iv.workloadReductionRate;
-        if (s0 < n) eff.changeCost[s0] += iv.implementationCostUsd;
+        if (s0 < n) eff.changeCost[s0] += iv.implementationCost;
         break;
       }
       case 'reallocation': {
         const from = eff.reallocDelta.get(iv.fromTeamId)!, to = eff.reallocDelta.get(iv.toTeamId)!;
         const m0 = s0 + iv.timeToImpactMonths;
         if (m0 < n) { from[m0] -= iv.headcount; to[m0] += iv.headcount; }
-        if (s0 < n) eff.changeCost[s0] += iv.implementationCostUsd;
+        if (s0 < n) eff.changeCost[s0] += iv.implementationCost;
         break;
       }
       case 'defer': eff.deferrals.set(iv.initiativeId, (eff.deferrals.get(iv.initiativeId) ?? 0) + iv.months); break;
@@ -168,7 +168,7 @@ function buildEffective(model: OperatingModel, scenario: Scenario, interventions
         eff.fteMult.set(id, (eff.fteMult.get(id) ?? 1) * iv.fteMultiplier);
         if (iv.valueMultiplier !== undefined)
           eff.valueMult.set(id, (eff.valueMult.get(id) ?? 1) * iv.valueMultiplier);
-        if (iv.oneTimeCostUsd) eff.changeCost[0] += iv.oneTimeCostUsd;
+        if (iv.oneTimeCost) eff.changeCost[0] += iv.oneTimeCost;
         break;
       }
       case 'rescope': {
@@ -348,7 +348,7 @@ export function run(input: OperatingModel, opts: RunOptions = {}): ModelResult {
         targetCapacityHours: targetCap, runHours: rh, portfolioHours: ph, workloadHours: work,
         utilization: util, targetUtilization: target, gapHours: gap, gapVsPlanHours: gapVsPlan, requiredFte: required,
         workforceGap: Math.max(0, required - available),
-        status: classify(util, target), runCostUsd: available * t.monthlyFteCostUsd,
+        status: classify(util, target), runCost: available * t.monthlyFteCost,
         // n servers against an offered load of `a` person-equivalents, so a/n is exactly
         // utilisation and the team's size still changes the answer.
         carriedInHours: carriedIn,
@@ -410,18 +410,18 @@ export function run(input: OperatingModel, opts: RunOptions = {}): ModelResult {
       worstStatus: rows.reduce<TeamStatus>((s, r) => worse(s, r.status), 'healthy'),
       annualWorkloadHours: rows.reduce((s, r) => s + r.workloadHours, 0),
       annualTargetCapacityHours: rows.reduce((s, r) => s + r.targetCapacityHours, 0),
-      annualRunCostUsd: rows.reduce((s, r) => s + r.runCostUsd, 0),
+      annualRunCost: rows.reduce((s, r) => s + r.runCost, 0),
       startingFte: rows[0].startingFte, endingFte: rows[n - 1].availableFte,
     });
   }
   const teamResultById = new Map(teamResults.map((r) => [r.teamId, r]));
 
   // 5. Financials.
-  const monthlyBudget = (model.budget.modeledAnnualBudgetUsd / 12) * eff.budgetMult;
+  const monthlyBudget = (model.budget.modeledAnnualBudget / 12) * eff.budgetMult;
   const fin: FinancialMonth[] = months.map((k, m) => {
-    const runCost = teamResults.reduce((s, r) => s + r.months[m].runCostUsd, 0);
+    const runCost = teamResults.reduce((s, r) => s + r.months[m].runCost, 0);
     const change = eff.changeCost[m];
-    return { month: k, runCostUsd: runCost, changeCostUsd: change, totalCostUsd: runCost + change, budgetCapUsd: monthlyBudget, varianceUsd: runCost + change - monthlyBudget };
+    return { month: k, runCost: runCost, changeCost: change, totalCost: runCost + change, budgetCap: monthlyBudget, variance: runCost + change - monthlyBudget };
   });
   const budgetLevers: BudgetLever[] = [];
   for (const h of eff.hiringPlan) {
@@ -429,22 +429,22 @@ export function run(input: OperatingModel, opts: RunOptions = {}): ModelResult {
     if (m >= n) continue;
     const t = teams.get(h.teamId)!;
     const remaining = n - Math.max(0, m);
-    budgetLevers.push({ kind: 'cancel-unstarted-hire', id: h.id, label: `Cancel ${h.headcount} ${t.name} hires`, cashReleasedUsd: h.headcount * t.monthlyFteCostUsd * remaining, fteMonthsReleased: h.headcount * remaining });
+    budgetLevers.push({ kind: 'cancel-unstarted-hire', id: h.id, label: `Cancel ${h.headcount} ${t.name} hires`, cashReleased: h.headcount * t.monthlyFteCost * remaining, fteMonthsReleased: h.headcount * remaining });
   }
   for (const sch of schedule) {
     const init = initById.get(sch.initiativeId)!;
     if (!init.discretionary || sch.status === 'cancelled') continue;
     const fteMonths = sch.activeMonthIndexes.length * Object.values(init.requiredFteByTeam).reduce((a, b) => a + b, 0);
-    budgetLevers.push({ kind: 'defer-discretionary-initiative', id: init.id, label: `Defer ${init.name}`, cashReleasedUsd: 0, fteMonthsReleased: fteMonths });
+    budgetLevers.push({ kind: 'defer-discretionary-initiative', id: init.id, label: `Defer ${init.name}`, cashReleased: 0, fteMonthsReleased: fteMonths });
   }
   const financials: Financials = {
     monthly: fin,
-    annualRunCostUsd: fin.reduce((s, f) => s + f.runCostUsd, 0),
-    annualChangeCostUsd: fin.reduce((s, f) => s + f.changeCostUsd, 0),
-    annualTotalCostUsd: fin.reduce((s, f) => s + f.totalCostUsd, 0),
-    annualBudgetUsd: monthlyBudget * n,
-    annualVarianceUsd: fin.reduce((s, f) => s + f.varianceUsd, 0),
-    peakMonthlyVarianceUsd: Math.max(...fin.map((f) => f.varianceUsd)),
+    annualRunCost: fin.reduce((s, f) => s + f.runCost, 0),
+    annualChangeCost: fin.reduce((s, f) => s + f.changeCost, 0),
+    annualTotalCost: fin.reduce((s, f) => s + f.totalCost, 0),
+    annualBudget: monthlyBudget * n,
+    annualVariance: fin.reduce((s, f) => s + f.variance, 0),
+    peakMonthlyVariance: Math.max(...fin.map((f) => f.variance)),
     budgetLevers,
   };
 
@@ -456,7 +456,7 @@ export function run(input: OperatingModel, opts: RunOptions = {}): ModelResult {
     if (sch.status === 'cancelled') continue;
     const init = initById.get(sch.initiativeId)!;
     const vm = eff.valueMult.get(init.id) ?? 1;
-    if (init.revenueAtRiskUsd * vm <= 0) continue;
+    if (init.revenueAtRisk * vm <= 0) continue;
     const p = Math.min(1, init.executionFailureProbability * eff.failureMult);
     let shortfall = 0;
     for (const tid of Object.keys(init.requiredFteByTeam)) {
@@ -467,9 +467,9 @@ export function run(input: OperatingModel, opts: RunOptions = {}): ModelResult {
       }
     }
     const pEff = 1 - (1 - p) * (1 - shortfall);
-    items.push({ initiativeId: init.id, revenueAtRiskUsd: init.revenueAtRiskUsd * vm, baseProbability: init.executionFailureProbability, scenarioProbability: p, capacityShortfall: shortfall, effectiveProbability: pEff, exposureUsd: init.revenueAtRiskUsd * vm * pEff });
+    items.push({ initiativeId: init.id, revenueAtRisk: init.revenueAtRisk * vm, baseProbability: init.executionFailureProbability, scenarioProbability: p, capacityShortfall: shortfall, effectiveProbability: pEff, exposure: init.revenueAtRisk * vm * pEff });
   }
-  const exposure: Exposure = { items, totalUsd: items.reduce((s, i) => s + i.exposureUsd, 0) };
+  const exposure: Exposure = { items, total: items.reduce((s, i) => s + i.exposure, 0) };
 
   // 7. Constraints, ranked by dollar impact.
   const constraints = detectConstraints(model, teamResults, schedule, financials, months);
@@ -490,9 +490,9 @@ export function run(input: OperatingModel, opts: RunOptions = {}): ModelResult {
     firstBreakMonth: firstBreak?.month ?? null,
     firstBreakTeamId: firstBreak?.teamId ?? null,
     portfolioLoad: totalTarget > 0 ? totalPortfolio / totalTarget : 0,
-    annualTotalCostUsd: financials.annualTotalCostUsd,
-    annualBudgetVarianceUsd: financials.annualVarianceUsd,
-    revenueExposureUsd: exposure.totalUsd,
+    annualTotalCost: financials.annualTotalCost,
+    annualBudgetVariance: financials.annualVariance,
+    revenueExposure: exposure.total,
     initiativesDelayed: schedule.filter((s) => s.delayMonths > 0).length,
     peopleLostToAttrition: teamResults.reduce((a, t) => a + t.months.reduce((b, m) => b + m.attritionLoss, 0), 0),
     closingBacklogHours: teamResults.reduce(
@@ -527,9 +527,9 @@ export function run(input: OperatingModel, opts: RunOptions = {}): ModelResult {
       return team?.teamType !== 'operational' ? a
         : a + t.months.filter((m) => m.utilization > m.targetUtilization).length;
     }, 0),
-    portfolioValueUsd: model.initiatives
+    portfolioValue: model.initiatives
       .filter((i) => !eff.cancelled.has(i.id))
-      .reduce((a, i) => a + i.financialValueUsd * (eff.valueMult.get(i.id) ?? 1), 0),
+      .reduce((a, i) => a + i.financialValue * (eff.valueMult.get(i.id) ?? 1), 0),
     hiresDropped,
     hiresDroppedFte: eff.hiringPlan
       .filter((h) => hiresDropped.includes(h.id))
@@ -555,12 +555,12 @@ function detectConstraints(model: OperatingModel, teams: TeamResult[], schedule:
     const t = teamById.get(r.teamId)!;
     const prod = r.months[0].productiveHoursPerFte;
     // Cost of the missing hours at this team's loaded rate.
-    const impact = prod > 0 ? (r.totalGapHours / prod) * t.monthlyFteCostUsd : 0;
+    const impact = prod > 0 ? (r.totalGapHours / prod) * t.monthlyFteCost : 0;
     out.push({
       id: `capacity:${r.teamId}`, kind: 'capacity', teamId: r.teamId,
       title: `${t.name} over capacity`,
       detail: `${r.monthsConstrained} of ${months.length} months over capacity against a ${Math.round(r.months[0].targetUtilization * 100)}% target; peak ${Math.round(r.peakUtilization * 100)}% in ${r.peakMonth}; ${f.num(r.totalGapHours)} gap hours; peak shortfall ${r.peakWorkforceGap.toFixed(1)} FTE.`,
-      businessImpactUsd: impact, firstMonth: r.firstConstrainedMonth,
+      businessImpact: impact, firstMonth: r.firstConstrainedMonth,
       metric: 'peak utilization', value: r.peakUtilization, threshold: r.months[0].targetUtilization,
     });
   }
@@ -572,7 +572,7 @@ function detectConstraints(model: OperatingModel, teams: TeamResult[], schedule:
       id: `sequencing:${s.initiativeId}`, kind: 'sequencing', initiativeId: s.initiativeId,
       title: `${init.name} cannot start when planned`,
       detail: `Planned ${s.plannedStart}, earliest feasible ${s.effectiveStart}: it depends on ${pred.name}, which finishes ${schedule.find((x) => x.initiativeId === pred.id)!.completion}.${s.truncated ? ' It now runs past the planning horizon.' : ''}`,
-      businessImpactUsd: init.revenueAtRiskUsd * Math.min(1, s.delayMonths / init.durationMonths),
+      businessImpact: init.revenueAtRisk * Math.min(1, s.delayMonths / init.durationMonths),
       firstMonth: s.plannedStart, metric: 'delay months', value: s.delayMonths, threshold: 0,
     });
   }
@@ -583,17 +583,17 @@ function detectConstraints(model: OperatingModel, teams: TeamResult[], schedule:
       id: `horizon:${s.initiativeId}`, kind: 'horizon', initiativeId: s.initiativeId,
       title: `${init.name} runs past the horizon`,
       detail: `Completes ${s.completion}, after the plan ends ${months[months.length - 1]}.`,
-      businessImpactUsd: 0, firstMonth: s.effectiveStart, metric: 'completion', value: 0, threshold: 0,
+      businessImpact: 0, firstMonth: s.effectiveStart, metric: 'completion', value: 0, threshold: 0,
     });
   }
-  if (fin.annualVarianceUsd > 0) {
+  if (fin.annualVariance > 0) {
     out.push({
       id: 'budget', kind: 'budget',
       title: 'Modeled cost exceeds the budget cap',
-      detail: `${f.money(fin.annualVarianceUsd, { compact: false })} over across the horizon; peak monthly overage ${f.money(fin.peakMonthlyVarianceUsd, { compact: false })}.`,
-      businessImpactUsd: fin.annualVarianceUsd, firstMonth: fin.monthly.find((f) => f.varianceUsd > 0)?.month ?? null,
-      metric: 'annual variance', value: fin.annualVarianceUsd, threshold: 0,
+      detail: `${f.money(fin.annualVariance, { compact: false })} over across the horizon; peak monthly overage ${f.money(fin.peakMonthlyVariance, { compact: false })}.`,
+      businessImpact: fin.annualVariance, firstMonth: fin.monthly.find((f) => f.variance > 0)?.month ?? null,
+      metric: 'annual variance', value: fin.annualVariance, threshold: 0,
     });
   }
-  return out.sort((a, b) => b.businessImpactUsd - a.businessImpactUsd);
+  return out.sort((a, b) => b.businessImpact - a.businessImpact);
 }

@@ -47,7 +47,7 @@ export function Story() {
   const scen = model.scenarios.find((x) => x.id === state.scenarioId)!;
   const th = useMemo(() => thresholds(model, state.scenarioId, active, teamName), [model, state.scenarioId, active, teamName]);
   const changed = useMemo(() => (isBase ? null : whatChanged(model, scen, active, result, base, teamName, initName)), [isBase, model, scen, active, result, base, teamName, initName]);
-  const dated = useMemo(() => [...result.constraints].sort((a, b) => ((a.firstMonth ? idx(a.firstMonth) : 99) - (b.firstMonth ? idx(b.firstMonth) : 99)) || b.businessImpactUsd - a.businessImpactUsd), [result.constraints, model.calendar.startMonth]);
+  const dated = useMemo(() => [...result.constraints].sort((a, b) => ((a.firstMonth ? idx(a.firstMonth) : 99) - (b.firstMonth ? idx(b.firstMonth) : 99)) || b.businessImpact - a.businessImpact), [result.constraints, model.calendar.startMonth]);
   const rank = (id: string) => { const i = result.constraints.findIndex((c) => c.id === id); return i === 0 ? 'primary' : i === 1 ? 'secondary' : null; };
   const q = window.location.hash.includes('?') ? '?' + window.location.hash.split('?')[1] : '';
 
@@ -102,7 +102,7 @@ export function Story() {
       title: <>{model.name} plans {pct(model.strategy.growthTargetPct)} growth with {fmt.num(model.teams.reduce((a, t) => a + t.currentFte, 0))} people.</>,
       body: (
         <>
-          <p>{model.teams.length} teams, {model.initiatives.length} initiatives, {model.hiringPlan.length} hiring requests, a {fmt.money(model.budget.modeledAnnualBudgetUsd)} budget.{isFixture ? ' A fictional company.' : ''}</p>
+          <p>{model.teams.length} teams, {model.initiatives.length} initiatives, {model.hiringPlan.length} hiring requests, a {fmt.money(model.budget.modeledAnnualBudget)} budget.{isFixture ? ' A fictional company.' : ''}</p>
           <Loop />
           <details className="tuck"><summary>How the model works</summary>
             <p>Strategy becomes work, work becomes hours, hours become people, month by month. Decisions change the strategy and the loop runs again. Every number on the board is computed from the inputs; none is typed in.</p>
@@ -216,7 +216,7 @@ export function Story() {
                 <button onClick={() => { if (c.teamId) dispatch({ type: 'team', id: c.teamId }); else setDetail('initiatives'); }}>
                   <span className="bc-when">{c.firstMonth ? monthLabel(c.firstMonth) : '—'}</span>
                   <span className="bc-t">{c.title}{rank(c.id) && <em className="bc-tag">{rank(c.id)}</em>}</span>
-                  <span className="bc-i">{c.businessImpactUsd > 0 ? fmt.money(c.businessImpactUsd) : ''}</span>
+                  <span className="bc-i">{c.businessImpact > 0 ? fmt.money(c.businessImpact) : ''}</span>
                 </button>
               </li>
             ))}

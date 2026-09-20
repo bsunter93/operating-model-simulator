@@ -1,5 +1,5 @@
 {
-  "modelVersion": "2.0",
+  "modelVersion": "3.0",
   "id": "atlas-systems-2027",
   "name": "Atlas Systems",
   "status": "calibrated",
@@ -11,11 +11,11 @@
     "workHoursPerFteMonth": 160
   },
   "strategy": {
-    "revenueTargetUsd": 500000000,
+    "revenueTarget": 500000000,
     "growthTargetPct": 0.12,
     "employeeCount": 1200,
     "enterpriseCustomers": 10000,
-    "operatingCostTargetUsd": 160000000,
+    "operatingCostTarget": 160000000,
     "strategicPriorities": [
       "enterprise-growth",
       "international-expansion",
@@ -32,7 +32,7 @@
       "annualAttrition": 0.14,
       "shrinkage": 0.18,
       "targetUtilization": 0.7,
-      "monthlyFteCostUsd": 18000,
+      "monthlyFteCost": 18000,
       "burnoutSensitivity": 0.4,
       "backlog": {
         "carryForward": 0.9
@@ -46,7 +46,7 @@
       "annualAttrition": 0.12,
       "shrinkage": 0.15,
       "targetUtilization": 0.8,
-      "monthlyFteCostUsd": 12500,
+      "monthlyFteCost": 12500,
       "burnoutSensitivity": 0.9,
       "backlog": {
         "carryForward": 0.85
@@ -60,7 +60,7 @@
       "annualAttrition": 0.14,
       "shrinkage": 0.16,
       "targetUtilization": 0.82,
-      "monthlyFteCostUsd": 11000,
+      "monthlyFteCost": 11000,
       "burnoutSensitivity": 0.9,
       "backlog": {
         "carryForward": 0.85
@@ -74,7 +74,7 @@
       "annualAttrition": 0.12,
       "shrinkage": 0.15,
       "targetUtilization": 0.78,
-      "monthlyFteCostUsd": 11500,
+      "monthlyFteCost": 11500,
       "burnoutSensitivity": 0.9,
       "backlog": {
         "carryForward": 0.85
@@ -88,7 +88,7 @@
       "annualAttrition": 0.15,
       "shrinkage": 0.15,
       "targetUtilization": 0.78,
-      "monthlyFteCostUsd": 10500,
+      "monthlyFteCost": 10500,
       "burnoutSensitivity": 0.9,
       "backlog": {
         "carryForward": 0.85
@@ -102,7 +102,7 @@
       "annualAttrition": 0.12,
       "shrinkage": 0.15,
       "targetUtilization": 0.8,
-      "monthlyFteCostUsd": 14500,
+      "monthlyFteCost": 14500,
       "burnoutSensitivity": 0.9,
       "backlog": {
         "carryForward": 0.85
@@ -116,7 +116,7 @@
       "annualAttrition": 0.1,
       "shrinkage": 0.12,
       "targetUtilization": 0.8,
-      "monthlyFteCostUsd": 19000,
+      "monthlyFteCost": 19000,
       "burnoutSensitivity": 0.6,
       "backlog": {
         "carryForward": 0.95
@@ -130,7 +130,7 @@
       "annualAttrition": 0.1,
       "shrinkage": 0.12,
       "targetUtilization": 0.8,
-      "monthlyFteCostUsd": 18500,
+      "monthlyFteCost": 18500,
       "burnoutSensitivity": 0.6,
       "backlog": {
         "carryForward": 0.95
@@ -302,10 +302,10 @@
         "team-platform-engineering": 6
       },
       "strategicValue": 10,
-      "financialValueUsd": 30000000,
+      "financialValue": 30000000,
       "urgency": 9,
       "confidence": 0.8,
-      "revenueAtRiskUsd": 30000000,
+      "revenueAtRisk": 30000000,
       "executionFailureProbability": 0.15,
       "discretionary": false
     },
@@ -321,10 +321,10 @@
         "team-data-platform": 4
       },
       "strategicValue": 9,
-      "financialValueUsd": 22000000,
+      "financialValue": 22000000,
       "urgency": 8,
       "confidence": 0.72,
-      "revenueAtRiskUsd": 22000000,
+      "revenueAtRisk": 22000000,
       "executionFailureProbability": 0.22,
       "discretionary": false
     },
@@ -338,10 +338,10 @@
         "team-consumer-ops": 4
       },
       "strategicValue": 8,
-      "financialValueUsd": 12000000,
+      "financialValue": 12000000,
       "urgency": 7,
       "confidence": 0.85,
-      "revenueAtRiskUsd": 8000000,
+      "revenueAtRisk": 8000000,
       "executionFailureProbability": 0.12,
       "discretionary": true
     },
@@ -355,10 +355,10 @@
         "team-data-platform": 7
       },
       "strategicValue": 10,
-      "financialValueUsd": 28000000,
+      "financialValue": 28000000,
       "urgency": 9,
       "confidence": 0.78,
-      "revenueAtRiskUsd": 28000000,
+      "revenueAtRisk": 28000000,
       "executionFailureProbability": 0.18,
       "discretionary": false
     }
@@ -372,7 +372,7 @@
     }
   ],
   "budget": {
-    "modeledAnnualBudgetUsd": 127000000
+    "modeledAnnualBudget": 127000000
   },
   "pooling": {
     "clientCount": 10,
@@ -486,7 +486,7 @@
       "type": "expediteHiring",
       "hiringRequestId": "hire-implementation-10",
       "newLeadTimeMonths": 3,
-      "oneTimeCostUsd": 120000,
+      "oneTimeCost": 120000,
       "description": "Agency sourcing and a signing bonus pull the lead time from five months to three."
     },
     {
@@ -496,7 +496,7 @@
       "teamId": "team-consumer-ops",
       "workloadReductionRate": 0.15,
       "timeToImpactMonths": 3,
-      "implementationCostUsd": 1200000,
+      "implementationCost": 1200000,
       "description": "Self-service and auto-resolution for the most common case types remove 15% of hands-on hours, starting three months after kickoff."
     },
     {
@@ -507,7 +507,7 @@
       "toTeamId": "team-implementation",
       "headcount": 5,
       "timeToImpactMonths": 1,
-      "implementationCostUsd": 150000,
+      "implementationCost": 150000,
       "description": "Five experienced account people cross-train and move within a month."
     },
     {
@@ -542,7 +542,7 @@
       "initiativeId": "init-enterprise-growth",
       "durationMultiplier": 0.7,
       "fteMultiplier": 1.4,
-      "oneTimeCostUsd": 400000,
+      "oneTimeCost": 400000,
       "description": "Forty percent more people for a shorter run, paid for with contractors and overtime. It lands sooner and it costs."
     },
     {

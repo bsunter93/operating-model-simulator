@@ -30,9 +30,9 @@ describe('targeted and combined scenarios', () => {
     expect(gap(r)).toBeLessThan(gap(base));
     for (const t of r.teams) expect(t.months.every((m) => m.hiresLanded === 0)).toBe(true);
     expect(r.summary.endingFte).toBeLessThan(base.summary.endingFte);
-    expect(r.financials.annualTotalCostUsd).toBeLessThan(base.financials.annualTotalCostUsd);
+    expect(r.financials.annualTotalCost).toBeLessThan(base.financials.annualTotalCost);
     // Less work does not make budget worse.
-    expect(r.financials.annualVarianceUsd).toBeLessThanOrEqual(base.financials.annualVarianceUsd);
+    expect(r.financials.annualVariance).toBeLessThanOrEqual(base.financials.annualVariance);
   });
   it('team-specific attrition touches only that team', () => {
     const r = run(model, { scenario: 'scenario-implementation-attrition' });
@@ -65,7 +65,7 @@ describe('one assumption at a time', () => {
     const r = run(m); const a = team(r, 'team-consumer-ops'), b = team(base, 'team-consumer-ops');
     for (let i = 0; i < 12; i++) expect(a.months[i].availableFte).toBeLessThan(b.months[i].availableFte);
     expect(a.totalGapVsPlanHours).toBeGreaterThan(b.totalGapVsPlanHours);
-    expect(r.financials.annualRunCostUsd).toBeLessThan(base.financials.annualRunCostUsd);
+    expect(r.financials.annualRunCost).toBeLessThan(base.financials.annualRunCost);
   });
   it('longer handling time: proportionally more hours, nothing else', () => {
     // Burnout is switched off on both sides here on purpose. With it on, more hours means
@@ -88,14 +88,14 @@ describe('one assumption at a time', () => {
     const m = clone(); const t = m.teams.find((x) => x.id === 'team-enterprise-support')!; t.currentFte += 10;
     const r = run(m);
     expect(team(r, 'team-enterprise-support').peakUtilization).toBeLessThan(team(base, 'team-enterprise-support').peakUtilization);
-    const extra = r.financials.annualRunCostUsd - base.financials.annualRunCostUsd;
+    const extra = r.financials.annualRunCost - base.financials.annualRunCost;
     expect(extra).toBeGreaterThan(0);
-    expect(r.financials.annualVarianceUsd - base.financials.annualVarianceUsd).toBeCloseTo(extra, 6);
+    expect(r.financials.annualVariance - base.financials.annualVariance).toBeCloseTo(extra, 6);
   });
   it('a bigger budget changes the variance and nothing operational', () => {
-    const m = clone(); m.budget.modeledAnnualBudgetUsd *= 1.2;
+    const m = clone(); m.budget.modeledAnnualBudget *= 1.2;
     const r = run(m);
-    expect(r.financials.annualVarianceUsd).toBeLessThan(base.financials.annualVarianceUsd);
+    expect(r.financials.annualVariance).toBeLessThan(base.financials.annualVariance);
     expect(JSON.stringify(r.teams)).toBe(JSON.stringify(base.teams));
   });
   it('an initiative that needs more people from a team pushes that team up and no other', () => {

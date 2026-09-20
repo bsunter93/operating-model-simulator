@@ -6,7 +6,7 @@ import type { OperatingModel } from '../src/models/types';
 const M = fixture as unknown as OperatingModel;
 const base = run(M);
 const ini = (r: ReturnType<typeof run>, id: string) => r.initiatives.find((i) => i.initiativeId === id)!;
-const spend = (r: ReturnType<typeof run>) => r.financials.monthly.reduce((a, m) => a + m.changeCostUsd, 0);
+const spend = (r: ReturnType<typeof run>) => r.financials.monthly.reduce((a, m) => a + m.changeCost, 0);
 const hours = (r: ReturnType<typeof run>, id: string) =>
   r.teams.find((t) => t.teamId === id)!.months.reduce((a, m) => a + m.portfolioHours, 0);
 
@@ -48,7 +48,7 @@ describe('rescope trades scope against effort', () => {
   const half = run(M, { interventions: ['intervention-half-portal'] });
 
   it('delivers less of what the portfolio was worth', () => {
-    expect(half.summary.portfolioValueUsd).toBeLessThan(base.summary.portfolioValueUsd);
+    expect(half.summary.portfolioValue).toBeLessThan(base.summary.portfolioValue);
   });
 
   it('takes fewer people to build, without cancelling it', () => {
@@ -58,7 +58,7 @@ describe('rescope trades scope against effort', () => {
 
   it('is not the same move as cancelling', () => {
     const killed = run(M, { interventions: ['intervention-cancel-self-service'] });
-    expect(half.summary.portfolioValueUsd).toBeGreaterThan(killed.summary.portfolioValueUsd);
+    expect(half.summary.portfolioValue).toBeGreaterThan(killed.summary.portfolioValue);
   });
 });
 
@@ -71,7 +71,7 @@ describe('the three vertices all have range', () => {
     const pick = ivs.filter((_, k) => mask & (1 << k));
     const r = run(M, { interventions: pick });
     cost.add(Math.round(spend(r) / 1e4));
-    scope.add(Math.round(r.summary.portfolioValueUsd / 1e5));
+    scope.add(Math.round(r.summary.portfolioValue / 1e5));
     time.add(r.initiatives.map((i) => i.completion).join('|'));
   }
   it('cost', () => expect(cost.size).toBeGreaterThanOrEqual(8));

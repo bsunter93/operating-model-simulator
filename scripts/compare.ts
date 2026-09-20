@@ -14,6 +14,6 @@ for (const w of weightSets) {
   for (const r of rows) {
     const impl = r.id === 'do-nothing' ? doNothing : options.find((o) => o.id === r.id)!.result;
     const t = impl.teams.find((x) => x.teamId === 'team-implementation')!;
-    console.log(`  ${String(r.rank).padStart(2)}. ${r.label.padEnd(52)} score ${r.score.toFixed(2)}  cost +$${Math.round(r.incrementalCostUsd).toLocaleString().padStart(11)}  gapVsPlanH ${Math.round(r.residualGapHours).toString().padStart(6)}  exposure $${Math.round(r.residualExposureUsd).toLocaleString()}  impl peak ${Math.round(t.peakUtilization * 100)}% (${t.monthsConstrained} mo)`);
+    console.log(`  ${String(r.rank).padStart(2)}. ${r.label.padEnd(52)} score ${r.score.toFixed(2)}  cost +$${Math.round(r.incrementalCost).toLocaleString().padStart(11)}  gapVsPlanH ${Math.round(r.residualGapHours).toString().padStart(6)}  exposure $${Math.round(r.residualExposure).toLocaleString()}  impl peak ${Math.round(t.peakUtilization * 100)}% (${t.monthsConstrained} mo)`);
   }
 }

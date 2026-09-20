@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useReducer, useState } from 'react';
 import { makeFmt, type Fmt } from '../lib/format';
+import { migrateModel } from '../models/migrate';
 import type { ReactNode } from 'react';
 import { run, validateModel } from '../engine';
 import type { OperatingModel, DecisionWeights, Intervention } from '../models/types';
@@ -96,13 +97,13 @@ export function customIntervention(model: OperatingModel, teamId: string, kind: 
   switch (kind) {
     case 'hire': {
       const lead = model.hiringPlan.find((h) => h.teamId === teamId)?.leadTimeMonths ?? 4;
-      return { id, name: `Hire more for ${t.name}`, type: 'hire', teamId, headcount: value ?? 10, leadTimeMonths: lead, recruitingCostPerHeadUsd: t.monthlyFteCostUsd,
+      return { id, name: `Hire more for ${t.name}`, type: 'hire', teamId, headcount: value ?? 10, leadTimeMonths: lead, recruitingCostPerHead: t.monthlyFteCost,
         description: `Requested in month one, landing after the team's ${lead}-month lead time. Recruiting cost assumed at one month of loaded cost per hire, then their salary.` };
     }
     case 'automate': {
       const rate = (value ?? 15) / 100;
-      const annualCost = t.currentFte * t.monthlyFteCostUsd * 12;
-      return { id, name: `Take work out of ${t.name}`, type: 'automation', teamId, workloadReductionRate: rate, timeToImpactMonths: 2, implementationCostUsd: Math.round(annualCost * rate * 0.5),
+      const annualCost = t.currentFte * t.monthlyFteCost * 12;
+      return { id, name: `Take work out of ${t.name}`, type: 'automation', teamId, workloadReductionRate: rate, timeToImpactMonths: 2, implementationCost: Math.round(annualCost * rate * 0.5),
         description: 'Automation, self-service, or standardization that removes a share of hands-on hours. Lands after two months. Cost assumed at half a year of the hours it saves.' };
     }
     case 'target': {
@@ -217,7 +218,8 @@ export function parseImportedModel(text: string): { model: OperatingModel } | { 
   let parsed: unknown;
   try { parsed = JSON.parse(text); } catch (e) { return { errors: [`Not valid JSON: ${(e as Error).message}`] }; }
   if (!parsed || typeof parsed !== 'object') return { errors: ['The file is not a JSON object.'] };
-  const m = parsed as OperatingModel;
+  // Files exported before the amount fields lost their currency suffix still open.
+  const m = migrateModel(parsed).model as OperatingModel;
   for (const key of ['calendar', 'teams', 'demandStreams', 'hiringPlan', 'initiatives', 'dependencies', 'budget', 'pooling', 'scenarios', 'interventions', 'decisionWeights', 'seasonality'] as const) {
     if (!(key in m)) return { errors: [`Missing "${key}". Export the current model to see the expected structure.`] };
   }

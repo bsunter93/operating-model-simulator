@@ -8,15 +8,15 @@ export function Cost() {
   const { result, base, model, state, interventions, teamName, initName, fmt } = useStore();
   const f = result.financials;
   const months = result.months;
-  const run = f.monthly.map((m) => m.runCostUsd);
-  const change = f.monthly.map((m) => m.changeCostUsd);
-  const cap = f.monthly.map((m) => m.budgetCapUsd);
-  const overMonths = f.monthly.filter((m) => m.varianceUsd > 0);
-  const gapCost = result.constraints.filter((c) => c.kind === 'capacity').reduce((s, c) => s + c.businessImpactUsd, 0);
-  const baseGapCost = base.constraints.filter((c) => c.kind === 'capacity').reduce((s, c) => s + c.businessImpactUsd, 0);
+  const run = f.monthly.map((m) => m.runCost);
+  const change = f.monthly.map((m) => m.changeCost);
+  const cap = f.monthly.map((m) => m.budgetCap);
+  const overMonths = f.monthly.filter((m) => m.variance > 0);
+  const gapCost = result.constraints.filter((c) => c.kind === 'capacity').reduce((s, c) => s + c.businessImpact, 0);
+  const baseGapCost = base.constraints.filter((c) => c.kind === 'capacity').reduce((s, c) => s + c.businessImpact, 0);
   const active = interventions.filter((iv) => state.interventionIds.includes(iv.id));
-  const addedCost = f.annualTotalCostUsd - base.financials.annualTotalCostUsd;
-  const byTeam = result.teams.map((t) => ({ t, cost: t.annualRunCostUsd })).sort((a, b) => b.cost - a.cost);
+  const addedCost = f.annualTotalCost - base.financials.annualTotalCost;
+  const byTeam = result.teams.map((t) => ({ t, cost: t.annualRunCost })).sort((a, b) => b.cost - a.cost);
   const scen = model.scenarios.find((s) => s.id === state.scenarioId)!;
 
   return (
@@ -28,8 +28,8 @@ export function Cost() {
       </p>
 
       <div className="metrics three">
-        <div className="metric"><div className="l">Modeled cost, {model.calendar.startMonth.slice(0, 4)}</div><div className="v">{fmt.money(f.annualTotalCostUsd)}</div><div className="d">{fmt.money(f.annualRunCostUsd)} people · {fmt.money(f.annualChangeCostUsd)} one-time changes</div></div>
-        <div className="metric"><div className="l"><Term k="budget">Against the cap</Term></div><div className={'v' + (f.annualVarianceUsd > 0 ? ' alert' : '')}>{fmt.money(f.annualVarianceUsd, { sign: true })}</div><div className="d">{f.annualVarianceUsd > 0 ? `over a ${fmt.money(f.annualBudgetUsd)} cap; ${overMonths.length} month${overMonths.length === 1 ? '' : 's'} over` : `under a ${fmt.money(f.annualBudgetUsd)} cap`}</div></div>
+        <div className="metric"><div className="l">Modeled cost, {model.calendar.startMonth.slice(0, 4)}</div><div className="v">{fmt.money(f.annualTotalCost)}</div><div className="d">{fmt.money(f.annualRunCost)} people · {fmt.money(f.annualChangeCost)} one-time changes</div></div>
+        <div className="metric"><div className="l"><Term k="budget">Against the cap</Term></div><div className={'v' + (f.annualVariance > 0 ? ' alert' : '')}>{fmt.money(f.annualVariance, { sign: true })}</div><div className="d">{f.annualVariance > 0 ? `over a ${fmt.money(f.annualBudget)} cap; ${overMonths.length} month${overMonths.length === 1 ? '' : 's'} over` : `under a ${fmt.money(f.annualBudget)} cap`}</div></div>
         <div className="metric"><div className="l">What the shortfall costs</div><div className={'v' + (gapCost > 0 ? ' warm' : '')}>{gapCost > 0 ? fmt.money(gapCost) : 'nothing'}</div><div className="d">{gapCost > 0 ? 'hours over capacity, at loaded cost' : 'no team over capacity'}{active.length && Math.abs(gapCost - baseGapCost) > 1e3 ? ` · was ${fmt.money(baseGapCost)} before your levers` : ''}</div></div>
       </div>
 
@@ -42,19 +42,19 @@ export function Cost() {
           format={(v) => fmt.money(v)}
           yLabel="USD / MO"
           zero={false}
-          tip={(i) => `<b>${monthLabel(months[i], true)}</b>people ${fmt.money(run[i])}${change[i] ? ` · one-time ${fmt.money(change[i])}` : ''}<br>cap ${fmt.money(cap[i])} · ${f.monthly[i].varianceUsd > 0 ? `${fmt.money(f.monthly[i].varianceUsd)} over` : `${fmt.money(-f.monthly[i].varianceUsd)} under`}`}
+          tip={(i) => `<b>${monthLabel(months[i], true)}</b>people ${fmt.money(run[i])}${change[i] ? ` · one-time ${fmt.money(change[i])}` : ''}<br>cap ${fmt.money(cap[i])} · ${f.monthly[i].variance > 0 ? `${fmt.money(f.monthly[i].variance)} over` : `${fmt.money(-f.monthly[i].variance)} under`}`}
         />
         <div className="legend"><span><i className="bar" /> people</span><span><i className="bar2" /> one-time change costs</span><span><i className="tline" /> budget cap</span></div>
       </div>
 
-      {f.annualVarianceUsd > 0 && (
+      {f.annualVariance > 0 && (
         <div className="callout">
-          <b>The cap bites by {fmt.money(f.annualVarianceUsd)} over the year.</b> The levers below would close it. Cancelling hires releases cash. Deferring an initiative releases people, not cash, because they are already on payroll.
+          <b>The cap bites by {fmt.money(f.annualVariance)} over the year.</b> The levers below would close it. Cancelling hires releases cash. Deferring an initiative releases people, not cash, because they are already on payroll.
         </div>
       )}
       {f.budgetLevers.length > 0 && (
         <section className="sec">
-          <h2>{f.annualVarianceUsd > 0 ? 'Levers that would close it' : 'Levers, if the cap ever bites'}</h2>
+          <h2>{f.annualVariance > 0 ? 'Levers that would close it' : 'Levers, if the cap ever bites'}</h2>
           <div className="tbl-wrap">
             <table className="tbl">
               <thead><tr><th>Lever</th><th>Cash released</th><th>Capacity released</th><th>What it costs you</th></tr></thead>
@@ -62,7 +62,7 @@ export function Cost() {
                 {f.budgetLevers.map((l) => (
                   <tr key={l.id}>
                     <td className="ink left">{l.label}</td>
-                    <td className={l.cashReleasedUsd > 0 ? 'ink' : 'dim'}>{l.cashReleasedUsd > 0 ? fmt.money(l.cashReleasedUsd) : 'none'}</td>
+                    <td className={l.cashReleased > 0 ? 'ink' : 'dim'}>{l.cashReleased > 0 ? fmt.money(l.cashReleased) : 'none'}</td>
                     <td>{fmt.num(l.fteMonthsReleased)} people-months</td>
                     <td className="left dim">{l.kind === 'cancel-unstarted-hire' ? 'The team stays short for the rest of the year.' : 'The initiative slips, with its value and its revenue at risk.'}</td>
                   </tr>
@@ -87,10 +87,10 @@ export function Cost() {
                   <tr key={t.teamId} data-s={t.worstStatus}>
                     <td><a href={href(`#/why/${t.teamId}`)}>{teamName(t.teamId)}</a></td>
                     <td>{fmt.num(pm)}</td>
-                    <td>{fmt.money(def.monthlyFteCostUsd, { compact: false })}</td>
+                    <td>{fmt.money(def.monthlyFteCost, { compact: false })}</td>
                     <td className="ink">{fmt.money(cost)}</td>
-                    <td className="dim">{pct(cost / f.annualRunCostUsd)}</td>
-                    <td className={c ? 'ink' : 'dim'}>{c ? fmt.money(c.businessImpactUsd) : '—'}</td>
+                    <td className="dim">{pct(cost / f.annualRunCost)}</td>
+                    <td className={c ? 'ink' : 'dim'}>{c ? fmt.money(c.businessImpact) : '—'}</td>
                   </tr>
                 );
               })}
@@ -108,11 +108,11 @@ export function Cost() {
             <p className="sub">{active.length === 1 ? 'Your lever adds' : `Your ${active.length} levers add`} {fmt.money(Math.max(0, addedCost))} to the year. The shortfall they leave behind is priced at {fmt.money(gapCost)}, down from {fmt.money(baseGapCost)}. {gapCost < baseGapCost && addedCost > 0 ? `Each dollar spent recovers $${((baseGapCost - gapCost) / addedCost).toFixed(2)} of shortfall.` : ''}</p>
             <ul className="th">
               {active.map((iv) => {
-                const line = iv.type === 'expediteHiring' ? `${fmt.money(iv.oneTimeCostUsd)} one-time`
-                  : iv.type === 'hire' ? `${fmt.money(iv.recruitingCostPerHeadUsd * iv.headcount)} recruiting, then ${iv.headcount} salaries`
-                  : iv.type === 'automation' ? `${fmt.money(iv.implementationCostUsd)} one-time`
-                  : iv.type === 'reallocation' ? `${fmt.money(iv.implementationCostUsd)} one-time; payroll unchanged`
-                  : iv.type === 'cancel' ? `no cost; ${fmt.money(model.initiatives.find((i) => i.id === iv.initiativeId)!.financialValueUsd)} of value given up`
+                const line = iv.type === 'expediteHiring' ? `${fmt.money(iv.oneTimeCost)} one-time`
+                  : iv.type === 'hire' ? `${fmt.money(iv.recruitingCostPerHead * iv.headcount)} recruiting, then ${iv.headcount} salaries`
+                  : iv.type === 'automation' ? `${fmt.money(iv.implementationCost)} one-time`
+                  : iv.type === 'reallocation' ? `${fmt.money(iv.implementationCost)} one-time; payroll unchanged`
+                  : iv.type === 'cancel' ? `no cost; ${fmt.money(model.initiatives.find((i) => i.id === iv.initiativeId)!.financialValue)} of value given up`
                   : iv.type === 'defer' ? `no cost; ${initName(iv.initiativeId)} slips ${iv.months} months`
                   : 'no cost; the service level pays';
                 return <li key={iv.id}><b>{iv.name}</b>: {line}.</li>;
@@ -124,19 +124,19 @@ export function Cost() {
 
       <section className="sec">
         <h2><Term k="exposure">Revenue exposure</Term> by initiative</h2>
-        <p className="sub">Revenue at risk times the odds of failure, where a capacity shortfall on the initiative's teams raises the odds. {fmt.money(result.exposure.totalUsd)} in total.</p>
+        <p className="sub">Revenue at risk times the odds of failure, where a capacity shortfall on the initiative's teams raises the odds. {fmt.money(result.exposure.total)} in total.</p>
         <div className="tbl-wrap">
           <table className="tbl">
             <thead><tr><th>Initiative</th><th>At risk</th><th>Base odds</th><th>Shortfall on its teams</th><th>Effective odds</th><th>Exposure</th></tr></thead>
             <tbody>
-              {result.exposure.items.sort((a, b) => b.exposureUsd - a.exposureUsd).map((e) => (
+              {result.exposure.items.sort((a, b) => b.exposure - a.exposure).map((e) => (
                 <tr key={e.initiativeId}>
                   <td className="ink left">{initName(e.initiativeId)}</td>
-                  <td>{fmt.money(e.revenueAtRiskUsd)}</td>
+                  <td>{fmt.money(e.revenueAtRisk)}</td>
                   <td>{pct(e.scenarioProbability)}</td>
                   <td className={e.capacityShortfall > 0 ? 'ink' : 'dim'}>{e.capacityShortfall > 0 ? pct(e.capacityShortfall) : '—'}</td>
                   <td className="ink">{pct(e.effectiveProbability)}</td>
-                  <td className="ink">{fmt.money(e.exposureUsd)}</td>
+                  <td className="ink">{fmt.money(e.exposure)}</td>
                 </tr>
               ))}
             </tbody>

@@ -24,9 +24,9 @@ export interface DecisionOption {
 export interface DecisionRow {
   id: string;
   label: string;
-  incrementalCostUsd: number;
+  incrementalCost: number;
   residualGapHours: number;
-  residualExposureUsd: number;
+  residualExposure: number;
   costUtility: number;
   speedUtility: number;
   exposureUtility: number;
@@ -42,17 +42,17 @@ function utility(values: number[]): number[] {
 
 export function compareOptions(doNothing: ModelResult, options: DecisionOption[], weights: DecisionWeights): DecisionRow[] {
   const all: DecisionOption[] = [{ id: 'do-nothing', label: 'Do nothing', result: doNothing }, ...options];
-  const base = doNothing.financials.annualTotalCostUsd;
-  const cost = all.map((o) => o.result.financials.annualTotalCostUsd - base);
+  const base = doNothing.financials.annualTotalCost;
+  const cost = all.map((o) => o.result.financials.annualTotalCost - base);
   const gap = all.map((o) => o.result.teams.reduce((s, t) => s + t.totalGapVsPlanHours, 0));
-  const exp = all.map((o) => o.result.exposure.totalUsd);
+  const exp = all.map((o) => o.result.exposure.total);
   const cu = utility(cost), su = utility(gap), eu = utility(exp);
   const rows = all.map((o, i) => ({
     id: o.id,
     label: o.label,
-    incrementalCostUsd: cost[i],
+    incrementalCost: cost[i],
     residualGapHours: gap[i],
-    residualExposureUsd: exp[i],
+    residualExposure: exp[i],
     costUtility: cu[i],
     speedUtility: su[i],
     exposureUtility: eu[i],

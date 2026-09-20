@@ -43,7 +43,7 @@ export interface TeamMonth {
   carriedOutHours: number;
   /** Of that, the share that will not come back. */
   shedHours: number;
-  runCostUsd: number;
+  runCost: number;
 }
 
 export interface TeamResult {
@@ -59,7 +59,7 @@ export interface TeamResult {
   worstStatus: TeamStatus;
   annualWorkloadHours: number;
   annualTargetCapacityHours: number;
-  annualRunCostUsd: number;
+  annualRunCost: number;
   startingFte: number;
   endingFte: number;
 }
@@ -92,7 +92,7 @@ export interface Constraint {
   title: string;
   detail: string;
   /** Dollar-denominated so kinds can be ranked against each other. */
-  businessImpactUsd: number;
+  businessImpact: number;
   firstMonth: MonthKey | null;
   metric: string;
   value: number;
@@ -101,21 +101,21 @@ export interface Constraint {
 
 export interface FinancialMonth {
   month: MonthKey;
-  runCostUsd: number;
-  changeCostUsd: number;
-  totalCostUsd: number;
-  budgetCapUsd: number;
-  varianceUsd: number;
+  runCost: number;
+  changeCost: number;
+  totalCost: number;
+  budgetCap: number;
+  variance: number;
 }
 
 export interface Financials {
   monthly: FinancialMonth[];
-  annualRunCostUsd: number;
-  annualChangeCostUsd: number;
-  annualTotalCostUsd: number;
-  annualBudgetUsd: number;
-  annualVarianceUsd: number;
-  peakMonthlyVarianceUsd: number;
+  annualRunCost: number;
+  annualChangeCost: number;
+  annualTotalCost: number;
+  annualBudget: number;
+  annualVariance: number;
+  peakMonthlyVariance: number;
   /** Levers the engine can name for a budget gap. It never applies them. */
   budgetLevers: BudgetLever[];
 }
@@ -125,25 +125,25 @@ export interface BudgetLever {
   id: string;
   label: string;
   /** Cash released over the horizon. Zero for initiative deferral in this model. */
-  cashReleasedUsd: number;
+  cashReleased: number;
   /** Capacity released over the horizon, in FTE-months. */
   fteMonthsReleased: number;
 }
 
 export interface ExposureItem {
   initiativeId: string;
-  revenueAtRiskUsd: number;
+  revenueAtRisk: number;
   baseProbability: number;
   scenarioProbability: number;
   /** Largest share of the initiative's teams' workload over capacity during its active months. */
   capacityShortfall: number;
   effectiveProbability: number;
-  exposureUsd: number;
+  exposure: number;
 }
 
 export interface Exposure {
   items: ExposureItem[];
-  totalUsd: number;
+  total: number;
 }
 
 export interface Summary {
@@ -156,16 +156,16 @@ export interface Summary {
   firstBreakMonth: MonthKey | null;
   firstBreakTeamId: string | null;
   portfolioLoad: number;
-  annualTotalCostUsd: number;
-  annualBudgetVarianceUsd: number;
-  revenueExposureUsd: number;
+  annualTotalCost: number;
+  annualBudgetVariance: number;
+  revenueExposure: number;
   initiativesDelayed: number;
   /**
    * What the portfolio is still worth after cancellations and partial scope. Scope had
    * no output before this: you could cut it and nothing in the result said so, which
    * made it invisible next to cost and time.
    */
-  portfolioValueUsd: number;
+  portfolioValue: number;
   /** Work still waiting at the end of the year. */
   closingBacklogHours: number;
   /** Work nobody ever did, because it was turned away rather than queued. */

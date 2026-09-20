@@ -16,12 +16,12 @@ function scale(m: OperatingModel, k: number): OperatingModel {
   for (const h of m.hiringPlan) h.headcount = Math.max(1, Math.round(h.headcount * k));
   for (const i of m.initiatives) {
     for (const tid of Object.keys(i.requiredFteByTeam)) i.requiredFteByTeam[tid] = Math.max(1, Math.round(i.requiredFteByTeam[tid] * k));
-    i.financialValueUsd = Math.round(i.financialValueUsd * k);
-    i.revenueAtRiskUsd = Math.round(i.revenueAtRiskUsd * k);
+    i.financialValue = Math.round(i.financialValue * k);
+    i.revenueAtRisk = Math.round(i.revenueAtRisk * k);
   }
-  m.budget.modeledAnnualBudgetUsd = Math.round(m.budget.modeledAnnualBudgetUsd * k);
-  m.strategy.revenueTargetUsd = Math.round(m.strategy.revenueTargetUsd * k);
-  m.strategy.operatingCostTargetUsd = Math.round(m.strategy.operatingCostTargetUsd * k);
+  m.budget.modeledAnnualBudget = Math.round(m.budget.modeledAnnualBudget * k);
+  m.strategy.revenueTarget = Math.round(m.strategy.revenueTarget * k);
+  m.strategy.operatingCostTarget = Math.round(m.strategy.operatingCostTarget * k);
   m.strategy.employeeCount = Math.round(m.strategy.employeeCount * k);
   m.strategy.enterpriseCustomers = Math.round(m.strategy.enterpriseCustomers * k);
   return m;
@@ -39,7 +39,7 @@ export const TEMPLATES: Template[] = [
       m.id = 'atlas-startup'; m.name = 'Northwind Labs'; m.status = 'provisional';
       for (const t of m.teams) { t.annualAttrition = Math.min(0.9, t.annualAttrition + 0.12); t.targetUtilization = Math.min(0.95, t.targetUtilization + 0.05); t.shrinkage = Math.max(0.05, t.shrinkage - 0.03); }
       for (const h of m.hiringPlan) h.leadTimeMonths = Math.max(1, h.leadTimeMonths - 2);
-      m.budget.modeledAnnualBudgetUsd = Math.round(m.teams.reduce((s, t) => s + t.currentFte * t.monthlyFteCostUsd * 12, 0) * 1.02);
+      m.budget.modeledAnnualBudget = Math.round(m.teams.reduce((s, t) => s + t.currentFte * t.monthlyFteCost * 12, 0) * 1.02);
       m.demoIntent = { summary: 'A small company where a two-person shortfall is a crisis and hiring is fast but attrition is faster.', intents: [] };
       return m;
     },

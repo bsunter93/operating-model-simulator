@@ -54,11 +54,11 @@ export function whatChanged(model: OperatingModel, scenario: Scenario, levers: I
     const b = base.initiatives.find((x) => x.initiativeId === s.initiativeId)!;
     if (s.effectiveStart !== b.effectiveStart || s.status !== b.status) steps.push({ label: initName(s.initiativeId), from: b.status === 'cancelled' ? 'cancelled' : `starts ${monthLabel(b.effectiveStart!)}`, to: s.status === 'cancelled' ? 'cancelled' : `starts ${monthLabel(s.effectiveStart!)}` });
   }
-  const dc = cur.financials.annualTotalCostUsd - base.financials.annualTotalCostUsd;
-  if (Math.abs(dc) > 5e4) steps.push({ label: 'Cost', from: money(base.financials.annualTotalCostUsd), to: money(cur.financials.annualTotalCostUsd), note: money(dc, { sign: true }) });
-  if (Math.sign(cur.financials.annualVarianceUsd) !== Math.sign(base.financials.annualVarianceUsd) || Math.abs(cur.financials.annualVarianceUsd - base.financials.annualVarianceUsd) > 5e5) steps.push({ label: 'Against budget', from: money(base.financials.annualVarianceUsd, { sign: true }), to: money(cur.financials.annualVarianceUsd, { sign: true }) });
-  const de = cur.summary.revenueExposureUsd - base.summary.revenueExposureUsd;
-  if (Math.abs(de) > 1e5) steps.push({ label: 'Revenue exposure', from: money(base.summary.revenueExposureUsd), to: money(cur.summary.revenueExposureUsd), note: money(de, { sign: true }) });
+  const dc = cur.financials.annualTotalCost - base.financials.annualTotalCost;
+  if (Math.abs(dc) > 5e4) steps.push({ label: 'Cost', from: money(base.financials.annualTotalCost), to: money(cur.financials.annualTotalCost), note: money(dc, { sign: true }) });
+  if (Math.sign(cur.financials.annualVariance) !== Math.sign(base.financials.annualVariance) || Math.abs(cur.financials.annualVariance - base.financials.annualVariance) > 5e5) steps.push({ label: 'Against budget', from: money(base.financials.annualVariance, { sign: true }), to: money(cur.financials.annualVariance, { sign: true }) });
+  const de = cur.summary.revenueExposure - base.summary.revenueExposure;
+  if (Math.abs(de) > 1e5) steps.push({ label: 'Revenue exposure', from: money(base.summary.revenueExposure), to: money(cur.summary.revenueExposure), note: money(de, { sign: true }) });
   if (!steps.length) steps.push({ label: 'Result', from: 'base plan', to: 'no material change' });
   return { cause: causes.join(' + '), steps };
 }

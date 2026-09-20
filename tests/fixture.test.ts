@@ -69,7 +69,7 @@ describe('Atlas Systems base plan', () => {
     expect(base.constraints[0].initiativeId).toBe('init-international-expansion');
   });
   it('the plan is under budget in the base case', () => {
-    expect(base.financials.annualVarianceUsd).toBeLessThan(0);
+    expect(base.financials.annualVariance).toBeLessThan(0);
   });
   it('headcount ends the year lower than it started because the plan has no backfill', () => {
     expect(base.summary.endingFte).toBeLessThan(base.summary.startingFte);
@@ -84,7 +84,7 @@ describe('Atlas Systems scenarios', () => {
   });
   it('a 10% budget cut opens a gap and names the levers', () => {
     const r = run(model, { scenario: 'scenario-budget-cut' });
-    expect(r.financials.annualVarianceUsd).toBeGreaterThan(0);
+    expect(r.financials.annualVariance).toBeGreaterThan(0);
     expect(r.constraints.some((c) => c.kind === 'budget')).toBe(true);
     expect(r.financials.budgetLevers.length).toBeGreaterThanOrEqual(4);
   });

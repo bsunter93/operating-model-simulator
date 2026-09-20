@@ -12,7 +12,7 @@ describe('decision comparison', () => {
   it('do nothing has zero incremental cost and the worst residual gap among gap-reducing options', () => {
     const rows = compareOptions(doNothing, options, model.decisionWeights);
     const dn = rows.find((r) => r.id === 'do-nothing')!;
-    expect(dn.incrementalCostUsd).toBe(0);
+    expect(dn.incrementalCost).toBe(0);
     expect(dn.costUtility).toBe(1);
     // Filtered to match this test's own name. It used to take the max across every row,
     // which held only while every lever reduced load. Crashing an initiative deliberately
