@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { run } from '../engine';
 import { FIXTURE } from '../state/store';
 import type { ModelResult } from '../models/results';
@@ -258,7 +258,10 @@ function consequence(before: ModelResult, after: ModelResult): string[] {
 
   if (better.length) out.push(`${list(better.map((b) => b.name))} came down.`);
   if (worse.length) out.push(`${list(worse.map((b) => b.name))} went up, which is where those people came from.`);
-  if (!moved.length) out.push('Nothing moved.');
+  // "Nothing moved" was being said about team load and then immediately contradicted by a
+  // line about money. It is specific now, and the no-change-at-all case is decided at the
+  // end, once everything else has had its say.
+  if (!moved.length) out.push('No team\u2019s load changed.');
 
   const dOver = after.summary.teamsConstrained - before.summary.teamsConstrained;
   if (dOver > 0) out.push(`Teams over capacity went from ${before.summary.teamsConstrained} to ${after.summary.teamsConstrained}: you fixed one and started another.`);
@@ -270,7 +273,7 @@ function consequence(before: ModelResult, after: ModelResult): string[] {
   const dRisk = after.summary.revenueExposureUsd - before.summary.revenueExposureUsd;
   if (Math.abs(dRisk) > 50000) out.push(`Revenue at risk ${dRisk < 0 ? 'falls' : 'rises'} to ${mUsd(after.summary.revenueExposureUsd)}.`);
 
-  return out;
+  return out.length === 1 && !moved.length ? ['Nothing changed. That is an answer too.'] : out;
 }
 
 /**
@@ -431,6 +434,80 @@ export function Run() {
   );
 }
 
+/**
+ * The year you actually ran, played back.
+ *
+ * The opening animation is a fixed story, because it has to be: it runs before you have
+ * made a decision. This one is yours. Every frame is a real engine state, one per call
+ * you made, and the captions are the same computed sentences the run showed you at the
+ * time. Nothing here is authored per path.
+ */
+function Replay({ picks, trail }: { picks: (string | null)[]; trail: TriPos[] }) {
+  const [at, setAt] = useState(0);
+  const [playing, setPlaying] = useState(true);
+
+  const states = useMemo(() => {
+    const out: ModelResult[] = [];
+    for (let i = 0; i <= picks.length; i++) {
+      out.push(run(M, { interventions: picks.slice(0, i).filter((p): p is string => !!p) }));
+    }
+    return out;
+  }, [picks.join('|')]);
+
+  useEffect(() => {
+    if (!playing) return;
+    if (at >= states.length - 1) { setPlaying(false); return; }
+    const t = setTimeout(() => setAt((i) => i + 1), at === 0 ? 1400 : 2600);
+    return () => clearTimeout(t);
+  }, [at, playing, states.length]);
+
+  const chosenAt = (i: number) => {
+    const d = DECISIONS[i];
+    const iv = picks[i];
+    return d.options.find((o) => o.iv === iv) ?? d.options[d.options.length - 1];
+  };
+  const lines = at > 0 ? consequence(states[at - 1], states[at]) : [];
+  const head = at === 0
+    ? { when: 'January', what: 'The plan as written' }
+    : { when: DECISIONS[at - 1].when, what: chosenAt(at - 1).label };
+
+  return (
+    <div className="rb-replay">
+      <div className="rb-replay-top">
+        <div>
+          <span className="rb-when">{head.when}</span>
+          <p className="rb-replay-what">{head.what}</p>
+        </div>
+        <div className="rb-replay-ctl">
+          {states.map((_, i) => (
+            <button key={i} className={'rb-step' + (i === at ? ' on' : i < at ? ' past' : '')}
+                    aria-label={`Step ${i + 1}`}
+                    onClick={() => { setPlaying(false); setAt(i); }} />
+          ))}
+          <button className="rb-replay-play"
+                  onClick={() => { if (at >= states.length - 1) setAt(0); setPlaying((p) => !p); }}>
+            {playing ? 'Pause' : at >= states.length - 1 ? 'Replay' : 'Play'}
+          </button>
+        </div>
+      </div>
+      <div className="rb-replay-body">
+        <TeamBars result={states[at]} />
+        <div className="rb-replay-side">
+          <Triangle trail={trail.slice(0, at + 1)} size={1.1} />
+          <ul className="rb-replay-kpi">
+            <li><b>{states[at].summary.teamsConstrained}</b><span>over capacity</span></li>
+            <li><b>{Math.round(states[at].summary.endingFte)}</b><span>people</span></li>
+            <li><b>{mUsd(states[at].summary.revenueExposureUsd)}</b><span>at risk</span></li>
+          </ul>
+        </div>
+      </div>
+      <div className="rb-replay-say">
+        {lines.length ? lines.map((l) => <p key={l}>{l}</p>) : <p className="dim">Eight teams, four programmes, and nothing decided yet.</p>}
+      </div>
+    </div>
+  );
+}
+
 function Scorecard({ picks, result, doNothing, onReset, trail }:
   { picks: (string | null)[]; result: ModelResult; doNothing: ModelResult; onReset: () => void; trail: TriPos[] }) {
   const s = result.summary, n = doNothing.summary;
@@ -451,6 +528,7 @@ function Scorecard({ picks, result, doNothing, onReset, trail }:
     <>
       <span className="rb-when">The year, as you ran it</span>
       <h1>{verdict}</h1>
+      <Replay picks={picks} trail={trail} />
       <div className="rb-final">
         <Triangle trail={trail} cloud={reachable()} size={1.55} />
         <div>
