@@ -35,7 +35,7 @@ export function Masthead() {
         </details>
         <nav className="mast-links" aria-label="Pages">
           <a href={/^#\/mine/.test(window.location.hash) ? '#/' : '#/mine'}>{/^#\/mine/.test(window.location.hash) ? '← The story' : 'Your numbers →'}</a>
-          <a href="#/?p=about">How it works &rarr;</a>
+          <a className="mast-how" href="#/?p=about">How it works &rarr;</a>
           <a href="https://bensunter.com/">bensunter.com</a>
         </nav>
         </div>

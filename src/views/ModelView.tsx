@@ -107,7 +107,7 @@ export function ModelView() {
         <h2>Teams</h2>
         <div className="tbl-wrap">
           <table className="tbl edit">
-            <thead><tr><th>Team</th><th>Type</th><th>People</th><th><Term k="target">Target</Term> %</th><th><Term k="shrinkage">Shrinkage</Term> %</th><th><Term k="attrition">Attrition</Term> %/yr</th><th>Cost / person / mo</th></tr></thead>
+            <thead><tr><th>Team</th><th>Type</th><th>People</th><th><Term k="target">Capacity</Term> %</th><th><Term k="shrinkage">Shrinkage</Term> %</th><th><Term k="attrition">Attrition</Term> %/yr</th><th>Cost / person / mo</th></tr></thead>
             <tbody>
               {model.teams.map((t, i) => (
                 <tr key={t.id}>

@@ -7,7 +7,7 @@ const TEXT: Record<string, string[]> = {
   ],
   team: [
     'Bars: run work (volume × handling time) plus initiative work (assigned people × their productive hours).',
-    'Target line: available people × productive hours per person × the team\'s target utilization. The dashed line is every productive hour.',
+    'Capacity line: available people × productive hours per person × the share of the day that team can sustain. The dashed line is every productive hour.',
     'People each month: last month\'s headcount less expected attrition (annual rate converted to monthly), plus hires landing at request month + lead time, plus reallocations.',
   ],
   scenarios: [

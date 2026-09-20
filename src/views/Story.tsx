@@ -106,6 +106,7 @@ export function Story() {
           <Loop />
           <details className="tuck"><summary>How the model works</summary>
             <p>Strategy becomes work, work becomes hours, hours become people, month by month. Decisions change the strategy and the loop runs again. Every number on the board is computed from the inputs; none is typed in.</p>
+            <p><a href="/simulator-flow.html">Watch a year of this plan run →</a></p>
             <button className="linkbtn" onClick={() => setDetail('about')}>Full method and assumptions →</button>
           </details>
         </>
@@ -116,7 +117,7 @@ export function Story() {
       title: <>{num(Math.round(result.teams.reduce((a, t) => a + t.annualWorkloadHours, 0)))} hours of work across twelve months.</>,
       body: (
         <>
-          <p>Each cell on the board is one team's month, as a share of the hours its people can actually work. Colored cells are above that team's own target.</p>
+          <p>Each cell on the board is one team's month, as a share of the hours its people can actually work. Colored cells are over that team's capacity.</p>
           <p className="hint">Click any team on the board to see its year in the chart below the map.</p>
           <details className="tuck"><summary>Where the hours come from</summary>
             <p>Volume × handling time per stream, spread across months by seasonality, plus the people assigned to initiatives. Headcount moves every month: attrition comes off, hires land after their lead time.</p>
@@ -127,17 +128,32 @@ export function Story() {
     {
       id: 'constraints', label: 'Constraints',
       title: <>What if the world is different?</>,
-      body: (
-        <>
-          <p className="hint">Pick one. The board marks every cell that moves.</p>
-          <div className="pick">
-            {model.scenarios.map((sc) => (
-              <button key={sc.id} className={'pk' + (state.scenarioId === sc.id ? ' on' : '')} onClick={() => dispatch({ type: 'scenario', id: sc.id })} title={sc.description}>{sc.name}</button>
-            ))}
-          </div>
-          {scen.description && <p className="hint">{scen.description}</p>}
-        </>
-      ),
+      /* Eleven buttons at the first choice point is a menu, not a question. The four the
+         model leads with stay in view and the rest sit under the same tuck the other
+         beats already use, so nothing is lost and the narrative keeps its shape. The
+         tuck opens itself when the chosen scenario is inside it. */
+      body: (() => {
+        const pick = (sc: typeof model.scenarios[number]) => (
+          <button key={sc.id} className={'pk' + (state.scenarioId === sc.id ? ' on' : '')}
+                  onClick={() => dispatch({ type: 'scenario', id: sc.id })}
+                  title={sc.description}>{sc.name}</button>
+        );
+        const lead = model.scenarios.slice(0, 4);
+        const rest = model.scenarios.slice(4);
+        return (
+          <>
+            <p className="hint">Pick one. The board marks every cell that moves.</p>
+            <div className="pick">{lead.map(pick)}</div>
+            {rest.length > 0 && (
+              <details className="tuck" open={rest.some((sc) => sc.id === state.scenarioId)}>
+                <summary>{rest.length} more ways the year could go</summary>
+                <div className="pick">{rest.map(pick)}</div>
+              </details>
+            )}
+            {scen.description && <p className="hint">{scen.description}</p>}
+          </>
+        );
+      })(),
     },
     {
       id: 'levers', label: 'Levers',
