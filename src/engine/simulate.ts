@@ -26,6 +26,10 @@ export interface RunOptions {
 
 /** Status thresholds. Configurable; these are the defaults from the spec. */
 export const STATUS_BAND_PP = 0.05;
+/** Most attrition can be lifted to, as a multiple of the team's own rate. */
+export const BURNOUT_CAP = 1.0;
+/** How much of last month's strain carries into this month's index. */
+export const BURNOUT_DECAY = 0.65;
 
 export function classify(utilization: number, target: number): TeamStatus {
   if (utilization > 1) return 'severe';
@@ -276,6 +280,10 @@ export function run(input: OperatingModel, opts: RunOptions = {}): ModelResult {
 
   const rowsFor = (t: Team, landing: Map<string, number[]>): TeamMonth[] => {
     const ma = annualToMonthlyRate(Math.min(0.99, t.annualAttrition * eff.attritionMult.get(t.id)!));
+    const burnout = t.burnoutSensitivity ?? 0;
+    /* Pressure that has been building for months costs people; one hard month does not.
+       Smoothed, so it is sustained strain that bites, and capped so the loop converges. */
+    let strainIdx = 0;
     const prod = productivePerFte(t);
     const target = eff.targetUtil.get(t.id)!;
     const rows: TeamMonth[] = [];
@@ -283,7 +291,12 @@ export function run(input: OperatingModel, opts: RunOptions = {}): ModelResult {
     let realloc = 0;
     for (let m = 0; m < n; m++) {
       const starting = fte;
-      const loss = starting * ma;
+      // Last month's strain drives this month's leavers: people resign after the bad
+      // month, not during it, and a same-month link would be circular.
+      const maEff = burnout > 0
+        ? Math.min(0.99, ma * (1 + burnout * Math.min(BURNOUT_CAP, strainIdx)))
+        : ma;
+      const loss = starting * maEff;
       const landed = landing.get(t.id)![m];
       realloc += eff.reallocDelta.get(t.id)![m];
       const available = Math.max(0, starting - loss + landed + eff.reallocDelta.get(t.id)![m]);
@@ -305,6 +318,9 @@ export function run(input: OperatingModel, opts: RunOptions = {}): ModelResult {
         workforceGap: Math.max(0, required - available),
         status: classify(util, target), runCostUsd: available * t.monthlyFteCostUsd,
       });
+      // Feed this month's overage into the index the next month reads.
+      const overShare = util > target ? (util - target) / Math.max(0.05, 1 - target) : 0;
+      strainIdx = strainIdx * BURNOUT_DECAY + Math.min(1, overShare) * (1 - BURNOUT_DECAY);
       fte = available;
     }
     return rows;
@@ -433,6 +449,20 @@ export function run(input: OperatingModel, opts: RunOptions = {}): ModelResult {
     annualBudgetVarianceUsd: financials.annualVarianceUsd,
     revenueExposureUsd: exposure.totalUsd,
     initiativesDelayed: schedule.filter((s) => s.delayMonths > 0).length,
+    peopleLostToAttrition: teamResults.reduce((a, t) => a + t.months.reduce((b, m) => b + m.attritionLoss, 0), 0),
+    retentionRate: (() => {
+      const start = model.teams.reduce((a, t) => a + t.currentFte, 0);
+      const lost = teamResults.reduce((a, t) => a + t.months.reduce((b, m) => b + m.attritionLoss, 0), 0);
+      return start > 0 ? Math.max(0, 1 - lost / start) : 1;
+    })(),
+    strainMonths: teamResults.reduce((a, t) => a + t.months.filter((m) => m.utilization > m.targetUtilization).length, 0),
+    // "Customer-facing" is the operational teams: the ones whose work is somebody's request
+    // waiting. Portfolio teams running hot is bad for the plan, not for a customer.
+    customerFacingStrainMonths: teamResults.reduce((a, t) => {
+      const team = model.teams.find((x) => x.id === t.teamId);
+      return team?.teamType !== 'operational' ? a
+        : a + t.months.filter((m) => m.utilization > m.targetUtilization).length;
+    }, 0),
     portfolioValueUsd: model.initiatives
       .filter((i) => !eff.cancelled.has(i.id))
       .reduce((a, i) => a + i.financialValueUsd * (eff.valueMult.get(i.id) ?? 1), 0),

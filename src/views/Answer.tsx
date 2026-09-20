@@ -38,7 +38,13 @@ const OBJECTIVES: Objective[] = [
     score: (r) => r.summary.revenueExposureUsd,
     read: (r) => `${mUsd(r.summary.revenueExposureUsd)} of revenue still at risk` },
   { id: 'people', label: 'Your people', who: 'anyone who has watched a team burn out',
-    score: strain, read: (r) => `${strain(r)} team-months spent over capacity` },
+    score: strain,
+    read: (r) => `${strain(r)} team-months over capacity, and ${Math.round(r.summary.peopleLostToAttrition)} people gone by December` },
+  { id: 'retention', label: 'Keeping people', who: 'anywhere the job market is the constraint',
+    score: (r) => -r.summary.retentionRate,
+    // One decimal, because the spread between the best and worst path here is under a
+    // point and whole percents made every answer read as "87% against 87%".
+    read: (r) => `${(r.summary.retentionRate * 100).toFixed(1)}% of the people you started with, still there` },
   { id: 'headcount', label: 'Headcount', who: 'a company under a hiring freeze',
     score: (r) => r.summary.endingFte, read: (r) => `${Math.round(r.summary.endingFte)} people at year end` },
   { id: 'budget', label: 'The budget', who: 'a non-profit, or anyone with a hard cap',
@@ -77,6 +83,13 @@ export function Answer() {
     || spend(a.result) - spend(b.result)
     || strain(a.result) - strain(b.result);
   const best = useMemo(() => [...paths].sort(rank(obj))[0], [paths, objId]);
+
+  /* Counted rather than claimed. The copy used to say "seven different winners" and that
+     was simply wrong: two objectives share an answer, which is worth saying out loud. */
+  const winners = useMemo(() => {
+    const keys = OBJECTIVES.map((o) => [...paths].sort(rank(o))[0].picks.join('|'));
+    return { distinct: new Set(keys).size, total: OBJECTIVES.length };
+  }, [paths]);
   const doNothing = useMemo(() => run(M), []);
 
   /* What this winner gives up. Said by comparing it against whoever wins the other
@@ -96,10 +109,11 @@ export function Answer() {
       <span className="rb-when">The short version</span>
       <h1>There is no best plan. There is a best plan for something.</h1>
       <p className="ans-lede">
-        This model can run a year {paths.length} different ways. Ranked against six things a
-        company might be trying to protect, it produces <b>six different winners, with no
-        overlap at all</b>. Every one of them is bad at something the others protect. So the
-        only useful question is the first one.
+        This model can run a year {paths.length} different ways. Ranked against {winners.total} things
+        a company might be trying to protect, it produces <b>{winners.distinct} different sets of
+        five decisions</b>. Every one of them is bad at something the others protect, and the only
+        two that share an answer are the two you would expect: looking after your people and
+        keeping them are the same five calls. So the useful question is the first one.
       </p>
 
       <p className="ans-ask">What are you protecting?</p>
@@ -152,8 +166,8 @@ export function Answer() {
       <div className="ans-lesson">
         <p className="ans-h">The whole thing, in three lines</p>
         <ol>
-          <li><b>Name what you are protecting before you look at options.</b> Six objectives, six
-              different answers, and nothing in this model tells you which objective is right.
+          <li><b>Name what you are protecting before you look at options.</b> Seven objectives,
+              six different answers, and nothing in this model tells you which objective is right.
               That part is a judgement, and it is the one that matters most.</li>
           <li><b>Every lever moves more than the thing you aimed it at.</b> Moving five people
               fixes one team and breaks another. Buying a tool cancels a hire nobody revisited.

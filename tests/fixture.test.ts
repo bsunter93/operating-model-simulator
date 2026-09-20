@@ -49,7 +49,12 @@ describe('Atlas Systems base plan', () => {
     expect(t.peakWorkforceGap).toBeLessThanOrEqual(15);
     expect(t.months[5].hiresLanded).toBe(10);
     expect(status('team-implementation').slice(1, 6).every((s) => s === 'constrained')).toBe(true);
-    expect(status('team-implementation').slice(6).every((s) => s !== 'constrained' && s !== 'severe')).toBe(true);
+    // Not every month after the hires land is clear any more. Strain through the first
+    // half costs the team people, and it slips back over capacity in September on its own.
+    // That is the loop working, so it is pinned rather than allowed.
+    expect(status('team-implementation').slice(6).filter((s) => s === 'constrained').length).toBe(1);
+    expect(status('team-implementation')[8]).toBe('constrained');
+    expect(status('team-implementation').slice(6).some((s) => s === 'severe')).toBe(false);
   });
   it('the first thing that breaks is Implementation, in February', () => {
     expect(base.summary.firstBreakTeamId).toBe('team-implementation');

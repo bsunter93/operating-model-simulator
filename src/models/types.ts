@@ -30,6 +30,17 @@ export interface Strategy {
 }
 
 export interface Team {
+  /**
+   * How much sustained over-capacity lifts this team's attrition. 0 keeps the old
+   * behaviour, where a team could run at 120% all year and lose exactly as many people
+   * as one running at 60%, which is the least true thing this model used to say.
+   *
+   * The loop it closes is the one that matters: strain pushes people out, fewer people
+   * means more strain on whoever stays, and the gap compounds faster than hiring closes
+   * it. Damped and capped in the engine, because a reinforcing loop with no ceiling
+   * models a company that ends the year with nobody in it.
+   */
+  burnoutSensitivity?: number;
   id: string;
   name: string;
   teamType: TeamType;

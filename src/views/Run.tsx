@@ -502,6 +502,7 @@ function Replay({ picks, trail }: { picks: (string | null)[]; trail: TriPos[] })
             <li><b>{states[at].summary.teamsConstrained}</b><span>over capacity</span></li>
             <li><b>{Math.round(states[at].summary.endingFte)}</b><span>people</span></li>
             <li><b>{mUsd(states[at].summary.revenueExposureUsd)}</b><span>at risk</span></li>
+            <li><b>{(states[at].summary.retentionRate * 100).toFixed(1)}%</b><span>retention</span></li>
           </ul>
         </div>
       </div>
@@ -549,6 +550,8 @@ function Scorecard({ picks, result, doNothing, onReset, trail }:
           <tr><td>Teams over capacity</td><td>{n.teamsConstrained}</td><td>{s.teamsConstrained}</td></tr>
           <tr><td>People at year end</td><td>{Math.round(n.endingFte)}</td><td>{Math.round(s.endingFte)}</td></tr>
           <tr><td>Revenue at risk</td><td>{mUsd(n.revenueExposureUsd)}</td><td>{mUsd(s.revenueExposureUsd)}</td></tr>
+          <tr><td>Kept their people</td><td>{(n.retentionRate * 100).toFixed(1)}%</td><td>{(s.retentionRate * 100).toFixed(1)}%</td></tr>
+          <tr><td>Months a team ran over</td><td>{n.strainMonths}</td><td>{s.strainMonths}</td></tr>
           <tr><td>Spent on changes</td><td>{mUsd(0)}</td><td>{mUsd(spent)}</td></tr>
         </tbody>
       </table>

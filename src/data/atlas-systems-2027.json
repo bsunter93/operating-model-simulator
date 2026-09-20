@@ -30,7 +30,8 @@
       "annualAttrition": 0.14,
       "shrinkage": 0.18,
       "targetUtilization": 0.7,
-      "monthlyFteCostUsd": 18000
+      "monthlyFteCostUsd": 18000,
+      "burnoutSensitivity": 0.4
     },
     {
       "id": "team-customer-ops",
@@ -40,7 +41,8 @@
       "annualAttrition": 0.12,
       "shrinkage": 0.15,
       "targetUtilization": 0.8,
-      "monthlyFteCostUsd": 12500
+      "monthlyFteCostUsd": 12500,
+      "burnoutSensitivity": 0.9
     },
     {
       "id": "team-consumer-ops",
@@ -50,7 +52,8 @@
       "annualAttrition": 0.14,
       "shrinkage": 0.16,
       "targetUtilization": 0.82,
-      "monthlyFteCostUsd": 11000
+      "monthlyFteCostUsd": 11000,
+      "burnoutSensitivity": 0.9
     },
     {
       "id": "team-enterprise-support",
@@ -60,7 +63,8 @@
       "annualAttrition": 0.12,
       "shrinkage": 0.15,
       "targetUtilization": 0.78,
-      "monthlyFteCostUsd": 11500
+      "monthlyFteCostUsd": 11500,
+      "burnoutSensitivity": 0.9
     },
     {
       "id": "team-consumer-support",
@@ -70,7 +74,8 @@
       "annualAttrition": 0.15,
       "shrinkage": 0.15,
       "targetUtilization": 0.78,
-      "monthlyFteCostUsd": 10500
+      "monthlyFteCostUsd": 10500,
+      "burnoutSensitivity": 0.9
     },
     {
       "id": "team-implementation",
@@ -80,7 +85,8 @@
       "annualAttrition": 0.12,
       "shrinkage": 0.15,
       "targetUtilization": 0.8,
-      "monthlyFteCostUsd": 14500
+      "monthlyFteCostUsd": 14500,
+      "burnoutSensitivity": 0.9
     },
     {
       "id": "team-platform-engineering",
@@ -90,7 +96,8 @@
       "annualAttrition": 0.1,
       "shrinkage": 0.12,
       "targetUtilization": 0.8,
-      "monthlyFteCostUsd": 19000
+      "monthlyFteCostUsd": 19000,
+      "burnoutSensitivity": 0.6
     },
     {
       "id": "team-data-platform",
@@ -100,7 +107,8 @@
       "annualAttrition": 0.1,
       "shrinkage": 0.12,
       "targetUtilization": 0.8,
-      "monthlyFteCostUsd": 18500
+      "monthlyFteCostUsd": 18500,
+      "burnoutSensitivity": 0.6
     }
   ],
   "seasonality": {

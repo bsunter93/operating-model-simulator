@@ -44,8 +44,18 @@ describe('decision comparison', () => {
     const rows = compareOptions(doNothing, [...options, accept88], model.decisionWeights);
     const accept = rows.find((r) => r.id === 'accept')!;
     const dn = rows.find((r) => r.id === 'do-nothing')!;
-    expect(accept.residualGapHours).toBeCloseTo(dn.residualGapHours, 6);
-    expect(accept.residualExposureUsd).toBeCloseTo(dn.residualExposureUsd, 6);
+    // The work is still identical: raising a target moves no hours. What it now also does
+    // is change who burns out, so the residual gap is no longer identical to doing nothing.
+    // That is a real effect and it gets its own test below rather than being averaged away.
+    const w = (r: ReturnType<typeof run>, id: string) =>
+      r.teams.find((t) => t.teamId === id)!.months.reduce((a, m) => a + m.workloadHours, 0);
+    expect(w(accept88.result, 'team-implementation')).toBeCloseTo(w(doNothing, 'team-implementation'), 6);
+  });
+
+  it('accepting a hotter target keeps people, because fewer months count as over capacity', () => {
+    const hotter = run(model, { interventions: [{ id: 'accept', name: 'accept', type: 'serviceLevelChange' as const, teamId: 'team-implementation', newTargetUtilization: 0.88 }] });
+    expect(hotter.summary.peopleLostToAttrition).toBeLessThan(doNothing.summary.peopleLostToAttrition);
+    expect(hotter.summary.strainMonths).toBeLessThan(doNothing.summary.strainMonths);
   });
   it('removing an option can change the others\' scores (and the UI must say so)', () => {
     const all = compareOptions(doNothing, options, model.decisionWeights);

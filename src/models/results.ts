@@ -151,6 +151,14 @@ export interface Summary {
    * made it invisible next to cost and time.
    */
   portfolioValueUsd: number;
+  /** People who left over the year, including the ones strain pushed out. */
+  peopleLostToAttrition: number;
+  /** Share of the starting workforce still there at year end. */
+  retentionRate: number;
+  /** Team-months spent over capacity. The closest thing this model has to morale. */
+  strainMonths: number;
+  /** Of those, the ones on teams that face a customer. */
+  customerFacingStrainMonths: number;
   /** Conditional hires the plan no longer needs. Empty unless a request set cancelIfSlack. */
   hiresDropped: string[];
   /** Headcount those dropped requests would have added. */

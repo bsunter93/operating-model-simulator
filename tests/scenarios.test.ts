@@ -68,8 +68,13 @@ describe('one assumption at a time', () => {
     expect(r.financials.annualRunCostUsd).toBeLessThan(base.financials.annualRunCostUsd);
   });
   it('longer handling time: proportionally more hours, nothing else', () => {
+    // Burnout is switched off on both sides here on purpose. With it on, more hours means
+    // more strain means fewer people, and this test is about whether hours move
+    // proportionally, not about the loop that reads them.
     const m = clone(); const s = m.demandStreams.find((x) => x.id === 'demand-consumer-cases')!; s.handlingMinutesPerUnit *= 1.1;
-    const a = team(run(m), 'team-consumer-ops'), b = team(base, 'team-consumer-ops');
+    m.teams.forEach((t) => { t.burnoutSensitivity = 0; });
+    const flatBase = clone(); flatBase.teams.forEach((t) => { t.burnoutSensitivity = 0; });
+    const a = team(run(m), 'team-consumer-ops'), b = team(run(flatBase), 'team-consumer-ops');
     a.months.forEach((x, i) => { expect(x.runHours).toBeCloseTo(b.months[i].runHours * 1.1, 6); expect(x.availableFte).toBeCloseTo(b.months[i].availableFte, 6); });
   });
   it('a longer hiring lead time lands the same people later and leaves more months over capacity', () => {
