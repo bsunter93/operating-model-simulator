@@ -104,6 +104,61 @@ const DECISIONS: Decision[] = [
     ],
   },
 ];
+/*
+ * Cost, scope and time: where a run has put you, and how it got there.
+ *
+ * Each axis scores how much of that dimension survived your decisions, normalised over
+ * what is actually reachable in this model rather than over an invented scale. The point
+ * is the weighted centre of the three, so protecting everything sits in the middle and
+ * every trade pulls it toward a corner. Doing nothing scores 1/1/1 and sits dead centre,
+ * which is the honest reading of doing nothing.
+ */
+const AXIS_RANGE = { spendMax: 1_870_000, valueMin: 68_400_000, valueMax: 92_000_000, lateMin: 9, lateMax: 13 };
+
+export type TriPos = { x: number; y: number; cost: number; scope: number; time: number };
+
+export function triangleOf(r: ModelResult): TriPos {
+  const spend = r.financials.monthly.reduce((a, m) => a + m.changeCostUsd, 0);
+  const late = r.initiatives.reduce((a, i) => a + (i.delayMonths ?? 0), 0);
+  const clamp = (v: number) => (v < 0 ? 0 : v > 1 ? 1 : v);
+  const cost = clamp(1 - spend / AXIS_RANGE.spendMax);
+  const scope = clamp((r.summary.portfolioValueUsd - AXIS_RANGE.valueMin) / (AXIS_RANGE.valueMax - AXIS_RANGE.valueMin));
+  const time = clamp(1 - (late - AXIS_RANGE.lateMin) / (AXIS_RANGE.lateMax - AXIS_RANGE.lateMin));
+  const sum = cost + scope + time || 1;
+  // cost at the apex, scope bottom-left, time bottom-right
+  const x = (cost * 0.5 + scope * 0 + time * 1) / sum;
+  const y = (cost * 0 + scope * 1 + time * 1) / sum;
+  return { x, y, cost, scope, time };
+}
+
+/** Pixel geometry for the drawn triangle. */
+const TW = 168, TH = 146, PAD = 15;
+const px = (p: TriPos) => ({ cx: PAD + p.x * (TW - PAD * 2), cy: PAD + p.y * (TH - PAD * 2) });
+
+function Triangle({ trail, cloud, size = 1 }: { trail: TriPos[]; cloud?: TriPos[]; size?: number }) {
+  const here = trail[trail.length - 1];
+  const w = TW * size, h = TH * size;
+  const apex = `${PAD + 0.5 * (TW - PAD * 2)},${PAD}`;
+  const bl = `${PAD},${TH - PAD}`;
+  const br = `${TW - PAD},${TH - PAD}`;
+  return (
+    <svg className="rb-tri" width={w} height={h} viewBox={`0 0 ${TW} ${TH}`} role="img"
+         aria-label={`Cost ${pct(here.cost)}, scope ${pct(here.scope)}, schedule ${pct(here.time)} of what this model can protect.`}>
+      <polygon points={`${apex} ${br} ${bl}`} className="tri-face" />
+      {cloud?.map((p, i) => { const q = px(p); return <circle key={i} cx={q.cx} cy={q.cy} r={1.6} className="tri-cloud" />; })}
+      {trail.length > 1 && (
+        <polyline className="tri-trail"
+          points={trail.map((p) => { const q = px(p); return `${q.cx},${q.cy}`; }).join(' ')} />
+      )}
+      {trail.slice(0, -1).map((p, i) => { const q = px(p); return <circle key={i} cx={q.cx} cy={q.cy} r={2.4} className="tri-was" />; })}
+      <circle cx={px(here).cx} cy={px(here).cy} r={4.6} className="tri-now" />
+      <text x={PAD + 0.5 * (TW - PAD * 2)} y={PAD - 5} className="tri-lab" textAnchor="middle">COST</text>
+      <text x={PAD - 3} y={TH - PAD + 11} className="tri-lab" textAnchor="start">SCOPE</text>
+      <text x={TW - PAD + 3} y={TH - PAD + 11} className="tri-lab" textAnchor="end">TIME</text>
+    </svg>
+  );
+}
+
 const pct = (n: number) => Math.round(n * 100) + '%';
 /** "a", "a and b", "a, b and c". Joining three names with two "and"s reads like a list
     nobody proofread. */
@@ -218,6 +273,25 @@ function consequence(before: ModelResult, after: ModelResult): string[] {
   return out;
 }
 
+/**
+ * Every ending reachable from these decisions. 3^5 runs of the engine, computed once and
+ * held, so the scorecard can show where your year sits among the years you did not have.
+ */
+let REACHABLE: TriPos[] | null = null;
+function reachable(): TriPos[] {
+  if (REACHABLE) return REACHABLE;
+  const out: TriPos[] = [];
+  const walk = (i: number, picked: string[]) => {
+    if (i === DECISIONS.length) { out.push(triangleOf(run(M, { interventions: picked }))); return; }
+    for (const o of DECISIONS[i].options) {
+      walk(i + 1, o.iv && !picked.includes(o.iv) ? [...picked, o.iv] : picked);
+    }
+  };
+  walk(0, []);
+  REACHABLE = out;
+  return out;
+}
+
 export function Run() {
   const [picks, setPicks] = useState<(string | null)[]>([]);
   const [preview, setPreview] = useState<string | null | undefined>(undefined);
@@ -239,20 +313,47 @@ export function Run() {
   );
 
   const shown = previewResult ?? current;
+
+  /* One position per state the run has been in, ending on whatever is on screen now,
+     so hovering a choice moves the marker before you commit to it. */
+  const trail = useMemo(() => {
+    const steps: TriPos[] = [];
+    for (let i = 0; i <= picks.length; i++) {
+      steps.push(triangleOf(run(M, { interventions: picks.slice(0, i).filter((p): p is string => !!p) })));
+    }
+    if (previewResult) steps.push(triangleOf(previewResult));
+    return steps;
+  }, [picks.join('|'), preview]);
+  const triNow = trail[trail.length - 1];
   const d = DECISIONS[Math.min(step, DECISIONS.length - 1)];
   const lastLines = step > 0 && !done ? consequence(previous, current) : [];
 
   return (
     <main className="runv">
-      <header className="rb-head">
-        <div>
-          <b>Atlas Systems</b>
-          <span>2027 &middot; a fictional company, real arithmetic</span>
+      {/* Sticky, and the same shape on every screen of the run. The triangle keeps its
+          trail so you can see the path your decisions took, not just where they left you. */}
+      <header className="rb-dash">
+        <div className="rb-dash-in">
+          <div className="rb-dash-id">
+            <b>Atlas Systems</b>
+            <span>2027 &middot; fictional company, real arithmetic</span>
+            <div className="rb-dots" aria-label={`Decision ${Math.min(step + 1, DECISIONS.length)} of ${DECISIONS.length}`}>
+              {DECISIONS.map((dd, i) => (
+                <i key={dd.id} className={i < step ? 'done' : i === step ? 'now' : ''} />
+              ))}
+            </div>
+          </div>
+          <div className="rb-dash-tri">
+            <Triangle trail={trail} />
+            <ul className="rb-tri-read">
+              <li><b>{pct(triNow.cost)}</b><span>budget kept</span></li>
+              <li><b>{pct(triNow.scope)}</b><span>scope kept</span></li>
+              <li><b>{pct(triNow.time)}</b><span>schedule kept</span></li>
+            </ul>
+          </div>
+          <Kpis result={shown} prev={previewResult ? current : undefined} />
         </div>
-        <a className="rb-exit" href="#/">The full model &rarr;</a>
       </header>
-
-      <Kpis result={shown} prev={previewResult ? current : undefined} />
 
       <div className="rb-body">
         <section className="rb-ask">
@@ -293,7 +394,7 @@ export function Run() {
               <p className="rb-hint">Hover a choice to see the board move before you commit.</p>
             </>
           ) : (
-            <Scorecard picks={picks} result={current} doNothing={doNothing} onReset={() => setPicks([])} />
+            <Scorecard picks={picks} result={current} doNothing={doNothing} trail={trail} onReset={() => setPicks([])} />
           )}
         </section>
 
@@ -310,8 +411,8 @@ export function Run() {
   );
 }
 
-function Scorecard({ picks, result, doNothing, onReset }:
-  { picks: (string | null)[]; result: ModelResult; doNothing: ModelResult; onReset: () => void }) {
+function Scorecard({ picks, result, doNothing, onReset, trail }:
+  { picks: (string | null)[]; result: ModelResult; doNothing: ModelResult; onReset: () => void; trail: TriPos[] }) {
   const s = result.summary, n = doNothing.summary;
   const spent = changeSpend(result);
   const took = picks.filter(Boolean).length;
@@ -330,6 +431,16 @@ function Scorecard({ picks, result, doNothing, onReset }:
     <>
       <span className="rb-when">The year, as you ran it</span>
       <h1>{verdict}</h1>
+      <div className="rb-final">
+        <Triangle trail={trail} cloud={reachable()} size={1.55} />
+        <div>
+          <p className="rb-final-h">Every year you could have had</p>
+          <p className="rb-setup">Each faint mark is one of the {reachable().length} ways these five
+             decisions could have gone. Yours is the filled one, and the line is how it got there.
+             Nothing sits in the middle of all three corners, because nothing protects
+             budget, scope and schedule at once.</p>
+        </div>
+      </div>
       <table className="rb-score">
         <thead><tr><th></th><th>Doing nothing</th><th>Your run</th></tr></thead>
         <tbody>
