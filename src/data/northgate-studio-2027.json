@@ -1,0 +1,627 @@
+{
+  "modelVersion": "3.0",
+  "id": "northgate-studio-2027",
+  "name": "Northgate Studio",
+  "status": "calibrated",
+  "currency": "EUR",
+  "locale": "en-IE",
+  "lexicon": {
+    "revenueNoun": "Fee income",
+    "customerNoun": "The client"
+  },
+  "calendar": {
+    "startMonth": "2027-01",
+    "endMonth": "2027-12",
+    "workHoursPerFteMonth": 160
+  },
+  "strategy": {
+    "revenueTarget": 27000000,
+    "growthTargetPct": 0.18,
+    "employeeCount": 175,
+    "enterpriseCustomers": 34,
+    "operatingCostTarget": 21000000,
+    "strategicPriorities": [
+      "meridian-delivery",
+      "framework-win",
+      "retainer-growth",
+      "senior-bench"
+    ]
+  },
+  "teams": [
+    {
+      "id": "team-strategy",
+      "name": "Strategy and Planning",
+      "teamType": "portfolio-only",
+      "currentFte": 14,
+      "annualAttrition": 0.16,
+      "shrinkage": 0.14,
+      "targetUtilization": 0.82,
+      "monthlyFteCost": 11500,
+      "burnoutSensitivity": 0.8
+    },
+    {
+      "id": "team-design",
+      "name": "Design Studio",
+      "teamType": "portfolio-and-run",
+      "currentFte": 38,
+      "annualAttrition": 0.18,
+      "shrinkage": 0.15,
+      "targetUtilization": 0.85,
+      "monthlyFteCost": 8200,
+      "burnoutSensitivity": 0.9,
+      "backlog": {
+        "carryForward": 0.9
+      }
+    },
+    {
+      "id": "team-engineering",
+      "name": "Engineering",
+      "teamType": "portfolio-and-run",
+      "currentFte": 52,
+      "annualAttrition": 0.17,
+      "shrinkage": 0.15,
+      "targetUtilization": 0.85,
+      "monthlyFteCost": 9400,
+      "burnoutSensitivity": 0.9,
+      "backlog": {
+        "carryForward": 0.9
+      }
+    },
+    {
+      "id": "team-delivery",
+      "name": "Delivery Management",
+      "teamType": "portfolio-only",
+      "currentFte": 18,
+      "annualAttrition": 0.14,
+      "shrinkage": 0.16,
+      "targetUtilization": 0.8,
+      "monthlyFteCost": 8800,
+      "burnoutSensitivity": 0.7
+    },
+    {
+      "id": "team-client-support",
+      "name": "Client Support",
+      "teamType": "operational",
+      "currentFte": 12,
+      "annualAttrition": 0.2,
+      "shrinkage": 0.18,
+      "targetUtilization": 0.75,
+      "monthlyFteCost": 5600,
+      "burnoutSensitivity": 0.9,
+      "backlog": {
+        "carryForward": 0.8
+      }
+    },
+    {
+      "id": "team-data",
+      "name": "Data and Insight",
+      "teamType": "portfolio-and-run",
+      "currentFte": 18,
+      "annualAttrition": 0.16,
+      "shrinkage": 0.15,
+      "targetUtilization": 0.82,
+      "monthlyFteCost": 9000,
+      "burnoutSensitivity": 0.8,
+      "backlog": {
+        "carryForward": 0.9
+      }
+    }
+  ],
+  "seasonality": {
+    "2027-01": 0.95,
+    "2027-02": 1.05,
+    "2027-03": 1.1,
+    "2027-04": 1.08,
+    "2027-05": 1.05,
+    "2027-06": 1.1,
+    "2027-07": 1.0,
+    "2027-08": 0.72,
+    "2027-09": 1.08,
+    "2027-10": 1.12,
+    "2027-11": 1.05,
+    "2027-12": 0.7
+  },
+  "demandStreams": [
+    {
+      "id": "demand-support-tickets",
+      "name": "Client support tickets",
+      "teamId": "team-client-support",
+      "unit": "tickets",
+      "annualVolume": 24000,
+      "handlingMinutesPerUnit": 24,
+      "complexityFactor": 1.0,
+      "workMix": {
+        "reusable": 0.6,
+        "configurable": 0.3,
+        "bespoke": 0.1
+      },
+      "seasonality": "default",
+      "answerWithinSeconds": 7200
+    },
+    {
+      "id": "demand-change-requests",
+      "name": "Small change requests",
+      "teamId": "team-engineering",
+      "unit": "requests",
+      "annualVolume": 4200,
+      "handlingMinutesPerUnit": 190,
+      "complexityFactor": 1.0,
+      "workMix": {
+        "reusable": 0.45,
+        "configurable": 0.35,
+        "bespoke": 0.2
+      },
+      "seasonality": "default",
+      "answerWithinSeconds": 172800
+    },
+    {
+      "id": "demand-design-asks",
+      "name": "Retainer design requests",
+      "teamId": "team-design",
+      "unit": "requests",
+      "annualVolume": 3100,
+      "handlingMinutesPerUnit": 210,
+      "complexityFactor": 1.0,
+      "workMix": {
+        "reusable": 0.4,
+        "configurable": 0.35,
+        "bespoke": 0.25
+      },
+      "seasonality": "default"
+    },
+    {
+      "id": "demand-reporting",
+      "name": "Client reporting and dashboards",
+      "teamId": "team-data",
+      "unit": "reports",
+      "annualVolume": 1800,
+      "handlingMinutesPerUnit": 240,
+      "complexityFactor": 1.0,
+      "workMix": {
+        "reusable": 0.5,
+        "configurable": 0.35,
+        "bespoke": 0.15
+      },
+      "seasonality": "default"
+    }
+  ],
+  "hiringPlan": [
+    {
+      "id": "hire-engineering-9",
+      "teamId": "team-engineering",
+      "requestMonth": "2027-02",
+      "headcount": 9,
+      "leadTimeMonths": 3
+    },
+    {
+      "id": "hire-design-5",
+      "teamId": "team-design",
+      "requestMonth": "2027-03",
+      "headcount": 5,
+      "leadTimeMonths": 2
+    }
+  ],
+  "initiatives": [
+    {
+      "id": "init-brightline",
+      "name": "Brightline rebrand",
+      "startMonth": "2027-01",
+      "durationMonths": 7,
+      "requiredFteByTeam": {
+        "team-strategy": 5,
+        "team-design": 16,
+        "team-delivery": 3
+      },
+      "strategicValue": 8,
+      "financialValue": 2900000,
+      "urgency": 8,
+      "confidence": 0.8,
+      "revenueAtRisk": 2900000,
+      "executionFailureProbability": 0.15,
+      "discretionary": false
+    },
+    {
+      "id": "init-meridian",
+      "name": "Meridian commerce replatform",
+      "startMonth": "2027-02",
+      "durationMonths": 10,
+      "requiredFteByTeam": {
+        "team-engineering": 23,
+        "team-design": 8,
+        "team-delivery": 5,
+        "team-data": 4
+      },
+      "strategicValue": 10,
+      "financialValue": 7400000,
+      "urgency": 10,
+      "confidence": 0.7,
+      "revenueAtRisk": 7400000,
+      "executionFailureProbability": 0.28,
+      "discretionary": false
+    },
+    {
+      "id": "init-framework-bid",
+      "name": "Public framework bid",
+      "startMonth": "2027-03",
+      "durationMonths": 5,
+      "requiredFteByTeam": {
+        "team-strategy": 6,
+        "team-delivery": 4,
+        "team-data": 3
+      },
+      "strategicValue": 9,
+      "financialValue": 5200000,
+      "urgency": 9,
+      "confidence": 0.45,
+      "revenueAtRisk": 5200000,
+      "executionFailureProbability": 0.45,
+      "discretionary": false
+    },
+    {
+      "id": "init-design-system",
+      "name": "Our own design system",
+      "startMonth": "2027-04",
+      "durationMonths": 8,
+      "requiredFteByTeam": {
+        "team-design": 6,
+        "team-engineering": 5
+      },
+      "strategicValue": 6,
+      "financialValue": 1100000,
+      "urgency": 4,
+      "confidence": 0.85,
+      "revenueAtRisk": 0,
+      "executionFailureProbability": 0.12,
+      "discretionary": true
+    }
+  ],
+  "dependencies": [],
+  "budget": {
+    "modeledAnnualBudget": 16800000
+  },
+  "pooling": {
+    "clientCount": 34,
+    "workloadPerClient": 1,
+    "ahtSeconds": 1440,
+    "targetSeconds": 7200,
+    "serviceLevel": 0.8,
+    "bespokeShare": 0.35,
+    "contextPenalty": 0.45
+  },
+  "scenarios": [
+    {
+      "id": "scenario-base",
+      "name": "Base plan",
+      "type": "base",
+      "description": "The 2027 plan as written, with both hiring requests."
+    },
+    {
+      "id": "scenario-squeeze",
+      "name": "New business won, seniors leaving",
+      "type": "combined",
+      "effects": [
+        {
+          "type": "demandMultiplier",
+          "demandMultiplier": 1.2,
+          "fromMonth": "2027-03"
+        },
+        {
+          "type": "attritionMultiplier",
+          "multiplier": 2.2,
+          "teamIds": [
+            "team-design"
+          ]
+        }
+      ],
+      "description": "Retainers grow 20% from March, and designers leave at over twice the planned rate all year."
+    },
+    {
+      "id": "scenario-new-business",
+      "name": "Retainers +25%",
+      "type": "demandMultiplier",
+      "demandMultiplier": 1.25,
+      "fromMonth": "2027-03",
+      "description": "A good year on the retainer book, which is a capacity problem wearing a nice hat."
+    },
+    {
+      "id": "scenario-designers-poached",
+      "name": "Designers poached",
+      "type": "attritionMultiplier",
+      "multiplier": 2.5,
+      "teamIds": [
+        "team-design"
+      ],
+      "description": "One team loses people at two and a half times the planned rate and no other team is touched."
+    },
+    {
+      "id": "scenario-client-leaves",
+      "name": "A client leaves in June",
+      "type": "demandMultiplier",
+      "demandMultiplier": 0.8,
+      "fromMonth": "2027-06",
+      "description": "Retainer work drops a fifth from June. The bench is now the problem."
+    },
+    {
+      "id": "scenario-hiring-freeze",
+      "name": "Hiring freeze",
+      "type": "hiringFreeze",
+      "description": "Both requests are withdrawn. Nobody already here leaves because of it."
+    },
+    {
+      "id": "scenario-margin-pressure",
+      "name": "Margin pressure",
+      "type": "budgetConstraint",
+      "budgetMultiplier": 0.9,
+      "description": "The cost base has to come in 10% under plan."
+    },
+    {
+      "id": "scenario-tooling",
+      "name": "Tooling saves 12%",
+      "type": "productivityMultiplier",
+      "multiplier": 1.12,
+      "description": "The same work takes 12% fewer hours everywhere."
+    },
+    {
+      "id": "scenario-delivery-risk",
+      "name": "Delivery risk +60%",
+      "type": "failureProbabilityMultiplier",
+      "multiplier": 1.6,
+      "description": "Every engagement is markedly likelier to miss."
+    },
+    {
+      "id": "scenario-hard-year",
+      "name": "Squeeze with a hiring freeze",
+      "type": "combined",
+      "effects": [
+        {
+          "type": "demandMultiplier",
+          "demandMultiplier": 1.2,
+          "fromMonth": "2027-03"
+        },
+        {
+          "type": "attritionMultiplier",
+          "multiplier": 2.2,
+          "teamIds": [
+            "team-design"
+          ]
+        },
+        {
+          "type": "hiringFreeze"
+        }
+      ],
+      "description": "Growing, losing people, and not allowed to replace them."
+    }
+  ],
+  "interventions": [
+    {
+      "id": "intervention-freelance-design",
+      "name": "Put 22% of design production with freelancers",
+      "type": "automation",
+      "teamId": "team-design",
+      "workloadReductionRate": 0.22,
+      "timeToImpactMonths": 1,
+      "implementationCost": 880000,
+      "description": "A trusted freelance bench takes the production work. Available within the month, and it costs roughly what the people would have."
+    },
+    {
+      "id": "intervention-expedite-design",
+      "name": "Bring the design hires forward",
+      "type": "expediteHiring",
+      "hiringRequestId": "hire-design-5",
+      "newLeadTimeMonths": 1,
+      "oneTimeCost": 140000,
+      "description": "Search fees and buying out notice periods. Two months becomes one."
+    },
+    {
+      "id": "intervention-move-eng-to-design",
+      "name": "Move 6 front-end engineers into design production",
+      "type": "reallocation",
+      "fromTeamId": "team-engineering",
+      "toTeamId": "team-design",
+      "headcount": 6,
+      "timeToImpactMonths": 1,
+      "implementationCost": 120000,
+      "description": "They can do production design inside a month. They are not doing Meridian while they do it."
+    },
+    {
+      "id": "intervention-drop-design-system",
+      "name": "Stop building our own design system",
+      "type": "cancel",
+      "initiativeId": "init-design-system",
+      "description": "The internal investment. Nothing bills against it, and eleven people come back."
+    },
+    {
+      "id": "intervention-half-brightline",
+      "name": "Take Brightline to 60% of scope",
+      "type": "rescope",
+      "initiativeId": "init-brightline",
+      "scopeMultiplier": 0.6,
+      "description": "The identity and the core applications, not the long tail. A conversation with the client, and less of the fee."
+    },
+    {
+      "id": "intervention-stretch-meridian",
+      "name": "Run Meridian leaner and longer",
+      "type": "restaff",
+      "initiativeId": "init-meridian",
+      "durationMultiplier": 1.4,
+      "fteMultiplier": 0.72,
+      "valueMultiplier": 0.94,
+      "description": "A smaller team over a longer run. It lands later, and the client has an opinion about that."
+    },
+    {
+      "id": "intervention-defer-framework",
+      "name": "Defer the framework bid by 2 months",
+      "type": "defer",
+      "initiativeId": "init-framework-bid",
+      "months": 2,
+      "description": "Push the bid out and give Strategy some air. Bids have dates, so check what this actually costs."
+    }
+  ],
+  "decisionWeights": {
+    "cost": 0.2,
+    "speed": 0.3,
+    "revenueExposure": 0.5
+  },
+  "run": {
+    "scenarioId": "scenario-squeeze",
+    "decisions": [
+      {
+        "id": "a1",
+        "when": "February",
+        "monthIndex": 1,
+        "focusTeamId": "team-design",
+        "question": "The Design Studio cannot hold both engagements.",
+        "setup": "Brightline and Meridian both staff out of the same thirty-eight people, and the studio is also carrying the retainer book and an internal design system nobody bills for.",
+        "options": [
+          {
+            "interventionId": "intervention-freelance-design",
+            "label": "Put production with freelancers",
+            "price": "\u20ac880K",
+            "why": "A trusted bench takes 22% of the work inside a month, and costs roughly what the people would have."
+          },
+          {
+            "interventionId": "intervention-drop-design-system",
+            "label": "Stop the internal design system",
+            "price": "nothing",
+            "why": "Eleven people come back to billable work. The thing that was going to make next year cheaper does not happen."
+          },
+          {
+            "interventionId": null,
+            "label": "Hold and run hot",
+            "price": "nothing",
+            "why": "The studio absorbs it, as studios do, right up until people start leaving."
+          }
+        ]
+      },
+      {
+        "id": "a2",
+        "when": "March",
+        "monthIndex": 2,
+        "focusTeamId": "team-design",
+        "question": "Two senior designers have resigned this month.",
+        "setup": "Five design hires were approved in March at a two-month lead time. Seniority is not a number of people; the work they were holding does not redistribute evenly.",
+        "options": [
+          {
+            "interventionId": "intervention-expedite-design",
+            "label": "Bring the hires forward",
+            "price": "\u20ac140K",
+            "why": "Search fees and bought-out notice. Two months becomes one."
+          },
+          {
+            "interventionId": "intervention-move-eng-to-design",
+            "label": "Move six engineers into production",
+            "price": "\u20ac120K",
+            "why": "They can do production design inside a month. They are not doing Meridian while they do it."
+          },
+          {
+            "interventionId": null,
+            "label": "Backfill in the normal way",
+            "price": "nothing",
+            "why": "The hires land in May and the studio covers until then."
+          }
+        ]
+      },
+      {
+        "id": "a3",
+        "when": "Mid-year",
+        "monthIndex": 5,
+        "focusTeamId": "team-strategy",
+        "question": "The framework bid and Brightline want the same fourteen people.",
+        "setup": "Strategy is fourteen people. The bid is worth more than Brightline and is under half as likely to land.",
+        "options": [
+          {
+            "interventionId": "intervention-defer-framework",
+            "label": "Defer the bid two months",
+            "price": "nothing",
+            "why": "Give Strategy some air. Bids have submission dates, so check whether this changes the number at all."
+          },
+          {
+            "interventionId": "intervention-half-brightline",
+            "label": "Take Brightline to 60%",
+            "price": "nothing",
+            "why": "The identity and the core applications, not the long tail. Less work and less fee."
+          },
+          {
+            "interventionId": null,
+            "label": "Run both at full scope",
+            "price": "nothing",
+            "why": "Everyone stays busy and something gives in August."
+          }
+        ]
+      },
+      {
+        "id": "a4",
+        "when": "September",
+        "monthIndex": 8,
+        "focusTeamId": "team-engineering",
+        "question": "Meridian is the year, and it is tight.",
+        "setup": "Twenty-three engineers on one client, against a book that grew 20% in March. Whatever else happens, this one has the biggest number attached to it.",
+        "options": [
+          {
+            "interventionId": "intervention-stretch-meridian",
+            "label": "Run Meridian leaner and longer",
+            "price": "nothing",
+            "why": "A smaller team over a longer run. It lands later, and the client has an opinion about that."
+          },
+          {
+            "interventionId": "intervention-move-eng-to-design",
+            "label": "Move six engineers into production",
+            "price": "\u20ac120K",
+            "why": "If you have not already. It takes them off Meridian."
+          },
+          {
+            "interventionId": null,
+            "label": "Hold the staffing",
+            "price": "nothing",
+            "why": "Meridian keeps its team and everything else works around it."
+          }
+        ]
+      },
+      {
+        "id": "a5",
+        "when": "The last call",
+        "monthIndex": 10,
+        "question": "One more before the year closes.",
+        "setup": "October. Whatever you have not spent is still there, and December is short.",
+        "options": [
+          {
+            "interventionId": "intervention-freelance-design",
+            "label": "Put production with freelancers",
+            "price": "\u20ac880K",
+            "why": "If you have not already. A month to mobilise means it is working for November and December."
+          },
+          {
+            "interventionId": "intervention-drop-design-system",
+            "label": "Stop the internal design system",
+            "price": "nothing",
+            "why": "If you have not already. It is the only thing here nobody is paying for."
+          },
+          {
+            "interventionId": null,
+            "label": "Take the year as it stands",
+            "price": "nothing",
+            "why": "Change nothing else."
+          }
+        ]
+      }
+    ]
+  },
+  "demoIntent": {
+    "summary": "A client services firm where the constraint is a named group of senior people, the internal investment always loses to billable work, and winning new business is itself a capacity problem.",
+    "intents": [
+      "Design is the constraint and it is seniority, not headcount.",
+      "The internal design system is the only work nobody is paying for, which makes it the easy cut and the expensive one.",
+      "Moving engineers into design helps the studio and takes them off the largest contract in the building."
+    ]
+  },
+  "routes": [
+    {
+      "id": "route-support-escalations",
+      "name": "Support tickets that become engineering work",
+      "fromStreamId": "demand-support-tickets",
+      "toTeamId": "team-engineering",
+      "share": 0.08,
+      "handlingMinutesPerUnit": 95
+    }
+  ]
+}

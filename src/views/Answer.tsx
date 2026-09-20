@@ -4,6 +4,7 @@ import type { ModelResult } from '../models/results';
 import type { OperatingModel, RunSpec } from '../models/types';
 import type { Fmt } from '../lib/format';
 import { Word, runWith, word } from './Run';
+import { OBJECTIVES, spend, strain, type Objective } from '../lib/objectives';
 
 /**
  * The short version, for anyone who does not want to play.
@@ -19,54 +20,11 @@ import { Word, runWith, word } from './Run';
  * in went stale the first time the run changed underneath it.
  */
 
-type Objective = {
-  id: string;
-  label: string;
-  /** Who tends to walk in with this one. Rough, and said as rough. */
-  who: string;
-  /** Lower is better. */
-  score: (r: ModelResult) => number;
-  /* Takes the formatter, because what a figure reads as depends on the model's currency
-     and there is no sensible default to fall back on. */
-  read: (r: ModelResult, fmt: Fmt) => string;
-};
-
-const strain = (r: ModelResult) =>
-  r.teams.reduce((a, t) => a + t.months.filter((m) => m.utilization > m.targetUtilization).length, 0);
-const spend = (r: ModelResult) => r.financials.monthly.reduce((a, m) => a + m.changeCost, 0);
-const lateness = (r: ModelResult) => r.initiatives.reduce((a, i) => a + (i.delayMonths ?? 0), 0);
 const shedByTeam = (r: ModelResult) => r.teams
   .map((t) => ({ id: t.teamId, hours: t.months.reduce((a, m) => a + m.shedHours, 0) }))
   .sort((a, b) => b.hours - a.hours);
 const svcPct = (r: ModelResult) => Math.round((r.summary.serviceLevelPct ?? 1) * 100);
 const cash = (fmt: Fmt, n: number) => fmt.money(n, { precise: true });
-
-const OBJECTIVES: Objective[] = [
-  { id: 'revenue', label: 'Revenue', who: 'a sales or GTM organisation',
-    score: (r) => r.summary.revenueExposure,
-    read: (r, fmt) => `${cash(fmt, r.summary.revenueExposure)} of revenue still at risk` },
-  { id: 'people', label: 'Your people', who: 'anyone who has watched a team burn out',
-    score: strain,
-    read: (r) => `${strain(r)} team-months over capacity, and ${Math.round(r.summary.peopleLostToAttrition)} people gone by year end` },
-  { id: 'retention', label: 'Keeping people', who: 'anywhere the job market is the constraint',
-    score: (r) => -r.summary.retentionRate,
-    // One decimal, because the spread between the best and worst path here is under a
-    // point and whole percents made every answer read as "87% against 87%".
-    read: (r) => `${(r.summary.retentionRate * 100).toFixed(1)}% of the people you started with, still there` },
-  { id: 'headcount', label: 'Headcount', who: 'a company under a hiring freeze',
-    score: (r) => r.summary.endingFte, read: (r) => `${Math.round(r.summary.endingFte)} people at year end` },
-  { id: 'budget', label: 'The budget', who: 'a non-profit, or anyone with a hard cap',
-    score: spend, read: (r, fmt) => `${cash(fmt, spend(r))} spent on changes` },
-  { id: 'portfolio', label: 'What you promised', who: 'a product or delivery organisation',
-    score: (r) => -r.summary.portfolioValue,
-    read: (r, fmt) => `${cash(fmt, r.summary.portfolioValue)} of the portfolio delivered` },
-  { id: 'service', label: 'The customer', who: 'anyone whose queue is somebody waiting',
-    score: (r) => -(r.summary.serviceLevelPct ?? 1),
-    read: (r) => r.summary.serviceLevelPct === null ? 'no queueing work in this model'
-      : `${(r.summary.serviceLevelPct * 100).toFixed(1)}% of requests picked up in time, worst month ${((r.summary.worstServiceLevel ?? 1) * 100).toFixed(0)}%` },
-  { id: 'schedule', label: 'The schedule', who: 'anyone who has committed to a date',
-    score: lateness, read: (r) => `${lateness(r)} months of delay across the portfolio` },
-];
 
 type Path = { picks: (string | null)[]; result: ModelResult };
 
@@ -150,7 +108,7 @@ function AnswerFor({ model, spec }: { model: OperatingModel; spec: RunSpec }) {
     const groups = new Map<string, string[]>();
     OBJECTIVES.forEach((o) => {
       const k = [...paths].sort(rank(o))[0].picks.join('|');
-      groups.set(k, [...(groups.get(k) ?? []), o.label.toLowerCase()]);
+      groups.set(k, [...(groups.get(k) ?? []), o.label(model).toLowerCase()]);
     });
     return {
       distinct: groups.size, total: OBJECTIVES.length,
@@ -191,7 +149,7 @@ function AnswerFor({ model, spec }: { model: OperatingModel; spec: RunSpec }) {
         {OBJECTIVES.map((o) => (
           <button key={o.id} className={'ans-pick' + (o.id === objId ? ' on' : '')}
                   onClick={() => setObjId(o.id)}>
-            <b>{o.label}</b><span>{o.who}</span>
+            <b>{o.label(model)}</b><span>{o.who}</span>
           </button>
         ))}
       </div>
@@ -224,7 +182,7 @@ function AnswerFor({ model, spec }: { model: OperatingModel; spec: RunSpec }) {
             <ul className="ans-costs">
               {costs.map((c) => (
                 <li key={c.o.id}>
-                  <b>{c.o.label}.</b> You end on {c.mine}. The plan that protects this instead
+                  <b>{c.o.label(model)}.</b> You end on {c.mine}. The plan that protects this instead
                   ends on {c.theirs}.
                 </li>
               ))}

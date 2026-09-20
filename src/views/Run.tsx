@@ -4,6 +4,8 @@ import { useStore } from '../state/store';
 import type { ModelResult } from '../models/results';
 import type { OperatingModel, RunDecision, RunSpec } from '../models/types';
 import type { Fmt } from '../lib/format';
+import { OBJECTIVES, rankAmong, type Objective } from '../lib/objectives';
+import { RUN_WORLDS } from '../data/templates';
 
 /**
  * The run: five decisions, and whatever they add up to.
@@ -149,6 +151,12 @@ export const Word = (n: number) => word(n).replace(/^./, (c) => c.toUpperCase())
 /* A scenario description is written as its own sentence. Spliced after a colon it needs
    to start lower case, or the line reads as two sentences jammed together. */
 const uncap = (t: string) => (t ? t[0].toLowerCase() + t.slice(1) : t);
+/** 1st, 2nd, 3rd, 11th. Places are read aloud, so they get read aloud here too. */
+const ord = (n: number) => {
+  const t = n % 100;
+  const suffix = t >= 11 && t <= 13 ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] ?? 'th';
+  return n + suffix;
+};
 /** "a", "a and b", "a, b and c". Joining three names with two "and"s reads like a list
     nobody proofread. */
 const list = (xs: string[]) =>
@@ -230,7 +238,10 @@ function InitiativeRisk({ model, result }: { model: OperatingModel; result: Mode
   );
 }
 
-function Kpis({ result, prev }: { result: ModelResult; prev?: ModelResult }) {
+type Headline = 'service' | 'over' | 'undone';
+
+function Kpis({ result, prev, headline, riskNoun }:
+  { result: ModelResult; prev?: ModelResult; headline: Headline; riskNoun: string }) {
   const { fmt } = useStore();
   const s = result.summary;
   const p = prev?.summary;
@@ -248,12 +259,14 @@ function Kpis({ result, prev }: { result: ModelResult; prev?: ModelResult }) {
       {/* Not "teams over capacity": on a year with real pressure in it that reads the same
           number whatever you do, and a dashboard cell that never moves teaches the reader
           to stop looking at it. The board below still shows every team. */}
-      {s.serviceLevelPct !== null
+      {headline === 'service' && s.serviceLevelPct !== null
         ? cell('Answered in time', Math.round(s.serviceLevelPct * 100) + '%',
                p?.serviceLevelPct != null ? s.serviceLevelPct - p.serviceLevelPct : undefined, false)
-        : cell('Teams over capacity', String(s.teamsConstrained), p && s.teamsConstrained - p.teamsConstrained)}
+        : headline === 'undone'
+          ? cell('Work never done', fmt.hours(s.shedHours), p && s.shedHours - p.shedHours)
+          : cell('Teams over capacity', String(s.teamsConstrained), p && s.teamsConstrained - p.teamsConstrained)}
       {cell('People, year end', String(Math.round(s.endingFte)), p && s.endingFte - p.endingFte)}
-      {cell('Revenue at risk', cash(fmt, s.revenueExposure), p && s.revenueExposure - p.revenueExposure)}
+      {cell(`${riskNoun} at risk`, cash(fmt, s.revenueExposure), p && s.revenueExposure - p.revenueExposure)}
       {cell('Spent on changes', cash(fmt, spendOf(result)), undefined)}
     </div>
   );
@@ -292,7 +305,7 @@ function consequence(model: OperatingModel, fmt: Fmt, before: ModelResult, after
   if (Math.abs(dShed) > 100) out.push(`Work that never gets done ${dShed < 0 ? 'falls' : 'rises'} to ${fmt.hours(after.summary.shedHours)}.`);
 
   const dRisk = after.summary.revenueExposure - before.summary.revenueExposure;
-  if (Math.abs(dRisk) > 50000) out.push(`Revenue at risk ${dRisk < 0 ? 'falls' : 'rises'} to ${cash(fmt, after.summary.revenueExposure)}.`);
+  if (Math.abs(dRisk) > 50000) out.push(`${model.lexicon?.revenueNoun ?? 'Revenue'} at risk ${dRisk < 0 ? 'falls' : 'rises'} to ${cash(fmt, after.summary.revenueExposure)}.`);
 
   return out.length === 1 && !moved.length ? ['Nothing changed. That is an answer too.'] : out;
 }
@@ -329,7 +342,11 @@ function RunFor({ model, spec }: { model: OperatingModel; spec: RunSpec }) {
   /* Whether these are the sample numbers or somebody's own. "Calibrated" is a statement
      about a model's internal consistency, not about whether the company exists, and
      reading it as the latter had this page calling a fictional company real. */
-  const { isFixture, fmt } = useStore();
+  const { isFixture, fmt, dispatch } = useStore();
+  /* What the reader said they were protecting. It is the question the short version asks
+     at the end, and asking it first is the difference between a demo about a fictional
+     software company and a demo about whatever the reader actually runs. */
+  const [objId, setObjId] = useState(OBJECTIVES[0].id);
   const [picks, setPicks] = useState<(string | null)[]>([]);
   const [started, setStarted] = useState(false);
   const [preview, setPreview] = useState<string | null | undefined>(undefined);
@@ -371,6 +388,27 @@ function RunFor({ model, spec }: { model: OperatingModel; spec: RunSpec }) {
   const cal = useMemo(() => calibrate(endings), [endings]);
   const cloud = useMemo(() => endings.map((r) => triangleOf(r, cal)), [endings, cal]);
 
+  /* Measured, not assumed: the spread each candidate shows across every ending this model
+     can reach. */
+  const headline: Headline = useMemo(() => {
+    const span = (f: (r: ModelResult) => number) => {
+      const v = endings.map(f).filter((x) => Number.isFinite(x));
+      if (!v.length) return 0;
+      const lo = Math.min(...v), hi = Math.max(...v);
+      return hi > lo && Math.abs(hi) > 0 ? (hi - lo) / Math.abs(hi) : 0;
+    };
+    const svc = endings[0].summary.serviceLevelPct === null ? -1 : span((r) => r.summary.serviceLevelPct ?? 1);
+    const undone = span((r) => r.summary.shedHours);
+    const over = span((r) => r.summary.teamsConstrained);
+    /* Service level wins whenever it genuinely moves, even if another measure moves more.
+       "42% of requests answered in time" is a sentence about a person waiting; "12k hours
+       never done" is a sentence about a spreadsheet, and only one of them makes somebody
+       care what they decided. */
+    if (svc > 0.25) return 'service';
+    const best = Math.max(svc, undone, over);
+    return best <= 0 ? 'over' : best === undone ? 'undone' : 'over';
+  }, [endings]);
+
   /* One position per state the run has been in, ending on whatever is on screen now,
      so hovering a choice moves the marker before you commit to it. */
   const trail = useMemo(() => {
@@ -411,7 +449,8 @@ function RunFor({ model, spec }: { model: OperatingModel; spec: RunSpec }) {
               <li><b>{pct(triNow.time)}</b><span>schedule kept</span></li>
             </ul>
           </div>
-          <Kpis result={shown} prev={previewResult ? current : undefined} />
+          <Kpis result={shown} prev={previewResult ? current : undefined} headline={headline}
+                riskNoun={model.lexicon?.revenueNoun ?? 'Revenue'} />
         </div>
       </header>
 
@@ -422,7 +461,7 @@ function RunFor({ model, spec }: { model: OperatingModel; spec: RunSpec }) {
               <span className="rb-when">Before you start</span>
               <h1>One decision, followed all the way through.</h1>
               <p className="rb-setup">
-                This is a year of {isFixture ? 'a fictional company’s' : 'your'} plan
+                This is a year of {isFixture ? 'a fictional organisation’s' : 'your'} plan
                 {scenario?.description
                   ? <>, with one thing in it the plan did not budget for: {uncap(scenario.description)}</>
                   : '.'}
@@ -431,6 +470,32 @@ function RunFor({ model, spec }: { model: OperatingModel; spec: RunSpec }) {
                       come{beforeSpike === 1 ? 's' : ''} before it lands.</>
                   : <> You make {word(decisions.length)} calls of your own.</>}
               </p>
+              {/* Two questions, on one screen, both answerable by anybody about their own
+                  work. Not a wizard: everything has a default, so a reader who does not
+                  care can press Start and get exactly what they got before. */}
+              <div className="rb-pick">
+                <p className="rb-pick-q">Which of these is closest to what you run?</p>
+                <div className="rb-worlds">
+                  {RUN_WORLDS.map((w) => (
+                    <button key={w.id} className={'rb-world' + (model.id === w.id ? ' on' : '')}
+                            onClick={() => dispatch({ type: 'model', model: w.build() })}>
+                      <b>{w.name}</b><span>{w.shapeLine}</span>
+                    </button>
+                  ))}
+                </div>
+                <p className="rb-pick-q">And what are you protecting this year?</p>
+                <div className="rb-objs">
+                  {OBJECTIVES.map((o) => (
+                    <button key={o.id} title={o.who}
+                            className={'rb-obj' + (o.id === objId ? ' on' : '')}
+                            onClick={() => setObjId(o.id)}>{o.label(model)}</button>
+                  ))}
+                </div>
+                <p className="rb-legend">Neither answer changes the arithmetic. The first picks
+                   whose year you are running, the second decides what the scoreboard at the end
+                   is measured against.</p>
+              </div>
+
               {/* Above the board, not below it. At 900px the button sat under a 380px
                   animation and the only thing you could do on the page was off screen. */}
               <div className="rb-opts rb-opts-lead">
@@ -493,6 +558,7 @@ function RunFor({ model, spec }: { model: OperatingModel; spec: RunSpec }) {
           ) : (
             <Scorecard model={model} spec={spec} picks={picks} result={current}
                        doNothing={doNothing} trail={trail} cloud={cloud} cal={cal}
+                       endings={endings} objId={objId}
                        onReset={() => setPicks([])} />
           )}
         </section>
@@ -610,10 +676,23 @@ function Replay({ model, spec, picks, trail }:
   );
 }
 
-function Scorecard({ model, spec, picks, result, doNothing, onReset, trail, cloud }:
+function Scorecard({ model, spec, picks, result, doNothing, onReset, trail, cloud, endings, objId }:
   { model: OperatingModel; spec: RunSpec; picks: (string | null)[]; result: ModelResult;
-    doNothing: ModelResult; onReset: () => void; trail: TriPos[]; cloud: TriPos[]; cal: TriCal }) {
+    doNothing: ModelResult; onReset: () => void; trail: TriPos[]; cloud: TriPos[]; cal: TriCal;
+    endings: ModelResult[]; objId: string }) {
   const { fmt } = useStore();
+
+  /* Where this year placed against every year the same five decisions could have made.
+     Not a score out of ten: a place in a field, on each of the things somebody might have
+     been protecting. Coming third on one and two hundredth on another, off one set of
+     calls, is the entire lesson of this page in a table. */
+  const ranked = useMemo(
+    () => OBJECTIVES.map((o: Objective) => ({ o, ...rankAmong(result, endings, o) })),
+    [result, endings],
+  );
+  const mine = ranked.find((r) => r.o.id === objId) ?? ranked[0];
+  const best = ranked.reduce((a, b) => (b.place < a.place ? b : a));
+  const worst = ranked.reduce((a, b) => (b.place > a.place ? b : a));
   const s = result.summary, n = doNothing.summary;
   const spent = spendOf(result);
   const took = picks.filter(Boolean).length;
@@ -647,12 +726,33 @@ function Scorecard({ model, spec, picks, result, doNothing, onReset, trail, clou
              up none of the three. Every mark away from the centre is one of them traded for another.</p>
         </div>
       </div>
+      <div className="rb-ranks-wrap">
+        <p className="rb-final-h">Where this year placed</p>
+        <p className="rb-setup">
+          You said you were protecting <b>{mine.o.label(model).toLowerCase()}</b>, and on that you
+          came <b>{ord(mine.place)}</b> of {mine.of}. The same five decisions came {ord(best.place)}
+          {' '}on {best.o.label(model).toLowerCase()} and {ord(worst.place)} on {worst.o.label(model).toLowerCase()}.
+          {best.place !== worst.place && ' Nothing was traded away by accident; every one of those is the same year read a different way.'}
+        </p>
+        <ol className="rb-ranks">
+          {ranked.map((r) => (
+            <li key={r.o.id} className={r.o.id === objId ? 'mine' : ''}>
+              <span className="rank-name">{r.o.label(model)}</span>
+              <span className="rank-track">
+                <i style={{ width: (r.of > 1 ? (1 - (r.place - 1) / (r.of - 1)) * 100 : 100) + '%' }} />
+              </span>
+              <span className="rank-place">{r.place} of {r.of}</span>
+            </li>
+          ))}
+        </ol>
+      </div>
+
       <table className="rb-score">
         <thead><tr><th></th><th>Doing nothing</th><th>Your run</th></tr></thead>
         <tbody>
           <tr><td>Teams over capacity</td><td>{n.teamsConstrained}</td><td>{s.teamsConstrained}</td></tr>
           <tr><td>People at year end</td><td>{Math.round(n.endingFte)}</td><td>{Math.round(s.endingFte)}</td></tr>
-          <tr><td>Revenue at risk</td><td>{cash(fmt, n.revenueExposure)}</td><td>{cash(fmt, s.revenueExposure)}</td></tr>
+          <tr><td>{model.lexicon?.revenueNoun ?? 'Revenue'} at risk</td><td>{cash(fmt, n.revenueExposure)}</td><td>{cash(fmt, s.revenueExposure)}</td></tr>
           <tr><td>Kept their people</td><td>{(n.retentionRate * 100).toFixed(1)}%</td><td>{(s.retentionRate * 100).toFixed(1)}%</td></tr>
           <tr><td>Months a team ran over</td><td>{n.strainMonths}</td><td>{s.strainMonths}</td></tr>
           {s.serviceLevelPct !== null && (

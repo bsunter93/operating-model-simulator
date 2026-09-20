@@ -1,14 +1,36 @@
 /**
- * Starting organizations. Each is derived from the Atlas fixture by a
- * transform, so every template is a complete, valid model with a different
- * size, rate profile, and story. Nothing here is a real company.
+ * Starting organizations.
+ *
+ * Three of these are the Atlas fixture put through a transform, which gives a different
+ * size and rate profile and the same company underneath. Two are not: a community health
+ * service and a client services firm, written from scratch, with their own teams, their
+ * own work, their own currency and their own run.
+ *
+ * That distinction is the point. An engine that only ever runs one kind of organisation
+ * has not shown that it models operating models; it has shown that it models that one.
+ * Nothing here is a real company.
  */
 import type { OperatingModel } from '../models/types';
 import base from './atlas-systems-2027.json';
+import health from './meadowbrook-health-2027.json';
+import agency from './northgate-studio-2027.json';
 
-export interface Template { id: string; name: string; blurb: string; build: () => OperatingModel }
+/**
+ * `shape` says what the organisation mostly does, and only the three written-from-scratch
+ * models carry one. It is what the run asks a reader before it starts, because "do you
+ * serve a queue or deliver projects" is a question anybody can answer about their own
+ * work, and it picks the world for them without making them read four blurbs.
+ */
+export type Shape = 'queue' | 'projects' | 'mixed';
+export interface Template {
+  id: string; name: string; blurb: string; build: () => OperatingModel;
+  shape?: Shape;
+  /** One line, in the reader's terms, for the question "which of these is you?" */
+  shapeLine?: string;
+}
 
 const atlas = () => structuredClone(base as unknown as OperatingModel);
+const asModel = (m: unknown) => () => structuredClone(m as OperatingModel);
 
 function scale(m: OperatingModel, k: number): OperatingModel {
   for (const t of m.teams) t.currentFte = Math.max(1, Math.round(t.currentFte * k));
@@ -30,7 +52,20 @@ function scale(m: OperatingModel, k: number): OperatingModel {
 export const TEMPLATES: Template[] = [
   {
     id: 'atlas-systems-2027', name: 'Atlas Systems', blurb: 'B2B platform company, 725 people in 8 teams, $500M revenue. The default: mostly healthy, two teams near the ceiling, one sequencing conflict.',
-    build: atlas,
+    build: atlas, shape: 'mixed',
+    shapeLine: 'Both. Queues to answer and programmes to land, competing for the same people.',
+  },
+  {
+    id: 'meadowbrook-health-2027', name: 'Community health service',
+    blurb: 'Six clinical and support teams, 428 people, in pounds. Nine-month hiring, a physical bottleneck in Diagnostics, and a winter that arrives whether or not the posts are filled.',
+    build: asModel(health), shape: 'queue',
+    shapeLine: 'Mostly a queue. Work arrives whether or not you are ready, and the question is who it waits for.',
+  },
+  {
+    id: 'northgate-studio-2027', name: 'Client services firm',
+    blurb: 'A studio of 152 in euro, where almost all the work is engagements with a client on them. The constraint is a named group of senior designers, and the internal investment loses to billable work every time.',
+    build: asModel(agency), shape: 'projects',
+    shapeLine: 'Mostly projects. Named pieces of work with dates and people on them, and a bench you pay for either way.',
   },
   {
     id: 'atlas-startup', name: 'Series B startup', blurb: '70 people. Lean targets, fast hiring, high attrition, and a budget with almost no slack. Small numbers move fast.',
@@ -69,3 +104,14 @@ export const TEMPLATES: Template[] = [
     },
   },
 ];
+
+/**
+ * The models the app ships with, as opposed to somebody's own numbers. Used to decide
+ * whether to say "fictional" or "your numbers": every template other than Atlas was
+ * being called the reader's own work, which it is not.
+ */
+export const SAMPLE_IDS: ReadonlySet<string> = new Set(TEMPLATES.map((t) => t.id));
+
+/** The three the run offers up front. The rest are variations on Atlas and live in the
+    full model, where somebody looking for them will find them. */
+export const RUN_WORLDS = TEMPLATES.filter((t) => t.shape);

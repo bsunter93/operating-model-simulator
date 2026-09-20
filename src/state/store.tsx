@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useReducer, useState } from 'react';
 import { makeFmt, type Fmt } from '../lib/format';
 import { migrateModel } from '../models/migrate';
+import { SAMPLE_IDS } from '../data/templates';
 import { createModelStore, decodeShare, type ModelStore } from './persistence';
 import type { ReactNode } from 'react';
 import { run, validateModel } from '../engine';
@@ -301,7 +302,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const value = useMemo<Ctx>(() => ({
     state, dispatch, model, interventions, result, doNothing, base,
     isBase: state.scenarioId === baseId(model) && active.length === 0,
-    isFixture: model.id === FIXTURE.id,
+    // Any model the app ships, not just Atlas. A community health service is no more
+    // "your numbers" than Atlas is.
+    isFixture: SAMPLE_IDS.has(model.id),
     fmt: makeFmt(model.currency, model.locale),
     store,
     restoredFrom,

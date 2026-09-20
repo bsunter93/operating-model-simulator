@@ -302,6 +302,12 @@ export interface OperatingModel {
    * screenshots, printed pages and tests disagree for no visible reason.
    */
   locale?: string;
+  /**
+   * A few nouns this organisation uses instead of the defaults. Deliberately tiny: a
+   * health service does not have revenue and a charity does not have customers, and a
+   * page that insists otherwise reads as somebody else's tool.
+   */
+  lexicon?: { revenueNoun?: string; customerNoun?: string };
   /** The guided run. Optional: a model without one still opens in the full board. */
   run?: RunSpec;
   /** Author metadata. Never read by the engine. */
