@@ -383,8 +383,10 @@ export function run(input: OperatingModel, opts: RunOptions = {}): ModelResult {
       if (!t) continue;
       const rows = rowsFor(t, provisional);
       const from = monthIndex(model.calendar.startMonth, h.requestMonth) + h.leadTimeMonths;
-      const window = rows.slice(Math.max(0, from), Math.max(0, from) + h.cancelIfSlack!.months);
-      if (window.length > 0 && window.every((r) => r.utilization < h.cancelIfSlack!.belowUtilization)) {
+      // Named for what it is, and not `window`: this file must stay free of the DOM, and
+      // a local shadowing the one global that would prove otherwise is a bad place to look.
+      const span = rows.slice(Math.max(0, from), Math.max(0, from) + h.cancelIfSlack!.months);
+      if (span.length > 0 && span.every((r) => r.utilization < h.cancelIfSlack!.belowUtilization)) {
         hiresDropped.push(h.id);
       }
     }
