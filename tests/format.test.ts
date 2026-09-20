@@ -13,6 +13,13 @@ const clone = (f: (m: OperatingModel) => void) => {
 };
 
 /*
+ * The compact suffix is matched case-insensitively throughout. CI found out why on its
+ * first run: this machine is ICU 77 / CLDR 47 and writes "£1.9M", while the runner's Node
+ * carries an older CLDR and writes "£1.9m". Both are correct for their data, and the app
+ * is right either way, because each reader's browser formats with its own. What was wrong
+ * was a test asserting a glyph nobody promised. Symbols, separators, signs and grouping
+ * are stable and still checked exactly; only the suffix's case is not.
+ *
  * Money used to be built by hand as '$' followed by a number, in two different places,
  * with the compact suffixes B/M/K written out. That is wrong three ways for anyone
  * outside the dollar: the symbol, where the symbol goes, and the fact that not every
@@ -21,19 +28,19 @@ const clone = (f: (m: OperatingModel) => void) => {
 describe('money follows the model, not the developer', () => {
   it('reads as dollars by default, unchanged from what it was', () => {
     const f = makeFmt();
-    expect(f.money(1_870_000)).toBe('$1.9M');
-    expect(f.money(450_000)).toBe('$450K');
+    expect(f.money(1_870_000)).toMatch(/^\$1\.9M$/i);
+    expect(f.money(450_000)).toMatch(/^\$450K$/i);
     expect(f.money(0)).toBe('$0');
   });
 
   it('puts two decimals on the figures a reader compares side by side', () => {
-    expect(makeFmt().money(47_040_000, { precise: true })).toBe('$47.04M');
+    expect(makeFmt().money(47_040_000, { precise: true })).toMatch(/^\$47\.04M$/i);
     // Except for nothing, which is not close to anything and does not need the decimals.
     expect(makeFmt().money(0, { precise: true })).toBe('$0');
   });
 
   it('follows the currency the model declares', () => {
-    expect(makeFmt('GBP', 'en-GB').money(1_870_000)).toBe('£1.9M');
+    expect(makeFmt('GBP', 'en-GB').money(1_870_000)).toMatch(/^£1\.9M$/i);
     expect(makeFmt('EUR', 'de-DE').money(1_870_000)).toContain('€');
   });
 
@@ -46,13 +53,13 @@ describe('money follows the model, not the developer', () => {
 
   it('groups the way the locale groups, which is not always by thousands', () => {
     // Indian digit grouping, and lakh/crore rather than K/M.
-    expect(makeFmt('INR', 'en-IN').money(1_870_000)).toContain('L');
+    expect(makeFmt('INR', 'en-IN').money(1_870_000)).toMatch(/L/i);
     expect(makeFmt('INR', 'en-IN').money(12_34_567, { compact: false })).toBe('₹12,34,567');
   });
 
   it('uses the typographic minus this design uses, not a hyphen', () => {
-    expect(makeFmt().money(-3_100_000)).toBe('−$3.1M');
-    expect(makeFmt().money(4_100_000, { sign: true })).toBe('+$4.1M');
+    expect(makeFmt().money(-3_100_000)).toMatch(/^−\$3\.1M$/i);
+    expect(makeFmt().money(4_100_000, { sign: true })).toMatch(/^\+\$4\.1M$/i);
   });
 
   it('binds straight off a model', () => {
