@@ -12,31 +12,35 @@ export class ModelValidationError extends Error {
 
 const MONTH_NAMES = ['01','02','03','04','05','06','07','08','09','10','11','12'];
 
-function inRange(v: number, lo: number, hi: number): boolean {
-  return Number.isFinite(v) && v >= lo && v <= hi;
-}
-
 /** Returns a list of readable problems. Empty means valid. */
 export function validateModel(m: OperatingModel): string[] {
   const p: string[] = [];
   const say = (s: string) => p.push(s);
+
+  /* A number that has to be there. Missing and out of range are different mistakes, and a
+     person fixing a file needs to be told which one they made: "monthlyFteCost cannot be
+     negative" about a field that is simply absent sends them hunting for a minus sign. */
+  const num = (v: unknown, ok: (n: number) => boolean, label: string, rule: string) => {
+    if (typeof v !== 'number' || !Number.isFinite(v)) say(`${label} is missing or not a number`);
+    else if (!ok(v)) say(`${label} ${rule}`);
+  };
 
   if (!isMonthKey(m.calendar.startMonth)) say(`calendar.startMonth "${m.calendar.startMonth}" is not YYYY-MM`);
   if (!isMonthKey(m.calendar.endMonth)) say(`calendar.endMonth "${m.calendar.endMonth}" is not YYYY-MM`);
   if (p.length) return p;
   const months = expandMonths(m.calendar.startMonth, m.calendar.endMonth);
   if (months.length < 1) say('calendar has no months');
-  if (!(m.calendar.workHoursPerFteMonth > 0)) say('calendar.workHoursPerFteMonth must be positive');
+  num(m.calendar.workHoursPerFteMonth, (n) => n > 0, 'calendar.workHoursPerFteMonth', 'must be positive');
 
   const teamIds = new Set<string>();
   for (const t of m.teams) {
     if (teamIds.has(t.id)) say(`duplicate team id "${t.id}"`);
     teamIds.add(t.id);
-    if (!(t.currentFte >= 0)) say(`team ${t.id}: currentFte cannot be negative`);
-    if (!inRange(t.shrinkage, 0, 0.99)) say(`team ${t.id}: shrinkage must be between 0 and 0.99`);
-    if (!inRange(t.targetUtilization, 0.01, 1)) say(`team ${t.id}: targetUtilization must be between 0.01 and 1`);
-    if (!inRange(t.annualAttrition, 0, 0.99)) say(`team ${t.id}: annualAttrition must be between 0 and 0.99`);
-    if (!(t.monthlyFteCost >= 0)) say(`team ${t.id}: monthlyFteCost cannot be negative`);
+    num(t.currentFte, (n) => n >= 0, `team ${t.id}: currentFte`, 'cannot be negative');
+    num(t.shrinkage, (n) => n >= 0 && n <= 0.99, `team ${t.id}: shrinkage`, 'must be between 0 and 0.99');
+    num(t.targetUtilization, (n) => n >= 0.01 && n <= 1, `team ${t.id}: targetUtilization`, 'must be between 0.01 and 1');
+    num(t.annualAttrition, (n) => n >= 0 && n <= 0.99, `team ${t.id}: annualAttrition`, 'must be between 0 and 0.99');
+    num(t.monthlyFteCost, (n) => n >= 0, `team ${t.id}: monthlyFteCost`, 'cannot be negative');
   }
 
   // Seasonality: the model-level profile must name all twelve calendar months.
@@ -45,7 +49,7 @@ export function validateModel(m: OperatingModel): string[] {
   for (const mm of MONTH_NAMES) if (!seasonMonths.has(mm)) say(`seasonality is missing calendar month ${mm}`);
   for (const [k, v] of Object.entries(m.seasonality)) {
     if (!isMonthKey(k)) say(`seasonality key "${k}" is not YYYY-MM`);
-    if (!(v >= 0)) say(`seasonality[${k}] cannot be negative`);
+    num(v, (n) => n >= 0, `seasonality[${k}]`, 'cannot be negative');
   }
 
   const streamsByTeam = new Map<string, number>();
@@ -55,9 +59,9 @@ export function validateModel(m: OperatingModel): string[] {
     streamIds.add(s.id);
     if (!teamIds.has(s.teamId)) say(`demand stream ${s.id} references unknown team "${s.teamId}"`);
     streamsByTeam.set(s.teamId, (streamsByTeam.get(s.teamId) ?? 0) + 1);
-    if (!(s.annualVolume >= 0)) say(`demand stream ${s.id}: annualVolume cannot be negative`);
-    if (!(s.handlingMinutesPerUnit >= 0)) say(`demand stream ${s.id}: handlingMinutesPerUnit cannot be negative`);
-    if (!(s.complexityFactor > 0)) say(`demand stream ${s.id}: complexityFactor must be positive`);
+    num(s.annualVolume, (n) => n >= 0, `demand stream ${s.id}: annualVolume`, 'cannot be negative');
+    num(s.handlingMinutesPerUnit, (n) => n >= 0, `demand stream ${s.id}: handlingMinutesPerUnit`, 'cannot be negative');
+    num(s.complexityFactor, (n) => n > 0, `demand stream ${s.id}: complexityFactor`, 'must be positive');
     const mix = s.workMix.reusable + s.workMix.configurable + s.workMix.bespoke;
     if (Math.abs(mix - 1) > 1e-6) say(`demand stream ${s.id}: workMix sums to ${mix.toFixed(3)}, must be 1`);
     if (s.seasonality !== 'default') {
@@ -77,8 +81,8 @@ export function validateModel(m: OperatingModel): string[] {
     hireIds.add(h.id);
     if (!teamIds.has(h.teamId)) say(`hiring request ${h.id} references unknown team "${h.teamId}"`);
     if (!isMonthKey(h.requestMonth)) say(`hiring request ${h.id}: requestMonth "${h.requestMonth}" is not YYYY-MM`);
-    if (!(h.headcount >= 0)) say(`hiring request ${h.id}: headcount cannot be negative`);
-    if (!(h.leadTimeMonths >= 0)) say(`hiring request ${h.id}: leadTimeMonths cannot be negative`);
+    num(h.headcount, (n) => n >= 0, `hiring request ${h.id}: headcount`, 'cannot be negative');
+    num(h.leadTimeMonths, (n) => n >= 0, `hiring request ${h.id}: leadTimeMonths`, 'cannot be negative');
   }
 
   const initIds = new Set<string>();
@@ -86,14 +90,14 @@ export function validateModel(m: OperatingModel): string[] {
     if (initIds.has(i.id)) say(`duplicate initiative id "${i.id}"`);
     initIds.add(i.id);
     if (!isMonthKey(i.startMonth)) say(`initiative ${i.id}: startMonth "${i.startMonth}" is not YYYY-MM`);
-    if (!(i.durationMonths >= 1)) say(`initiative ${i.id}: durationMonths must be at least 1`);
+    num(i.durationMonths, (n) => n >= 1, `initiative ${i.id}: durationMonths`, 'must be at least 1');
     for (const [tid, fte] of Object.entries(i.requiredFteByTeam)) {
       if (!teamIds.has(tid)) say(`initiative ${i.id} requires FTE from unknown team "${tid}"`);
-      if (!(fte >= 0)) say(`initiative ${i.id}: required FTE for ${tid} cannot be negative`);
+      num(fte, (n) => n >= 0, `initiative ${i.id}: required FTE for ${tid}`, 'cannot be negative');
     }
-    if (!inRange(i.executionFailureProbability, 0, 1)) say(`initiative ${i.id}: executionFailureProbability must be between 0 and 1`);
-    if (!inRange(i.confidence, 0, 1)) say(`initiative ${i.id}: confidence must be between 0 and 1`);
-    if (!(i.revenueAtRisk >= 0)) say(`initiative ${i.id}: revenueAtRisk cannot be negative`);
+    num(i.executionFailureProbability, (n) => n >= 0 && n <= 1, `initiative ${i.id}: executionFailureProbability`, 'must be between 0 and 1');
+    num(i.confidence, (n) => n >= 0 && n <= 1, `initiative ${i.id}: confidence`, 'must be between 0 and 1');
+    num(i.revenueAtRisk, (n) => n >= 0, `initiative ${i.id}: revenueAtRisk`, 'cannot be negative');
     if (typeof i.discretionary !== 'boolean') say(`initiative ${i.id}: discretionary must be true or false`);
   }
 
@@ -105,7 +109,7 @@ export function validateModel(m: OperatingModel): string[] {
     if (!initIds.has(d.predecessorId)) say(`dependency ${d.id} references unknown predecessor "${d.predecessorId}"`);
     if (!initIds.has(d.successorId)) say(`dependency ${d.id} references unknown successor "${d.successorId}"`);
     if (d.predecessorId === d.successorId) say(`dependency ${d.id} points an initiative at itself`);
-    if (!(d.lagMonths >= 0)) say(`dependency ${d.id}: lagMonths cannot be negative`);
+    num(d.lagMonths, (n) => n >= 0, `dependency ${d.id}: lagMonths`, 'cannot be negative');
     edges.set(d.predecessorId, [...(edges.get(d.predecessorId) ?? []), d.successorId]);
   }
   // Cycle check (DFS with colors).
@@ -120,24 +124,24 @@ export function validateModel(m: OperatingModel): string[] {
   };
   for (const id of initIds) visit(id, []);
 
-  if (!(m.budget.modeledAnnualBudget >= 0)) say('budget.modeledAnnualBudget cannot be negative');
+  num(m.budget.modeledAnnualBudget, (n) => n >= 0, 'budget.modeledAnnualBudget', 'cannot be negative');
 
   const w = m.decisionWeights;
   const wsum = w.cost + w.speed + w.revenueExposure;
   if (Math.abs(wsum - 1) > 1e-6) say(`decisionWeights sum to ${wsum.toFixed(3)}, must be 1`);
 
   const pool = m.pooling;
-  if (!(pool.clientCount >= 1)) say('pooling.clientCount must be at least 1');
-  if (!(pool.workloadPerClient > 0)) say('pooling.workloadPerClient must be positive');
-  if (!inRange(pool.serviceLevel, 0, 1)) say('pooling.serviceLevel must be between 0 and 1');
-  if (!inRange(pool.bespokeShare, 0, 1)) say('pooling.bespokeShare must be between 0 and 1');
-  if (!(pool.contextPenalty >= 0)) say('pooling.contextPenalty cannot be negative');
+  num(pool.clientCount, (n) => n >= 1, 'pooling.clientCount', 'must be at least 1');
+  num(pool.workloadPerClient, (n) => n > 0, 'pooling.workloadPerClient', 'must be positive');
+  num(pool.serviceLevel, (n) => n >= 0 && n <= 1, 'pooling.serviceLevel', 'must be between 0 and 1');
+  num(pool.bespokeShare, (n) => n >= 0 && n <= 1, 'pooling.bespokeShare', 'must be between 0 and 1');
+  num(pool.contextPenalty, (n) => n >= 0, 'pooling.contextPenalty', 'cannot be negative');
 
   const scenIds = new Set<string>();
   const checkEffect = (id: string, e: ScenarioEffect) => {
     if ('fromMonth' in e && e.fromMonth !== undefined && !isMonthKey(e.fromMonth)) say(`scenario ${id}: fromMonth is not YYYY-MM`);
     if (e.type === 'demandMultiplier') {
-      if (!(e.demandMultiplier >= 0)) say(`scenario ${id}: demandMultiplier cannot be negative`);
+      num(e.demandMultiplier, (n) => n >= 0, `scenario ${id}: demandMultiplier`, 'cannot be negative');
       for (const sid of e.streamIds ?? []) if (!streamIds.has(sid)) say(`scenario ${id} references unknown demand stream "${sid}"`);
     }
     if (e.type === 'budgetConstraint' && !(e.budgetMultiplier >= 0)) say(`scenario ${id}: budgetMultiplier cannot be negative`);
@@ -164,14 +168,14 @@ export function validateModel(m: OperatingModel): string[] {
     switch (iv.type) {
       case 'expediteHiring':
         if (!hireIds.has(iv.hiringRequestId)) say(`intervention ${iv.id} references unknown hiring request "${iv.hiringRequestId}"`);
-        if (!(iv.newLeadTimeMonths >= 0)) say(`intervention ${iv.id}: newLeadTimeMonths cannot be negative`);
+        num(iv.newLeadTimeMonths, (n) => n >= 0, `intervention ${iv.id}: newLeadTimeMonths`, 'cannot be negative');
         break;
       case 'hire':
         if (!teamIds.has(iv.teamId)) say(`intervention ${iv.id} references unknown team "${iv.teamId}"`);
         break;
       case 'automation':
         if (!teamIds.has(iv.teamId)) say(`intervention ${iv.id} references unknown team "${iv.teamId}"`);
-        if (!inRange(iv.workloadReductionRate, 0, 1)) say(`intervention ${iv.id}: workloadReductionRate must be between 0 and 1`);
+        num(iv.workloadReductionRate, (n) => n >= 0 && n <= 1, `intervention ${iv.id}: workloadReductionRate`, 'must be between 0 and 1');
         break;
       case 'reallocation':
         if (!teamIds.has(iv.fromTeamId)) say(`intervention ${iv.id} references unknown team "${iv.fromTeamId}"`);
@@ -184,7 +188,7 @@ export function validateModel(m: OperatingModel): string[] {
         break;
       case 'serviceLevelChange':
         if (!teamIds.has(iv.teamId)) say(`intervention ${iv.id} references unknown team "${iv.teamId}"`);
-        if (!inRange(iv.newTargetUtilization, 0.01, 1)) say(`intervention ${iv.id}: newTargetUtilization must be between 0.01 and 1`);
+        num(iv.newTargetUtilization, (n) => n >= 0.01 && n <= 1, `intervention ${iv.id}: newTargetUtilization`, 'must be between 0.01 and 1');
         break;
     }
   }
