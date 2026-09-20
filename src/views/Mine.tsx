@@ -1,10 +1,11 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { OperatingModel } from '../models/types';
 import { FIXTURE, parseImportedModel, useStore } from '../state/store';
 import { TEMPLATES } from '../data/templates';
 import { Controls } from '../components/Controls';
 import { verdict } from '../lib/verdict';
 import { monthLabel, pct } from '../lib/format';
+import { encodeShare, type SavedModel } from '../state/persistence';
 
 function N({ value, onChange, step = 1, min = 0, width = 64 }: { value: number; onChange: (v: number) => void; step?: number; min?: number; width?: number }) {
   return <input className="cellin" type="number" value={value} step={step} min={min} style={{ width }} onChange={(e) => { const v = Number(e.target.value); if (Number.isFinite(v) && v >= min) onChange(v); }} />;
@@ -12,8 +13,41 @@ function N({ value, onChange, step = 1, min = 0, width = 64 }: { value: number; 
 
 /** Your numbers: one screen, no scrolling. Inputs on the left in labeled cards, the answer on the right. */
 export function Mine() {
-  const { model, dispatch, result, state, teamName, initName, isBase, fmt } = useStore();
+  const { model, dispatch, result, state, teamName, initName, isBase, fmt,
+          store, restoredFrom, dismissRestored } = useStore();
   const [errors, setErrors] = useState<string[]>([]);
+  const [saved, setSaved] = useState<SavedModel[]>([]);
+  const [naming, setNaming] = useState<string | null>(null);
+  const [said, setSaid] = useState<string | null>(null);
+
+  const refresh = useCallback(() => { void store.list().then(setSaved); }, [store]);
+  useEffect(refresh, [refresh]);
+  /* Say what happened, then stop saying it. A status line that never clears stops being
+     read, and this one is the only feedback a save gives. */
+  useEffect(() => {
+    if (!said) return;
+    const t = setTimeout(() => setSaid(null), 4000);
+    return () => clearTimeout(t);
+  }, [said]);
+
+  const saveAs = async (name: string) => {
+    if (!name.trim()) return;
+    const meta = await store.save(name, model);
+    setNaming(null);
+    refresh();
+    setSaid(`Saved as ${meta.name}.`);
+  };
+  const shareLink = async () => {
+    const token = await encodeShare(model);
+    const url = `${location.origin}${location.pathname}#/mine?m=${token}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      setSaid(`Link copied. ${(url.length / 1024).toFixed(1)}k of URL, which carries the whole model.`);
+    } catch {
+      // Clipboard needs a permission this page may not have. Give them the link instead.
+      setSaid(url);
+    }
+  };
   const focus = state.teamId ?? result.summary.firstBreakTeamId ?? model.teams[0].id;
   const v = verdict(result, fmt, teamName, initName);
   const edit = (fn: (m: OperatingModel) => void) => { const m = structuredClone(model); fn(m); m.id = m.id.replace(/(-edited)?$/, '-edited'); m.status = 'provisional'; dispatch({ type: 'editModel', model: m }); };
@@ -32,12 +66,51 @@ export function Mine() {
         <div className="tpl-row">
           <span className="lbl">Start from</span>
           {TEMPLATES.map((t) => <button key={t.id} className={'chipbtn' + (model.id === t.id || model.id === `${t.id}-edited` ? ' on' : '')} onClick={() => dispatch({ type: 'model', model: t.build() })} title={t.blurb}>{t.name}</button>)}
+          <button className="chipbtn" onClick={() => setNaming(model.name)}>Save</button>
+          <button className="chipbtn" onClick={() => void shareLink()}>Copy link</button>
           <button className="chipbtn" onClick={exportJson}>Export JSON</button>
           <label className="chipbtn">Import JSON<input type="file" accept="application/json,.json" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) void importJson(f); e.target.value = ''; }} /></label>
           {model.id !== FIXTURE.id && <button className="chipbtn" onClick={() => dispatch({ type: 'model', model: FIXTURE })}>Reset</button>}
         </div>
       </div>
       {errors.length > 0 && <div className="errors"><b>That file did not load.</b><ul>{errors.slice(0, 6).map((e) => <li key={e}>{e}</li>)}</ul></div>}
+
+      {restoredFrom && (
+        <p className="keepline">
+          {restoredFrom === 'link'
+            ? 'Opened from a shared link. Nothing was sent anywhere: the whole model travelled in the URL.'
+            : 'Picked up where you left off. This is kept in this browser only.'}
+          <button className="linkbtn" onClick={() => { dismissRestored(); dispatch({ type: 'model', model: FIXTURE }); }}>Back to Atlas</button>
+          <button className="linkbtn" onClick={dismissRestored}>Keep it</button>
+        </p>
+      )}
+
+      {naming !== null && (
+        <form className="keepline" onSubmit={(e) => { e.preventDefault(); void saveAs(naming); }}>
+          <label>Save this model as
+            <input className="cellin" autoFocus value={naming} onChange={(e) => setNaming(e.target.value)} style={{ width: 200, marginLeft: 8 }} />
+          </label>
+          <button className="chipbtn" type="submit">Save</button>
+          <button className="chipbtn" type="button" onClick={() => setNaming(null)}>Cancel</button>
+        </form>
+      )}
+
+      {saved.length > 0 && (
+        <p className="keepline">
+          <span className="lbl">Saved here</span>
+          {saved.map((m) => (
+            <span key={m.id} className="savedchip">
+              <button className="linkbtn" onClick={() => void store.load(m.id).then((x) => x && dispatch({ type: 'model', model: x }))}
+                      title={`${(m.bytes / 1024).toFixed(1)}k, saved ${m.updatedAt.slice(0, 10)}`}>{m.name}</button>
+              <button className="linkbtn dim" aria-label={`Delete ${m.name}`}
+                      onClick={() => void store.remove(m.id).then(refresh)}>&times;</button>
+            </span>
+          ))}
+          {store.kind === 'memory' && <em className="dim"> This browser is not letting the page keep anything, so these go when the tab does.</em>}
+        </p>
+      )}
+
+      {said && <p className="keepline said">{said}</p>}
 
       <div className="mine-grid">
         <div className="mine-inputs five">

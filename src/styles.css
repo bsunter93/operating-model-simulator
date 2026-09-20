@@ -1114,3 +1114,16 @@ details.tuck p{font-size:12.5px;color:var(--muted);margin:8px 0 6px}
   .lev-track{grid-column:1/-1;order:3}
   .lev-num:last-child{grid-column:2}
 }
+
+/* Keeping things: the save/restore row on Your numbers. One line, wraps, and says nothing
+   at all until there is something to say. */
+.keepline{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:10px 0 0;
+  font-size:13px;color:var(--body)}
+.keepline .lbl{margin:0}
+.keepline label{display:inline-flex;align-items:center;gap:0;font-size:13px;color:var(--muted)}
+.keepline.said{color:var(--muted);font:500 12px/1.5 var(--mono);word-break:break-all}
+.savedchip{display:inline-flex;align-items:center;gap:4px;padding:2px 6px;
+  border:1px solid var(--line);border-radius:5px;background:var(--hair)}
+.savedchip .linkbtn{font-size:12px}
+.savedchip .linkbtn.dim{color:var(--muted);font-size:14px;line-height:1}
+.savedchip .linkbtn.dim:hover{color:var(--warm)}

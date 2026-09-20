@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useReducer, useState } from 'react';
 import { makeFmt, type Fmt } from '../lib/format';
 import { migrateModel } from '../models/migrate';
+import { createModelStore, decodeShare, type ModelStore } from './persistence';
 import type { ReactNode } from 'react';
 import { run, validateModel } from '../engine';
 import type { OperatingModel, DecisionWeights, Intervention } from '../models/types';
@@ -143,11 +144,30 @@ interface Ctx {
   isFixture: boolean;
   /** Number and money formatting, bound to this model's currency and locale. */
   fmt: Fmt;
+  /** Where saved models live. Swap the implementation, not the callers. */
+  store: ModelStore;
+  /** Set when this page picked a model up from somewhere, so it can say so. */
+  restoredFrom: 'session' | 'link' | null;
+  dismissRestored: () => void;
   teamName: (id: string) => string;
   initName: (id: string) => string;
 }
 
 const StoreContext = createContext<Ctx | null>(null);
+
+const PAGES = ['#/mine', '#/summary', '#/model', '#/answer'];
+
+/**
+ * A shared model arrives in the hash, and it has to be read before anything else touches
+ * the URL. writeQuery rebuilds the query from a fixed list of keys it knows about, runs
+ * on mount like every other effect, and is declared first, so by the time the restore
+ * effect looked for the token it had already been swept away. Read it at load instead.
+ */
+const SHARE_TOKEN: string | null = (() => {
+  if (typeof window === 'undefined') return null;
+  try { return new URLSearchParams(window.location.hash.split('?')[1] ?? '').get('m'); }
+  catch { return null; }
+})();
 
 // ── URL state: #/view/arg?s=scenario&i=id:knob,id&theme=dark ──────────────
 function readQuery(model: OperatingModel): Partial<State> {
@@ -174,6 +194,16 @@ function readQuery(model: OperatingModel): Partial<State> {
   return out;
 }
 
+/** Drops one parameter from the hash and leaves the rest of the URL alone. */
+function stripQuery(key: string): void {
+  const [path, cur] = window.location.hash.split('?');
+  const p = new URLSearchParams(cur ?? '');
+  if (!p.has(key)) return;
+  p.delete(key);
+  const q = p.toString();
+  history.replaceState(null, '', path + (q ? '?' + q : ''));
+}
+
 function writeQuery(s: State): void {
   const [path, cur] = window.location.hash.split('?');
   const curP = new URLSearchParams(cur ?? '');
@@ -183,14 +213,62 @@ function writeQuery(s: State): void {
   if (s.scenarioId !== baseId(s.model)) p.set('s', s.scenarioId);
   if (s.interventionIds.length) p.set('i', s.interventionIds.map((id) => (s.overrides[id] !== undefined ? `${id}:${s.overrides[id]}` : id)).join(','));
   const q = p.toString();
-  const base = path.startsWith('#/mine') ? '#/mine' : path.startsWith('#/summary') ? '#/summary' : '#/';
+  /* Every page the app has, not the three it had when this was written. Leaving #/model
+     off the list meant the board silently refused to keep a scenario in the URL, so you
+     could not link anyone to what you were looking at. */
+  const base = PAGES.find((k) => path.startsWith(k)) ?? '#/';
   const next = base + (q ? '?' + q : '');
-  if (next !== window.location.hash && (path === '#/' || path === '#' || path === '' || path.startsWith('#/mine') || path.startsWith('#/summary'))) history.replaceState(null, '', next);
+  if (next !== window.location.hash && (path === '#/' || path === '#' || path === '' || PAGES.some((k) => path.startsWith(k)))) {
+    history.replaceState(null, '', next);
+  }
 }
 
 export function StoreProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, FIXTURE, (m) => ({ ...fresh(m), ...readQuery(m) }));
   useEffect(() => { writeQuery(state); }, [state]);
+
+  const store = useMemo(() => createModelStore(), []);
+  const [restoredFrom, setRestoredFrom] = useState<'session' | 'link' | null>(null);
+  const [ready, setReady] = useState(false);
+
+  /* On the way in: a shared link wins over whatever was here last, because somebody
+     followed it on purpose. Both arrive through parseImportedModel rather than being
+     trusted: a link is an untrusted file that happens to be in a URL. */
+  useEffect(() => {
+    let live = true;
+    void (async () => {
+      const token = SHARE_TOKEN;
+      if (token) {
+        const decoded = await decodeShare(token);
+        const parsed = decoded ? parseImportedModel(JSON.stringify(decoded)) : { errors: ['unreadable'] };
+        // Spent either way: a link that does not open should not keep failing on refresh.
+        stripQuery('m');
+        if (live && 'model' in parsed) {
+          dispatch({ type: 'model', model: parsed.model });
+          setRestoredFrom('link');
+          setReady(true);
+          return;
+        }
+      }
+      const saved = await store.readSession();
+      if (live && saved) {
+        const parsed = parseImportedModel(JSON.stringify(saved));
+        if ('model' in parsed && parsed.model.id !== FIXTURE.id) {
+          dispatch({ type: 'model', model: parsed.model });
+          setRestoredFrom('session');
+        }
+      }
+      if (live) setReady(true);
+    })();
+    return () => { live = false; };
+  }, [store]);
+
+  /* On the way out. Only once the restore has had its turn, or the first render would
+     write the fixture over the very thing we are about to read back. */
+  useEffect(() => {
+    if (!ready) return;
+    void store.writeSession(state.model.id === FIXTURE.id ? null : state.model);
+  }, [ready, store, state.model]);
   const { model } = state;
   const interventions = useMemo(() => effectiveInterventions(model, state.overrides, state.interventionIds.filter(isCustomId)), [model, state.overrides, state.interventionIds]);
   const active = useMemo(() => interventions.filter((iv) => state.interventionIds.includes(iv.id)), [interventions, state.interventionIds]);
@@ -202,9 +280,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     isBase: state.scenarioId === baseId(model) && active.length === 0,
     isFixture: model.id === FIXTURE.id,
     fmt: makeFmt(model.currency, model.locale),
+    store,
+    restoredFrom,
+    dismissRestored: () => setRestoredFrom(null),
     teamName: (id) => model.teams.find((t) => t.id === id)?.name ?? id,
     initName: (id) => model.initiatives.find((i) => i.id === id)?.name ?? id,
-  }), [state, model, interventions, result, doNothing, base, active.length]);
+  }), [state, model, interventions, result, doNothing, base, active.length, store, restoredFrom]);
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
 }
 
