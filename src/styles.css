@@ -842,6 +842,9 @@ details.tuck p{font-size:12.5px;color:var(--muted);margin:8px 0 6px}
   transition:cx .35s ease,cy .35s ease}
 .tri-lab{font:500 7px var(--mono);letter-spacing:.1em;fill:var(--muted)}
 .rb-tri-read{list-style:none;margin:0;padding:0}
+/* On the scorecard they lie across the width instead of stacking beside a small picture. */
+.rb-tri-read.wide{display:flex;gap:26px;margin-bottom:12px}
+.rb-tri-read.wide li{margin-bottom:0}
 .rb-tri-read li{margin-bottom:7px}
 .rb-tri-read li:last-child{margin-bottom:0}
 .rb-tri-read b{font:600 14px/1 var(--display);color:var(--ink);
@@ -1179,3 +1182,11 @@ details.tuck p{font-size:12.5px;color:var(--muted);margin:8px 0 6px}
   .fundlist li{grid-template-columns:minmax(0,1fr) auto}
   .fund-track{grid-column:1/-1;order:3}
 }
+
+/* What a person is worth, and where. Spans the dashboard rather than sitting in a column,
+   because it is a sentence and sentences want width. */
+.rb-bind{grid-column:1 / -1;margin:10px 0 0;padding-top:10px;border-top:1px solid var(--hair);
+  font:400 13px/1.5 var(--sans);color:var(--body)}
+.rb-bind-k{font-weight:600;color:var(--ink)}
+.rb-bind-idle{color:var(--muted)}
+@media (max-width:900px){ .rb-bind{font-size:12px} }

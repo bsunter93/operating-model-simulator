@@ -6,6 +6,7 @@ import type { OperatingModel, RunDecision, RunSpec } from '../models/types';
 import type { Fmt } from '../lib/format';
 import { OBJECTIVES, rankAmong, type Objective } from '../lib/objectives';
 import { RUN_WORLDS } from '../data/templates';
+import { bindingConstraints, type Binding } from '../lib/constraint';
 
 /**
  * The run: five decisions, and whatever they add up to.
@@ -139,6 +140,46 @@ function YearStrip({ at, decided, spike, months }:
         </li>
       ))}
     </ol>
+  );
+}
+
+/**
+ * What a person is worth, and where.
+ *
+ * The most useful thing this model knows, and the hardest to get from looking at it: five
+ * more people on one team move the year and on another move nothing at all. Measured by
+ * running the year again with them, not inferred from whichever bar is reddest, because
+ * on a real model those are different teams.
+ */
+function ConstraintLine({ model, binding, fmt }:
+  { model: OperatingModel; binding: Binding; fmt: Fmt }) {
+  const name = (id: string) => model.teams.find((t) => t.id === id)?.name ?? id;
+  const answers = binding.service ? `answers ${Math.round(binding.service.gain * 100)} points more` : '';
+  const risk = binding.portfolio ? `puts ${cash(fmt, binding.portfolio.gain)} less at risk` : '';
+  /* One team binding both is worth saying out loud rather than naming twice. It is the
+     shape of a physical bottleneck: the same people are the answer to two different
+     questions, which is rarer and more useful than the usual split. */
+  const together = binding.service && binding.portfolio
+    && binding.service.teamId === binding.portfolio.teamId;
+  const parts: string[] = together
+    ? [`${name(binding.service!.teamId)} ${answers} and ${risk}, and no other team moves either`]
+    : [
+        binding.service ? `${name(binding.service.teamId)} ${answers}` : '',
+        binding.portfolio ? `${name(binding.portfolio.teamId)} ${risk}` : '',
+      ].filter(Boolean);
+  const idle = binding.idle.length;
+  return (
+    <p className="rb-bind">
+      <span className="rb-bind-k">Five more people:</span>
+      {parts.length === 0
+        ? <> nowhere would that move this year. Capacity is not what is short.</>
+        : <>{' '}{parts.join(', or ')}.</>}
+      {idle > 0 && (
+        <span className="rb-bind-idle">
+          {' '}On {idle === model.teams.length ? 'every team' : `${idle} of the ${model.teams.length} teams`}, nothing at all.
+        </span>
+      )}
+    </p>
   );
 }
 
@@ -425,7 +466,14 @@ function RunFor({ model, spec }: { model: OperatingModel; spec: RunSpec }) {
     return steps;
   }, [model, spec, cal, picks.join('|'), preview]);
 
-  const triNow = trail[trail.length - 1];
+  /* Recomputed as the run goes, because the constraint moves when you act on it. Eight
+     extra engine runs, a few milliseconds, and the only number on the page that tells
+     somebody what to do next rather than what already happened. */
+  const binding = useMemo(
+    () => bindingConstraints(model, spec, chosen, shown),
+    [model, spec, chosen.join('|'), shown],
+  );
+
   const d: RunDecision = decisions[Math.min(step, decisions.length - 1)];
   const lastLines = step > 0 && !done ? consequence(model, fmt, previous, current) : [];
   const beforeSpike = spike === null ? 0 : decisions.filter((x) => x.monthIndex < spike).length;
@@ -446,16 +494,18 @@ function RunFor({ model, spec }: { model: OperatingModel; spec: RunSpec }) {
               decided={started ? decisions.slice(0, step).map((dd) => dd.monthIndex) : []}
               spike={spike} months={months} />
           </div>
+          {/* The picture stays, and keeps the trail, which is what it was for: where the
+              decisions have taken you, visible the whole way through. The three percentages
+              that used to sit beside it are gone from here. They quantified a position on a
+              normalised scale, which is the most abstract thing this page had, and they were
+              standing where the constraint belongs. They are on the scorecard now, next to
+              the cloud, where there is room to say what they mean. */}
           <div className="rb-dash-tri">
-            <Triangle trail={trail} />
-            <ul className="rb-tri-read">
-              <li><b>{pct(triNow.cost)}</b><span>budget kept</span></li>
-              <li><b>{pct(triNow.scope)}</b><span>scope kept</span></li>
-              <li><b>{pct(triNow.time)}</b><span>schedule kept</span></li>
-            </ul>
+            <Triangle trail={trail} size={0.78} />
           </div>
           <Kpis result={shown} prev={previewResult ? current : undefined} headline={headline}
                 riskNoun={model.lexicon?.revenueNoun ?? 'Revenue'} />
+          {started && <ConstraintLine model={model} binding={binding} fmt={fmt} />}
         </div>
       </header>
 
@@ -729,6 +779,11 @@ function Scorecard({ model, spec, picks, result, doNothing, onReset, trail, clou
       <div className="rb-final">
         <Triangle trail={trail} cloud={cloud} size={1.55} />
         <div>
+          <ul className="rb-tri-read wide">
+            <li><b>{pct(trail[trail.length - 1].cost)}</b><span>budget kept</span></li>
+            <li><b>{pct(trail[trail.length - 1].scope)}</b><span>scope kept</span></li>
+            <li><b>{pct(trail[trail.length - 1].time)}</b><span>schedule kept</span></li>
+          </ul>
           <p className="rb-final-h">Every year you could have had</p>
           <p className="rb-setup">Each faint mark is one of the {cloud.length} ways these
              {' '}{spec.decisions.length} decisions could have gone. Yours is the filled one, and the
