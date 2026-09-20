@@ -69,6 +69,8 @@ export function knobFor(iv: Intervention): Knob | null {
     case 'reallocation': return { label: 'headcount', unit: 'people', min: 0, max: 50, step: 1, get: (x) => (x as typeof iv).headcount, set: (x, v) => ({ ...(x as typeof iv), headcount: v }) };
     case 'defer': return { label: 'defer by', unit: 'months', min: 0, max: 12, step: 1, get: (x) => (x as typeof iv).months, set: (x, v) => ({ ...(x as typeof iv), months: v }) };
     case 'serviceLevelChange': return { label: 'new target', unit: '%', min: 50, max: 100, step: 1, get: (x) => Math.round((x as typeof iv).newTargetUtilization * 100), set: (x, v) => ({ ...(x as typeof iv), newTargetUtilization: v / 100 }) };
+    case 'restaff': return { label: 'people on it', unit: '%', min: 40, max: 200, step: 5, get: (x) => Math.round((x as typeof iv).fteMultiplier * 100), set: (x, v) => ({ ...(x as typeof iv), fteMultiplier: v / 100 }) };
+    case 'rescope': return { label: 'scope kept', unit: '%', min: 10, max: 100, step: 5, get: (x) => Math.round((x as typeof iv).scopeMultiplier * 100), set: (x, v) => ({ ...(x as typeof iv), scopeMultiplier: v / 100 }) };
     case 'cancel': return null;
   }
 }

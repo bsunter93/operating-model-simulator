@@ -145,6 +145,12 @@ export interface Summary {
   annualBudgetVarianceUsd: number;
   revenueExposureUsd: number;
   initiativesDelayed: number;
+  /**
+   * What the portfolio is still worth after cancellations and partial scope. Scope had
+   * no output before this: you could cut it and nothing in the result said so, which
+   * made it invisible next to cost and time.
+   */
+  portfolioValueUsd: number;
   /** Conditional hires the plan no longer needs. Empty unless a request set cancelIfSlack. */
   hiresDropped: string[];
   /** Headcount those dropped requests would have added. */

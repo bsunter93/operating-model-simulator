@@ -169,6 +169,23 @@ export type Intervention = {
   | { type: 'reallocation'; fromTeamId: string; toTeamId: string; headcount: number; timeToImpactMonths: number; implementationCostUsd: number }
   | { type: 'defer'; initiativeId: string; months: number }
   | { type: 'cancel'; initiativeId: string }
+  /**
+   * Trades time against people on one initiative, which is the axis this model was
+   * missing. Nothing else here changes a delivery date, so cost and scope could move
+   * and time could not, and the classic triangle had only two working corners.
+   *
+   * Run it leaner and longer (fte 0.7, duration 1.5), or crash it (fte 1.4, duration
+   * 0.7, and pay for the overtime). `valueMultiplier` is how much of what it earns
+   * survives the change: finishing later usually earns less inside the year.
+   */
+  | { type: 'restaff'; initiativeId: string; durationMultiplier: number; fteMultiplier: number;
+      valueMultiplier?: number; oneTimeCostUsd?: number }
+  /**
+   * Delivers part of an initiative instead of all of it: fewer people, proportionally
+   * less of what it was worth, same dates. Cancelling was previously the only way to
+   * move scope, which made scope a switch rather than a dial.
+   */
+  | { type: 'rescope'; initiativeId: string; scopeMultiplier: number }
   | { type: 'serviceLevelChange'; teamId: string; newTargetUtilization: number }
 );
 

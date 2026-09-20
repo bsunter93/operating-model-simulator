@@ -37,6 +37,20 @@ export function describeEffect(iv: Intervention, before: ModelResult, after: Mod
       const changed = before.teams.map((t) => teamLine(t.teamId)).filter((s) => !s.endsWith('no change'));
       return changed.length ? changed.join('. ') : 'Releases capacity on teams that were not short';
     }
+    case 'restaff': {
+      const a = init(before, iv.initiativeId), b = init(after, iv.initiativeId);
+      const when = a.completion === b.completion
+        ? `Finishes ${monthLabel(b.completion ?? '')} either way`
+        : `Finishes ${monthLabel(b.completion ?? '')} instead of ${monthLabel(a.completion ?? '')}`;
+      const changed = before.teams.map((t) => teamLine(t.teamId)).filter((x) => !x.endsWith('no change'));
+      return changed.length ? `${when}. ${changed.join('. ')}` : when;
+    }
+    case 'rescope': {
+      const kept = Math.round(iv.scopeMultiplier * 100);
+      const changed = before.teams.map((t) => teamLine(t.teamId)).filter((x) => !x.endsWith('no change'));
+      return `${kept}% of it gets built, earning ${kept}% of what it was worth`
+        + (changed.length ? `. ${changed.join('. ')}` : '');
+    }
   }
 }
 

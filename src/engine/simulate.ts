@@ -53,6 +53,9 @@ interface Effective {
   changeCost: number[];                   // one-time change costs by month
   deferrals: Map<string, number>;
   cancelled: Set<string>;
+  durationMult: Map<string, number>;      // initiativeId -> how much longer it runs
+  fteMult: Map<string, number>;           // initiativeId -> people per month on it
+  valueMult: Map<string, number>;         // initiativeId -> how much of the value survives
 }
 
 function resolveScenario(model: OperatingModel, s: RunOptions['scenario']): Scenario {
@@ -91,6 +94,9 @@ function buildEffective(model: OperatingModel, scenario: Scenario, interventions
     changeCost: new Array(n).fill(0),
     deferrals: new Map(),
     cancelled: new Set(),
+    durationMult: new Map(),
+    fteMult: new Map(),
+    valueMult: new Map(),
   };
 
   const apply = (e: ScenarioEffect) => {
@@ -150,6 +156,22 @@ function buildEffective(model: OperatingModel, scenario: Scenario, interventions
       }
       case 'defer': eff.deferrals.set(iv.initiativeId, (eff.deferrals.get(iv.initiativeId) ?? 0) + iv.months); break;
       case 'cancel': eff.cancelled.add(iv.initiativeId); break;
+      case 'restaff': {
+        const id = iv.initiativeId;
+        eff.durationMult.set(id, (eff.durationMult.get(id) ?? 1) * iv.durationMultiplier);
+        eff.fteMult.set(id, (eff.fteMult.get(id) ?? 1) * iv.fteMultiplier);
+        if (iv.valueMultiplier !== undefined)
+          eff.valueMult.set(id, (eff.valueMult.get(id) ?? 1) * iv.valueMultiplier);
+        if (iv.oneTimeCostUsd) eff.changeCost[0] += iv.oneTimeCostUsd;
+        break;
+      }
+      case 'rescope': {
+        // Less of the thing: fewer people on it, and proportionally less of what it earns.
+        const id = iv.initiativeId;
+        eff.fteMult.set(id, (eff.fteMult.get(id) ?? 1) * iv.scopeMultiplier);
+        eff.valueMult.set(id, (eff.valueMult.get(id) ?? 1) * iv.scopeMultiplier);
+        break;
+      }
       case 'serviceLevelChange': eff.targetUtil.set(iv.teamId, iv.newTargetUtilization); break;
     }
   }
@@ -177,9 +199,18 @@ export function run(input: OperatingModel, opts: RunOptions = {}): ModelResult {
   const hours = model.calendar.workHoursPerFteMonth;
 
   // 1. Initiative schedule with dependency propagation.
+  /* Restaffing changes how long an initiative runs, so the scheduler has to be given the
+     adjusted initiative rather than the authored one. Duration is rounded to whole months
+     and floored at one: half a month of an initiative is not a thing this model has. */
+  const scheduledInitiatives = model.initiatives.map((i) => {
+    const dm = eff.durationMult.get(i.id);
+    return dm && dm !== 1
+      ? { ...i, durationMonths: Math.max(1, Math.round(i.durationMonths * dm)) }
+      : i;
+  });
   const schedule = scheduleInitiatives({
     horizonStart: model.calendar.startMonth, horizonMonths: n,
-    initiatives: model.initiatives, dependencies: model.dependencies,
+    initiatives: scheduledInitiatives, dependencies: model.dependencies,
     deferrals: eff.deferrals, cancelled: eff.cancelled,
   });
   const initById = new Map(model.initiatives.map((i) => [i.id, i]));
@@ -225,10 +256,11 @@ export function run(input: OperatingModel, opts: RunOptions = {}): ModelResult {
   for (const sch of schedule) {
     if (sch.status === 'cancelled') continue;
     const init = initById.get(sch.initiativeId)!;
+    const fm = eff.fteMult.get(init.id) ?? 1;
     for (const [tid, fte] of Object.entries(init.requiredFteByTeam)) {
       const arr = portfolioHours.get(tid)!;
       const t = teams.get(tid)!;
-      for (const m of sch.activeMonthIndexes) arr[m] += fte * productivePerFte(t);
+      for (const m of sch.activeMonthIndexes) arr[m] += fte * fm * productivePerFte(t);
     }
   }
 
@@ -362,7 +394,8 @@ export function run(input: OperatingModel, opts: RunOptions = {}): ModelResult {
   for (const sch of schedule) {
     if (sch.status === 'cancelled') continue;
     const init = initById.get(sch.initiativeId)!;
-    if (init.revenueAtRiskUsd <= 0) continue;
+    const vm = eff.valueMult.get(init.id) ?? 1;
+    if (init.revenueAtRiskUsd * vm <= 0) continue;
     const p = Math.min(1, init.executionFailureProbability * eff.failureMult);
     let shortfall = 0;
     for (const tid of Object.keys(init.requiredFteByTeam)) {
@@ -373,7 +406,7 @@ export function run(input: OperatingModel, opts: RunOptions = {}): ModelResult {
       }
     }
     const pEff = 1 - (1 - p) * (1 - shortfall);
-    items.push({ initiativeId: init.id, revenueAtRiskUsd: init.revenueAtRiskUsd, baseProbability: init.executionFailureProbability, scenarioProbability: p, capacityShortfall: shortfall, effectiveProbability: pEff, exposureUsd: init.revenueAtRiskUsd * pEff });
+    items.push({ initiativeId: init.id, revenueAtRiskUsd: init.revenueAtRiskUsd * vm, baseProbability: init.executionFailureProbability, scenarioProbability: p, capacityShortfall: shortfall, effectiveProbability: pEff, exposureUsd: init.revenueAtRiskUsd * vm * pEff });
   }
   const exposure: Exposure = { items, totalUsd: items.reduce((s, i) => s + i.exposureUsd, 0) };
 
@@ -400,6 +433,9 @@ export function run(input: OperatingModel, opts: RunOptions = {}): ModelResult {
     annualBudgetVarianceUsd: financials.annualVarianceUsd,
     revenueExposureUsd: exposure.totalUsd,
     initiativesDelayed: schedule.filter((s) => s.delayMonths > 0).length,
+    portfolioValueUsd: model.initiatives
+      .filter((i) => !eff.cancelled.has(i.id))
+      .reduce((a, i) => a + i.financialValueUsd * (eff.valueMult.get(i.id) ?? 1), 0),
     hiresDropped,
     hiresDroppedFte: eff.hiringPlan
       .filter((h) => hiresDropped.includes(h.id))

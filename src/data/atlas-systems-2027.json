@@ -486,6 +486,42 @@
       "type": "cancel",
       "initiativeId": "init-self-service",
       "description": "Drop the portal for this year and release six people-worth of capacity in Customer and Consumer Operations."
+    },
+    {
+      "id": "intervention-stretch-platform",
+      "name": "Run Platform Scale leaner and longer",
+      "type": "restaff",
+      "initiativeId": "init-platform-scale",
+      "durationMultiplier": 1.5,
+      "fteMultiplier": 0.7,
+      "valueMultiplier": 0.9,
+      "description": "Thirty percent fewer people on it, running half again as long. It finishes later and earns a little less, and Platform Engineering gets its year back."
+    },
+    {
+      "id": "intervention-crash-enterprise",
+      "name": "Crash the Enterprise Growth Program",
+      "type": "restaff",
+      "initiativeId": "init-enterprise-growth",
+      "durationMultiplier": 0.7,
+      "fteMultiplier": 1.4,
+      "oneTimeCostUsd": 400000,
+      "description": "Forty percent more people for a shorter run, paid for with contractors and overtime. It lands sooner and it costs."
+    },
+    {
+      "id": "intervention-half-portal",
+      "name": "Ship half the Self-Service Portal",
+      "type": "rescope",
+      "initiativeId": "init-self-service",
+      "scopeMultiplier": 0.5,
+      "description": "Build the half that handles the commonest cases. Half the people, half the return."
+    },
+    {
+      "id": "intervention-core-markets-only",
+      "name": "International Expansion, core markets only",
+      "type": "rescope",
+      "initiativeId": "init-international-expansion",
+      "scopeMultiplier": 0.6,
+      "description": "Three markets instead of five. Less to build, and less of the upside."
     }
   ],
   "decisionWeights": {
