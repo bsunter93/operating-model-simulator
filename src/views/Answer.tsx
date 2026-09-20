@@ -1,23 +1,23 @@
 import { useMemo, useState } from 'react';
-import { run } from '../engine';
-import { FIXTURE } from '../state/store';
+import { useStore } from '../state/store';
 import type { ModelResult } from '../models/results';
-import { DECISIONS, RUN_SCENARIO, mUsd } from './Run';
+import type { OperatingModel, RunSpec } from '../models/types';
 import { hours } from '../lib/format';
+import { Word, mUsd, runWith, word } from './Run';
 
 /**
  * The short version, for anyone who does not want to play.
  *
  * It was tempting to write "the decisions that reach the optimal outcome". There is no
- * such list. Ranking all 243 paths against six different objectives produces six
- * different winners with no overlap at all, and every one of them is bad at something
- * the others protect. So the page asks what you are protecting first, and only then has
- * an answer, which is the actual lesson and not a way around it.
+ * such list. Ranking every path against each objective in turn produces a different
+ * winner almost every time, and every one of them is bad at something the others protect.
+ * So the page asks what you are protecting first, and only then has an answer, which is
+ * the actual lesson and not a way around it.
  *
- * Every path, ranking and figure here is computed from the model at render time.
+ * Every path, ranking, figure and count here is computed from the model at render time,
+ * including the ones the prose talks about. Nothing is typed in, because everything typed
+ * in went stale the first time the run changed underneath it.
  */
-
-const M = FIXTURE;
 
 type Objective = {
   id: string;
@@ -44,7 +44,7 @@ const OBJECTIVES: Objective[] = [
     read: (r) => `${mUsd(r.summary.revenueExposureUsd)} of revenue still at risk` },
   { id: 'people', label: 'Your people', who: 'anyone who has watched a team burn out',
     score: strain,
-    read: (r) => `${strain(r)} team-months over capacity, and ${Math.round(r.summary.peopleLostToAttrition)} people gone by December` },
+    read: (r) => `${strain(r)} team-months over capacity, and ${Math.round(r.summary.peopleLostToAttrition)} people gone by year end` },
   { id: 'retention', label: 'Keeping people', who: 'anywhere the job market is the constraint',
     score: (r) => -r.summary.retentionRate,
     // One decimal, because the spread between the best and worst path here is under a
@@ -67,43 +67,68 @@ const OBJECTIVES: Objective[] = [
 
 type Path = { picks: (string | null)[]; result: ModelResult };
 
-/*
- * Every lever the run offers, applied on its own to the same year, ranked by how much
- * work it saves from never being done. The ranking is the whole argument and none of it
- * is authored: the levers that change how much work there is, or who is already there to
- * do it, beat the lever that adds people, because people approved in February arrive
- * after the spike has already happened.
- */
-const LEVERS = (() => {
-  const seen = new Map<string, string>();
-  for (const d of DECISIONS) for (const o of d.options) if (o.iv && !seen.has(o.iv)) seen.set(o.iv, o.label);
-  const rows = [...seen].map(([iv, label]) => ({ iv, label, r: run(M, { scenario: RUN_SCENARIO, interventions: [iv] }) }));
-  rows.push({ iv: 'none', label: 'Leave the plan alone', r: run(M, { scenario: RUN_SCENARIO }) });
-  /* Ties at the precision the reader is shown break toward the better answer rate. Two
-     levers both saving 10.3k hours read as equally good until you notice one of them
-     takes the queue from 42% to 33%, and a list that ranked it second was saying the
-     opposite of what its own second column said. */
-  return rows.sort((a, b) =>
-    Math.round(a.r.summary.shedHours / 100) - Math.round(b.r.summary.shedHours / 100)
-    || (b.r.summary.serviceLevelPct ?? 0) - (a.r.summary.serviceLevelPct ?? 0));
-})();
-
-function allPaths(): Path[] {
-  const out: Path[] = [];
-  const walk = (i: number, ivs: string[], picks: (string | null)[]) => {
-    if (i === DECISIONS.length) { out.push({ picks, result: run(M, { scenario: RUN_SCENARIO, interventions: ivs }) }); return; }
-    for (const o of DECISIONS[i].options) {
-      walk(i + 1, o.iv && !ivs.includes(o.iv) ? [...ivs, o.iv] : ivs, [...picks, o.iv]);
-    }
-  };
-  walk(0, [], []);
-  return out;
+export function Answer() {
+  const { model } = useStore();
+  return model.run && model.run.decisions.length > 0
+    ? <AnswerFor model={model} spec={model.run} />
+    : (
+      <main className="answerv">
+        <span className="rb-when">The short version</span>
+        <h1>{model.name} does not carry a run.</h1>
+        <p className="ans-lede">This page ranks the endings of a guided run against the things a
+          company might be protecting. The model needs a run for there to be endings to rank.</p>
+        <div className="ans-go">
+          <a className="rb-opt" href="#/model"><b>Open the full model</b>
+            <span>Every team, month, scenario and assumption behind this.</span></a>
+        </div>
+      </main>
+    );
 }
 
-export function Answer() {
+function AnswerFor({ model, spec }: { model: OperatingModel; spec: RunSpec }) {
   const [objId, setObjId] = useState(OBJECTIVES[0].id);
-  const paths = useMemo(allPaths, []);
   const obj = OBJECTIVES.find((o) => o.id === objId)!;
+
+  const paths = useMemo(() => {
+    const out: Path[] = [];
+    const walk = (i: number, ivs: string[], picks: (string | null)[]) => {
+      if (i === spec.decisions.length) { out.push({ picks, result: runWith(model, spec, ivs) }); return; }
+      for (const o of spec.decisions[i].options) {
+        walk(i + 1, o.interventionId && !ivs.includes(o.interventionId) ? [...ivs, o.interventionId] : ivs,
+             [...picks, o.interventionId]);
+      }
+    };
+    walk(0, [], []);
+    return out;
+  }, [model, spec]);
+
+  const doNothing = useMemo(() => runWith(model, spec), [model, spec]);
+
+  /*
+   * Every lever the run offers, applied on its own to the same year, ranked by how much
+   * work it saves from never being done. The ranking is the whole argument and none of it
+   * is authored.
+   */
+  const levers = useMemo(() => {
+    const seen = new Map<string, string>();
+    for (const d of spec.decisions) {
+      for (const o of d.options) if (o.interventionId && !seen.has(o.interventionId)) seen.set(o.interventionId, o.label);
+    }
+    const rows: { iv: string; label: string; type?: string; r: ModelResult }[] =
+      [...seen].map(([iv, label]) => ({
+        iv, label,
+        type: model.interventions.find((x) => x.id === iv)?.type,
+        r: runWith(model, spec, [iv]),
+      }));
+    rows.push({ iv: 'none', label: 'Leave the plan alone', type: undefined, r: doNothing });
+    /* Ties at the precision the reader is shown break toward the better answer rate. Two
+       levers both saving 10.3k hours read as equally good until you notice one of them
+       takes the queue from 42% to 33%, and a list that ranked it second was saying the
+       opposite of what its own second column said. */
+    return rows.sort((a, b) =>
+      Math.round(a.r.summary.shedHours / 100) - Math.round(b.r.summary.shedHours / 100)
+      || (b.r.summary.serviceLevelPct ?? 0) - (a.r.summary.serviceLevelPct ?? 0));
+  }, [model, spec, doNothing]);
 
   /* Ties break toward the cheaper path, then the kinder one. Without this, protecting
      the portfolio returned a plan that spent $1.72M to deliver exactly what doing nothing
@@ -114,8 +139,9 @@ export function Answer() {
     || strain(a.result) - strain(b.result);
   const best = useMemo(() => [...paths].sort(rank(obj))[0], [paths, objId]);
 
-  /* Counted rather than claimed. The copy used to say "seven different winners" and that
-     was simply wrong: two objectives share an answer, which is worth saying out loud. */
+  /* Counted rather than claimed. The copy used to name which two objectives shared an
+     answer; they stopped sharing one the day the run changed year, and the sentence went
+     on saying it. */
   const winners = useMemo(() => {
     const groups = new Map<string, string[]>();
     OBJECTIVES.forEach((o) => {
@@ -127,7 +153,6 @@ export function Answer() {
       shared: [...groups.values()].filter((v) => v.length > 1),
     };
   }, [paths]);
-  const doNothing = useMemo(() => run(M, { scenario: RUN_SCENARIO }), []);
 
   /* What this winner gives up. Said by comparing it against whoever wins the other
      objectives, because "it costs you something" is only worth reading with a number. */
@@ -138,8 +163,10 @@ export function Answer() {
   }).filter((c) => c.worse);
 
   const label = (i: number) =>
-    DECISIONS[i].options.find((o) => o.iv === best.picks[i])?.label
-    ?? DECISIONS[i].options[DECISIONS[i].options.length - 1].label;
+    spec.decisions[i].options.find((o) => o.interventionId === best.picks[i])?.label
+    ?? spec.decisions[i].options[spec.decisions[i].options.length - 1].label;
+
+  const scenario = spec.scenarioId ? model.scenarios.find((s) => s.id === spec.scenarioId) : undefined;
 
   return (
     <main className="answerv">
@@ -148,7 +175,7 @@ export function Answer() {
       <p className="ans-lede">
         This model can run a year {paths.length} different ways. Ranked against {winners.total} things
         a company might be trying to protect, it produces <b>{winners.distinct} different sets of
-        five decisions</b>. Every one of them is bad at something the others protect
+        {' '}{word(spec.decisions.length)} decisions</b>. Every one of them is bad at something the others protect
         {winners.shared.length === 0
           ? ', and no two of them are the same plan'
           : `, and the only ones that share an answer are ${winners.shared.map((g) => g.join(' and ')).join('; ')}`}.
@@ -166,9 +193,9 @@ export function Answer() {
       </div>
 
       <div className="ans-out">
-        <p className="ans-h">The five calls that get you there</p>
+        <p className="ans-h">The {word(spec.decisions.length)} calls that get you there</p>
         <ol className="ans-steps">
-          {DECISIONS.map((d, i) => (
+          {spec.decisions.map((d, i) => (
             <li key={d.id}><span>{d.when}</span><b>{label(i)}</b></li>
           ))}
         </ol>
@@ -204,25 +231,27 @@ export function Answer() {
 
       {doNothing.summary.shedHours > 0 && (() => {
         const worst = shedByTeam(doNothing)[0];
-        const worstName = M.teams.find((t) => t.id === worst.id)?.name ?? worst.id;
+        const worstName = model.teams.find((t) => t.id === worst.id)?.name ?? worst.id;
         const share = Math.round((worst.hours / doNothing.summary.shedHours) * 100);
-        const best = LEVERS[0];
-        const lev = (iv: string) => LEVERS.find((l) => l.iv === iv);
-        const hire = lev('intervention-expedite-implementation');
-        const move = lev('intervention-reallocate-to-implementation');
-        const max = Math.max(...LEVERS.map((l) => l.r.summary.shedHours)) || 1;
+        const top = levers[0];
+        /* By what the lever does, not by its id. A model with different levers still gets
+           the right sentence, and this stops the page naming ids that may not exist. */
+        const byType = (...ts: string[]) => levers.find((l) => l.type && ts.includes(l.type));
+        const hire = byType('expediteHiring', 'hire');
+        const move = byType('reallocation');
+        const max = Math.max(...levers.map((l) => l.r.summary.shedHours)) || 1;
         return (
           <div className="ans-levers">
             <p className="ans-h">Why the year answers to some calls and not others</p>
             <p className="ans-body">
-              Demand steps up 30% in April. Leaving the plan alone ends the year
-              with <b>{hours(doNothing.summary.shedHours)}</b> of work never done, and {share}% of
-              that lands on one team: <b>{worstName}</b>. Every lever the run offers, each
-              applied on its own to that same year:
+              {scenario?.description ? <>{scenario.description} </> : null}
+              Leaving the plan alone ends the year with <b>{hours(doNothing.summary.shedHours)}</b> of
+              work never done, and {share}% of that lands on one team: <b>{worstName}</b>. Every
+              lever the run offers, each applied on its own to that same year:
             </p>
             <ol className="lev-rank">
-              {LEVERS.map((l) => (
-                <li key={l.iv} className={l.iv === best.iv ? 'top' : l.iv === 'none' ? 'nil' : ''}>
+              {levers.map((l) => (
+                <li key={l.iv} className={l.iv === top.iv ? 'top' : l.iv === 'none' ? 'nil' : ''}>
                   <span className="lev-name">{l.label}</span>
                   <span className="lev-track"><i style={{ width: (l.r.summary.shedHours / max) * 100 + '%' }} /></span>
                   <span className="lev-num">{hours(l.r.summary.shedHours)} undone</span>
@@ -231,14 +260,15 @@ export function Answer() {
               ))}
             </ol>
             <p className="ans-body">
-              <b>{best.label}</b> takes work off {worstName} directly, and it is the only call
-              that changes what the customer sees: {svcPct(best.r)}% of requests answered in
+              <b>{top.label}</b> takes work off {worstName} directly, and it is the only call
+              that changes what the customer sees: {svcPct(top.r)}% of requests answered in
               time against {svcPct(doNothing)}% for leaving it alone.
-              {hire && <> Pulling hires forward only saves {hours(doNothing.summary.shedHours - hire.r.summary.shedHours)},
-                because it adds people to a team the spike did not land on.</>}
-              {move && <> Moving people across saves about the same and takes the answer rate
-                down to {svcPct(move.r)}%, because the people come out of a queue that was
-                already answering somebody.</>}
+              {hire && hire.iv !== top.iv && <> Pulling hires forward only
+                saves {hours(doNothing.summary.shedHours - hire.r.summary.shedHours)}, because it adds
+                people to a team the pressure did not land on.</>}
+              {move && move.iv !== top.iv && <> Moving people across takes the answer rate
+                to {svcPct(move.r)}%, because the people come out of a queue that was already
+                answering somebody.</>}
             </p>
             <p className="ans-body">
               The lesson is not that tools beat people. It is that a response only works if it
@@ -258,15 +288,16 @@ export function Answer() {
           <li><b>Every lever moves more than the thing you aimed it at.</b> Moving five people
               fixes one team and breaks another. Buying a tool cancels a hire nobody revisited.
               A model that cannot show you the second effect is not worth running.</li>
-          <li><b>Some levers do nothing, and you want to know which.</b> Deferring the biggest
-              programme here changes not one number, because a dependency had already moved it.
-              Finding that out in a model costs an afternoon; finding out in the year costs the year.</li>
+          <li><b>Some levers do nothing, and you want to know which.</b> At least one call here
+              changes not a single number, because a dependency had already moved the thing it
+              was aimed at. Finding that out in a model costs an afternoon; finding out in the
+              year costs the year.</li>
         </ol>
       </div>
 
       <div className="ans-go">
         <a className="rb-opt" href="#/"><b>Run it yourself &rarr;</b>
-          <span>Five decisions, and see where you land against all {paths.length} endings.</span></a>
+          <span>{Word(spec.decisions.length)} decisions, and see where you land against all {paths.length} endings.</span></a>
         <a className="rb-opt" href="#/model"><b>Open the full model</b>
           <span>Every team, month, scenario and assumption behind this.</span></a>
       </div>

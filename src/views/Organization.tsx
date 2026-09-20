@@ -33,7 +33,12 @@ export function Organization() {
   const cross = c.crossoverPenalty;
   const blended = c.blendedPenalty;
 
-  const supportTeam = model.teams.find((t) => t.id === 'team-enterprise-support');
+  /* The smallest team with work that queues. This used to name one team by id, so the
+     example vanished on any other model, and pooling is exactly the question that matters
+     most on a small queue: it is the team with the least variance to absorb. */
+  const supportTeam = model.teams
+    .filter((t) => model.demandStreams.some((d) => d.teamId === t.id && d.answerWithinSeconds))
+    .sort((a2, b2) => a2.currentFte - b2.currentFte)[0];
   const supportResult = supportTeam ? result.teams.find((t) => t.teamId === supportTeam.id) : null;
 
   const Num = ({ label, value, onChange, step = 1, min = 0, max, unit }: { label: string; value: number; onChange: (v: number) => void; step?: number; min?: number; max?: number; unit?: string }) => (

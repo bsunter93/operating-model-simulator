@@ -188,6 +188,38 @@ export function validateModel(m: OperatingModel): string[] {
         break;
     }
   }
+
+  /* The guided run, if the model carries one. Every reference has to resolve or the run
+     offers a choice that does nothing and says nothing about why. */
+  if (m.run) {
+    if (m.run.scenarioId && !scenIds.has(m.run.scenarioId)) {
+      say(`run references unknown scenario "${m.run.scenarioId}"`);
+    }
+    if (!Array.isArray(m.run.decisions) || m.run.decisions.length === 0) {
+      say('run has no decisions');
+    } else {
+      const seen = new Set<string>();
+      for (const d of m.run.decisions) {
+        if (seen.has(d.id)) say(`duplicate run decision id "${d.id}"`);
+        seen.add(d.id);
+        if (!Number.isInteger(d.monthIndex) || d.monthIndex < 0 || d.monthIndex >= months.length) {
+          say(`run decision ${d.id}: monthIndex ${d.monthIndex} is outside the plan year`);
+        }
+        if (d.focusTeamId && !teamIds.has(d.focusTeamId)) {
+          say(`run decision ${d.id} references unknown team "${d.focusTeamId}"`);
+        }
+        if (!d.options?.length) say(`run decision ${d.id} has no options`);
+        for (const o of d.options ?? []) {
+          if (o.interventionId && !intIds.has(o.interventionId)) {
+            say(`run decision ${d.id} offers unknown intervention "${o.interventionId}"`);
+          }
+        }
+        if (!d.options?.some((o) => o.interventionId === null)) {
+          say(`run decision ${d.id} has no do-nothing option, which is always a real answer`);
+        }
+      }
+    }
+  }
   return p;
 }
 

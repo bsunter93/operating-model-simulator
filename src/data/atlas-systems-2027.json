@@ -593,5 +593,149 @@
       "share": 0.012987,
       "handlingMinutesPerUnit": 55
     }
-  ]
+  ],
+  "run": {
+    "scenarioId": "scenario-demand-shock",
+    "introEmbedUrl": "/simulator-flow.html?embed=1",
+    "decisions": [
+      {
+        "id": "d1",
+        "when": "February",
+        "monthIndex": 1,
+        "question": "Implementation cannot absorb the year in front of it.",
+        "setup": "Fifty people, and ten more already approved. Recruiting takes five months, so they land in June, and the problem starts now.",
+        "focusTeamId": "team-implementation",
+        "options": [
+          {
+            "interventionId": "intervention-expedite-implementation",
+            "label": "Pull the hires forward",
+            "price": "$120K",
+            "why": "Agency sourcing and a signing bonus. Five months becomes three."
+          },
+          {
+            "interventionId": "intervention-reallocate-to-implementation",
+            "label": "Move five people across",
+            "price": "$150K",
+            "why": "Account people cross-train and move within a month. Faster than hiring, and they come from somewhere."
+          },
+          {
+            "interventionId": null,
+            "label": "Live with it",
+            "price": "nothing",
+            "why": "Run the team hot and deal with what breaks."
+          }
+        ]
+      },
+      {
+        "id": "d2",
+        "when": "March",
+        "monthIndex": 2,
+        "question": "Two programmes are drawing on the same engineers.",
+        "setup": "Platform Scale and Enterprise Growth both staff out of Platform Engineering and Data Platform, and neither programme was planned around the other.",
+        "focusTeamId": "team-data-platform",
+        "options": [
+          {
+            "interventionId": "intervention-stretch-platform",
+            "label": "Run Platform Scale leaner",
+            "price": "nothing",
+            "why": "Thirty percent fewer people on it, running half again as long. It lands later and earns a little less."
+          },
+          {
+            "interventionId": "intervention-crash-enterprise",
+            "label": "Crash Enterprise Growth",
+            "price": "$400K",
+            "why": "Forty percent more people for a shorter run, on contractors. It lands sooner and it strains the teams doing it."
+          },
+          {
+            "interventionId": null,
+            "label": "Leave both as planned",
+            "price": "nothing",
+            "why": "The schedule stands."
+          }
+        ]
+      },
+      {
+        "id": "d3",
+        "when": "Mid-year",
+        "monthIndex": 5,
+        "question": "Consumer Operations is the next one to go.",
+        "setup": "Twelve more people are already approved to start in May. The question is whether twelve is the right answer to what is arriving.",
+        "focusTeamId": "team-consumer-ops",
+        "options": [
+          {
+            "interventionId": "intervention-automate-consumer",
+            "label": "Buy the self-service tool",
+            "price": "$1.2M",
+            "why": "Auto-resolution for the commonest case types. Three months before it touches anything."
+          },
+          {
+            "interventionId": "intervention-cancel-self-service",
+            "label": "Cancel the portal project",
+            "price": "nothing",
+            "why": "Drop it and give two teams their people back. You lose what it was going to earn."
+          },
+          {
+            "interventionId": null,
+            "label": "Hire the twelve",
+            "price": "nothing",
+            "why": "Keep the plan as written."
+          }
+        ]
+      },
+      {
+        "id": "d4",
+        "when": "Q3",
+        "monthIndex": 8,
+        "question": "The portfolio is bigger than the year.",
+        "setup": "Four programmes, all committed, all staffed from teams that are already tight. You do not have to drop one to take pressure off.",
+        "options": [
+          {
+            "interventionId": "intervention-half-portal",
+            "label": "Ship half the portal",
+            "price": "nothing",
+            "why": "Build the half that handles the commonest cases. Half the people on it, half the return."
+          },
+          {
+            "interventionId": "intervention-core-markets-only",
+            "label": "Three markets, not five",
+            "price": "nothing",
+            "why": "International Expansion at sixty percent of its scope, and sixty percent of its upside."
+          },
+          {
+            "interventionId": null,
+            "label": "Keep the full scope",
+            "price": "nothing",
+            "why": "Everything ships as written, and everyone stays busy."
+          }
+        ]
+      },
+      {
+        "id": "d5",
+        "when": "The last call",
+        "monthIndex": 11,
+        "question": "One more move before the year closes.",
+        "setup": "International Expansion is the biggest thing left, staffed out of four teams that are all running tight.",
+        "options": [
+          {
+            "interventionId": "intervention-defer-international",
+            "label": "Defer it three months",
+            "price": "nothing",
+            "why": "Push the start out and give those four teams some air."
+          },
+          {
+            "interventionId": "intervention-expedite-implementation",
+            "label": "Pull the Implementation hires in",
+            "price": "$120K",
+            "why": "If you have not already, buying three months of lead time still helps the team that broke first."
+          },
+          {
+            "interventionId": null,
+            "label": "Hold the line",
+            "price": "nothing",
+            "why": "Change nothing else and take the year as it stands."
+          }
+        ]
+      }
+    ]
+  }
 }

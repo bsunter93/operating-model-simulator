@@ -1,170 +1,88 @@
 import { useEffect, useMemo, useState } from 'react';
-import { run } from '../engine';
-import { FIXTURE } from '../state/store';
+import { monthIndex, run } from '../engine';
+import { useStore } from '../state/store';
 import type { ModelResult } from '../models/results';
+import type { OperatingModel, RunDecision, RunSpec } from '../models/types';
 import { hours } from '../lib/format';
 
 /**
- * The run: three decisions, and whatever they add up to.
+ * The run: five decisions, and whatever they add up to.
  *
  * This view exists because the board next door answers "what can this model do", and
  * the question worth answering is "do you now understand how one of these works". So
  * there is one question on screen at a time, no settings, and nothing to configure.
  * The modelling underneath is the same engine at full strength; none of it surfaces.
  *
- * Every consequence is computed by running the model with and without the choice. The
- * writing frames each decision; it never states an outcome. If the fixture changes,
- * the sentences follow it, and they cannot drift from the arithmetic.
+ * Nothing here is written against a particular set of numbers. The decisions, the year
+ * they are played on and the explainer all come from the model, and every consequence is
+ * computed by running that model with and without the choice. The writing frames each
+ * decision; it never states an outcome. Load a different model and this page is that
+ * model's run, or tells you it has not got one.
  */
-
-const M = FIXTURE;
 
 export const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const MONTHS_LONG = ['January','February','March','April','May','June',
+                     'July','August','September','October','November','December'];
 
-/*
- * The run's year is not the base plan. It is the base plan with a demand spike in it.
- *
- * On the flat year every interesting measure was dead: service level sat between 99.5%
- * and 99.9% across all 243 endings and no decision could shift it, and nothing was ever
- * left undone. The spike is what gives the five calls something to be right or wrong
- * about. It roughly doubles the spread between the best and worst year you can run
- * ($9.9M of revenue at risk to $20.9M) without touching what the levers cost, so the
- * cost/scope/time triangle keeps exactly the range it was calibrated against.
- *
- * It is stated up front rather than sprung, because the model computes the whole year at
- * once: the dashboard would have shown its damage from the first screen anyway, and a
- * surprise the instruments already gave away is just a confusing one. The lesson survives
- * being announced, and is sharper for it. You can see it coming and still not hire in time.
+export const runWith = (model: OperatingModel, spec: RunSpec, interventions: string[] = []) =>
+  run(model, { scenario: spec.scenarioId, interventions });
+
+/**
+ * Every ending the decisions can reach. One engine run each, and the whole of the rest
+ * of this file is measured against the set: it is the cloud behind the triangle, and it
+ * is what the triangle is calibrated on.
  */
-export const RUN_SCENARIO = 'scenario-demand-shock';
-const SPIKE_MONTH = 3;
-const runYear = (interventions: string[] = []) => run(M, { scenario: RUN_SCENARIO, interventions });
-
-/* The figures the questions quote, read off the model instead of typed in. The prose used
-   to carry numbers from the flat year, and every one of them quietly became wrong the
-   moment the run moved onto a spike. */
-const FACTS = (() => {
-  const r = runYear();
-  const peak = (id: string) => {
-    const t = r.teams.find((x) => x.teamId === id)!;
-    return t.months.reduce((a, b) => (b.utilization > a.utilization ? b : a));
+export function allEndings(model: OperatingModel, spec: RunSpec): ModelResult[] {
+  const out: ModelResult[] = [];
+  const walk = (i: number, picked: string[]) => {
+    if (i === spec.decisions.length) { out.push(runWith(model, spec, picked)); return; }
+    for (const o of spec.decisions[i].options) {
+      walk(i + 1, o.interventionId && !picked.includes(o.interventionId)
+        ? [...picked, o.interventionId] : picked);
+    }
   };
-  const fte = (id: string) => Math.round(M.teams.find((t) => t.id === id)!.currentFte);
-  const imp = peak('team-implementation'), co = peak('team-consumer-ops');
-  const long = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-  return {
-    impHas: fte('team-implementation'), impNeeds: Math.round(imp.requiredFte), impMonth: long[imp.monthIndex],
-    coHas: fte('team-consumer-ops'), coNeeds: Math.round(co.requiredFte), coMonth: long[co.monthIndex],
-    coCases: (M.demandStreams.find((d) => d.teamId === 'team-consumer-ops')!.annualVolume).toLocaleString(),
-  };
-})();
+  walk(0, []);
+  return out;
+}
 
-export type Option = {
-  /** null is the do-nothing branch, which is a real answer and stays available. */
-  iv: string | null;
-  label: string;
-  price: string;
-  why: string;
-};
-export type Decision = { id: string; when: string; /** Which month of the plan year this lands in. */ monthIndex: number; question: string; setup: string; options: Option[] };
-
-export const DECISIONS: Decision[] = [
-  {
-    id: 'd1',
-    when: 'February', monthIndex: 1,
-    question: 'Implementation cannot absorb the year in front of it.',
-    setup:
-      `${FACTS.impHas} people, and ten more already approved. Recruiting takes five months, so those land in June, and by ${FACTS.impMonth} the work in front of this team needs ${FACTS.impNeeds}.`,
-    options: [
-      { iv: 'intervention-expedite-implementation', label: 'Pull the hires forward', price: '$120K',
-        why: 'Agency sourcing and a signing bonus. Five months becomes three.' },
-      { iv: 'intervention-reallocate-to-implementation', label: 'Move five people across', price: '$150K',
-        why: 'Account people cross-train and move within a month. Faster than hiring, and they come from somewhere.' },
-      { iv: null, label: 'Live with it', price: 'nothing',
-        why: 'Run the team hot and deal with what breaks.' },
-    ],
-  },
-  {
-    id: 'd2',
-    when: 'March', monthIndex: 2,
-    question: 'Two programmes are drawing on the same engineers.',
-    setup:
-      'Platform Scale and Enterprise Growth both staff out of Platform Engineering and Data Platform, and Data Platform is the tightest team in the company.',
-    options: [
-      { iv: 'intervention-stretch-platform', label: 'Run Platform Scale leaner', price: 'nothing',
-        why: 'Thirty percent fewer people on it, running half again as long. It lands later and earns a little less.' },
-      { iv: 'intervention-crash-enterprise', label: 'Crash Enterprise Growth', price: '$400K',
-        why: 'Forty percent more people for a shorter run, on contractors. It lands sooner and it strains the teams doing it.' },
-      { iv: null, label: 'Leave both as planned', price: 'nothing',
-        why: 'The schedule stands.' },
-    ],
-  },
-  {
-    id: 'd3',
-    when: 'Mid-year', monthIndex: 5,
-    question: 'Consumer Operations is the next one to go.',
-    setup:
-      `${FACTS.coHas} people, planned for ${FACTS.coCases} cases, with twelve more approved to start in May. April moved the arrival rate, and by ${FACTS.coMonth} the same team is being asked for ${FACTS.coNeeds}. Twelve does not close that, so the question is what does.`,
-    options: [
-      { iv: 'intervention-automate-consumer', label: 'Buy the self-service tool', price: '$1.2M',
-        why: 'Auto-resolution for the commonest case types. Three months before it touches anything.' },
-      { iv: 'intervention-cancel-self-service', label: 'Cancel the portal project', price: 'nothing',
-        why: 'Drop it and give two teams their people back. You lose what it was going to earn.' },
-      { iv: null, label: 'Hire the twelve', price: 'nothing',
-        why: 'Keep the plan as written.' },
-    ],
-  },
-  {
-    id: 'd4',
-    when: 'Q3', monthIndex: 8,
-    question: 'The portfolio is bigger than the year.',
-    setup:
-      'Four programmes, all committed, all staffed from teams that are already tight. You do not have to drop one to take pressure off.',
-    options: [
-      { iv: 'intervention-half-portal', label: 'Ship half the portal', price: 'nothing',
-        why: 'Build the half that handles the commonest cases. Half the people on it, half the return.' },
-      { iv: 'intervention-core-markets-only', label: 'Three markets, not five', price: 'nothing',
-        why: 'International Expansion at sixty percent of its scope, and sixty percent of its upside.' },
-      { iv: null, label: 'Keep the full scope', price: 'nothing',
-        why: 'Everything ships as written, and everyone stays busy.' },
-    ],
-  },
-  {
-    id: 'd5',
-    when: 'The last call', monthIndex: 11,
-    question: 'One more move before the year closes.',
-    setup:
-      'International Expansion is the biggest thing left, staffed out of four teams that are all running tight.',
-    options: [
-      { iv: 'intervention-defer-international', label: 'Defer it three months', price: 'nothing',
-        why: 'Push the start out and give those four teams some air.' },
-      { iv: 'intervention-expedite-implementation', label: 'Pull the Implementation hires in', price: '$120K',
-        why: 'If you have not already, buying three months of lead time still helps the team that broke first.' },
-      { iv: null, label: 'Hold the line', price: 'nothing',
-        why: 'Change nothing else and take the year as it stands.' },
-    ],
-  },
-];
 /*
  * Cost, scope and time: where a run has put you, and how it got there.
  *
  * Each axis scores how much of that dimension survived your decisions, normalised over
  * what is actually reachable in this model rather than over an invented scale. The point
  * is the weighted centre of the three, so protecting everything sits in the middle and
- * every trade pulls it toward a corner. Doing nothing scores 1/1/1 and sits dead centre,
- * which is the honest reading of doing nothing.
+ * every trade pulls it toward a corner.
+ *
+ * The bounds are measured from the endings, not typed in. They used to be four constants
+ * calibrated by hand against one fixture, which meant any other model drew positions that
+ * clamped silently at a corner: the one failure of this visual a reader cannot see.
  */
-const AXIS_RANGE = { spendMax: 1_870_000, valueMin: 68_400_000, valueMax: 92_000_000, lateMin: 9, lateMax: 13 };
-
+export type TriCal = { spend: [number, number]; value: [number, number]; late: [number, number] };
 export type TriPos = { x: number; y: number; cost: number; scope: number; time: number };
 
-export function triangleOf(r: ModelResult): TriPos {
-  const spend = r.financials.monthly.reduce((a, m) => a + m.changeCostUsd, 0);
-  const late = r.initiatives.reduce((a, i) => a + (i.delayMonths ?? 0), 0);
-  const clamp = (v: number) => (v < 0 ? 0 : v > 1 ? 1 : v);
-  const cost = clamp(1 - spend / AXIS_RANGE.spendMax);
-  const scope = clamp((r.summary.portfolioValueUsd - AXIS_RANGE.valueMin) / (AXIS_RANGE.valueMax - AXIS_RANGE.valueMin));
-  const time = clamp(1 - (late - AXIS_RANGE.lateMin) / (AXIS_RANGE.lateMax - AXIS_RANGE.lateMin));
+const spendOf = (r: ModelResult) => r.financials.monthly.reduce((a, m) => a + m.changeCostUsd, 0);
+const lateOf = (r: ModelResult) => r.initiatives.reduce((a, i) => a + (i.delayMonths ?? 0), 0);
+
+export function calibrate(endings: ModelResult[]): TriCal {
+  const span = (f: (r: ModelResult) => number): [number, number] => {
+    const v = endings.map(f);
+    return [Math.min(...v), Math.max(...v)];
+  };
+  return { spend: span(spendOf), value: span((r) => r.summary.portfolioValueUsd), late: span(lateOf) };
+}
+
+export function triangleOf(r: ModelResult, cal: TriCal): TriPos {
+  /* An axis with no range is an axis nothing on the table trades away. Scoring it 1
+     keeps it out of the picture instead of dividing by zero and putting every run in
+     the same wrong place. */
+  const norm = (v: number, [lo, hi]: [number, number], goodIsLow: boolean) => {
+    if (!(hi > lo)) return 1;
+    const t = (v - lo) / (hi - lo);
+    return goodIsLow ? 1 - t : t;
+  };
+  const cost = norm(spendOf(r), cal.spend, true);
+  const scope = norm(r.summary.portfolioValueUsd, cal.value, false);
+  const time = norm(lateOf(r), cal.late, true);
   const sum = cost + scope + time || 1;
   // cost at the apex, scope bottom-left, time bottom-right
   const x = (cost * 0.5 + scope * 0 + time * 1) / sum;
@@ -203,16 +121,18 @@ function Triangle({ trail, cloud, size = 1 }: { trail: TriPos[]; cloud?: TriPos[
 /**
  * The year, always on screen. A model that runs on an annual cycle and never shows you a
  * calendar leaves you guessing where "mid-year" is relative to the hire that lands in May.
- * Months already decided are filled; the one you are being asked about is marked.
+ * Months already decided are filled; the one you are being asked about is marked; and the
+ * month the year changes under you, if the scenario has one, carries an arrow.
  */
-function YearStrip({ at, decided, spike }: { at: number | null; decided: number[]; spike?: number }) {
+function YearStrip({ at, decided, spike, months }:
+  { at: number | null; decided: number[]; spike: number | null; months: string[] }) {
   return (
     <ol className="rb-year" aria-label="The plan year">
-      {MONTHS.map((m, i) => (
-        <li key={m}
+      {months.map((m, i) => (
+        <li key={m + i}
             className={[i === at ? 'now' : decided.some((d) => d === i) ? 'done' : i < (at ?? -1) ? 'past' : '',
                         i === spike ? 'spike' : ''].filter(Boolean).join(' ')}
-            title={i === spike ? 'Demand steps up 30% here and stays there' : undefined}>
+            title={i === spike ? 'The year changes here' : undefined}>
           <i /><span>{m}</span>
         </li>
       ))}
@@ -221,6 +141,14 @@ function YearStrip({ at, decided, spike }: { at: number | null; decided: number[
 }
 
 const pct = (n: number) => Math.round(n * 100) + '%';
+/* Small counts read as words in a sentence and as digits in a label. "Two of your 5
+   calls" is neither. */
+const WORDS = ['no','one','two','three','four','five','six','seven','eight','nine','ten','eleven','twelve'];
+export const word = (n: number) => WORDS[n] ?? String(n);
+export const Word = (n: number) => word(n).replace(/^./, (c) => c.toUpperCase());
+/* A scenario description is written as its own sentence. Spliced after a colon it needs
+   to start lower case, or the line reads as two sentences jammed together. */
+const uncap = (t: string) => (t ? t[0].toLowerCase() + t.slice(1) : t);
 /** "a", "a and b", "a, b and c". Joining three names with two "and"s reads like a list
     nobody proofread. */
 const list = (xs: string[]) =>
@@ -228,11 +156,12 @@ const list = (xs: string[]) =>
 export const mUsd = (n: number) => '$' + (n / 1e6).toFixed(2) + 'M';
 
 /** One grammar for every team: a bar, and the line it should not cross. */
-function TeamBars({ result, highlight }: { result: ModelResult; highlight?: string[] }) {
+function TeamBars({ model, result, highlight }:
+  { model: OperatingModel; result: ModelResult; highlight?: string[] }) {
   return (
     <ul className="rb-teams">
       {result.teams.map((t) => {
-        const team = M.teams.find((x) => x.id === t.teamId)!;
+        const team = model.teams.find((x) => x.id === t.teamId)!;
         const u = t.peakUtilization;
         const cap = t.months[0].targetUtilization;
         const state = u > cap ? 'over' : u > cap - 0.06 ? 'near' : 'ok';
@@ -252,12 +181,32 @@ function TeamBars({ result, highlight }: { result: ModelResult; highlight?: stri
 }
 
 /**
+ * Where the team a question is about actually stands, read off the model as it is right
+ * now. The questions used to carry these numbers in their prose, and every one of them
+ * was quietly wrong the day the run moved onto a different year.
+ */
+function FocusLine({ model, result, teamId }:
+  { model: OperatingModel; result: ModelResult; teamId: string }) {
+  const t = result.teams.find((x) => x.teamId === teamId);
+  if (!t || t.months.length === 0) return null;
+  const worst = t.months.reduce((a, b) => (b.utilization > a.utilization ? b : a));
+  const name = model.teams.find((x) => x.id === teamId)?.name ?? teamId;
+  return (
+    <p className="rb-focus">
+      <b>{name}</b> peaks in {MONTHS_LONG[worst.monthIndex] ?? worst.month}: the work needs{' '}
+      <b>{Math.round(worst.requiredFte)}</b> people at a pace they can hold, against{' '}
+      <b>{Math.round(worst.availableFte)}</b> on the team. That is {pct(worst.utilization)} of what they have.
+    </p>
+  );
+}
+
+/**
  * What the strain is doing to the odds. The engine computes this already: a team running
  * short lifts the chance the work it is staffing misses, as 1-(1-p)(1-shortfall). Showing
  * it beats adding a dice roll, which would be the only invented number on the page.
  */
-function InitiativeRisk({ result }: { result: ModelResult }) {
-  const named = (id: string) => M.initiatives.find((i) => i.id === id)?.name ?? id;
+function InitiativeRisk({ model, result }: { model: OperatingModel; result: ModelResult }) {
+  const named = (id: string) => model.initiatives.find((i) => i.id === id)?.name ?? id;
   const items = [...result.exposure.items].sort((a, b) => b.exposureUsd - a.exposureUsd);
   return (
     <ul className="rb-risks">
@@ -292,32 +241,26 @@ function Kpis({ result, prev }: { result: ModelResult; prev?: ModelResult }) {
   };
   return (
     <div className="rb-kpis">
-      {/* Not "teams over capacity": on a spike year that reads 7 whatever you do, and a
-          dashboard cell that never moves teaches the reader to stop looking at it. The
-          board below still shows every team. Service level is the one the decisions
-          actually move, from 33% to 82% across the endings. */}
+      {/* Not "teams over capacity": on a year with real pressure in it that reads the same
+          number whatever you do, and a dashboard cell that never moves teaches the reader
+          to stop looking at it. The board below still shows every team. */}
       {s.serviceLevelPct !== null
         ? cell('Answered in time', Math.round(s.serviceLevelPct * 100) + '%',
                p?.serviceLevelPct != null ? s.serviceLevelPct - p.serviceLevelPct : undefined, false)
         : cell('Teams over capacity', String(s.teamsConstrained), p && s.teamsConstrained - p.teamsConstrained)}
       {cell('People, year end', String(Math.round(s.endingFte)), p && s.endingFte - p.endingFte)}
       {cell('Revenue at risk', mUsd(s.revenueExposureUsd), p && s.revenueExposureUsd - p.revenueExposureUsd)}
-      {cell('Spent on changes', mUsd(changeSpend(result)), undefined)}
+      {cell('Spent on changes', mUsd(spendOf(result)), undefined)}
     </div>
   );
 }
 
-/** What the decisions cost, as opposed to what running the company costs. */
-function changeSpend(r: ModelResult): number {
-  return r.financials.monthly.reduce((a, m) => a + m.changeCostUsd, 0);
-}
-
 /** Said in sentences, computed from the two runs. Never authored. */
-function consequence(before: ModelResult, after: ModelResult): string[] {
+function consequence(model: OperatingModel, before: ModelResult, after: ModelResult): string[] {
   const out: string[] = [];
   const moved = after.teams
     .map((t, i) => ({
-      name: M.teams.find((x) => x.id === t.teamId)!.name,
+      name: model.teams.find((x) => x.id === t.teamId)!.name,
       d: (t.peakUtilization - before.teams[i].peakUtilization) * 100,
     }))
     .filter((x) => Math.abs(x.d) > 0.4);
@@ -329,7 +272,7 @@ function consequence(before: ModelResult, after: ModelResult): string[] {
   // "Nothing moved" was being said about team load and then immediately contradicted by a
   // line about money. It is specific now, and the no-change-at-all case is decided at the
   // end, once everything else has had its say.
-  if (!moved.length) out.push('No team\u2019s load changed.');
+  if (!moved.length) out.push('No team’s load changed.');
 
   const dOver = after.summary.teamsConstrained - before.summary.teamsConstrained;
   if (dOver > 0) out.push(`Teams over capacity went from ${before.summary.teamsConstrained} to ${after.summary.teamsConstrained}: you fixed one and started another.`);
@@ -350,61 +293,95 @@ function consequence(before: ModelResult, after: ModelResult): string[] {
   return out.length === 1 && !moved.length ? ['Nothing changed. That is an answer too.'] : out;
 }
 
-/**
- * Every ending reachable from these decisions. 3^5 runs of the engine, computed once and
- * held, so the scorecard can show where your year sits among the years you did not have.
- */
-let REACHABLE: TriPos[] | null = null;
-function reachable(): TriPos[] {
-  if (REACHABLE) return REACHABLE;
-  const out: TriPos[] = [];
-  const walk = (i: number, picked: string[]) => {
-    if (i === DECISIONS.length) { out.push(triangleOf(runYear(picked))); return; }
-    for (const o of DECISIONS[i].options) {
-      walk(i + 1, o.iv && !picked.includes(o.iv) ? [...picked, o.iv] : picked);
-    }
-  };
-  walk(0, []);
-  REACHABLE = out;
-  return out;
+/** A model can arrive without a run. Say so, rather than rendering an empty board. */
+function NoRun({ name }: { name: string }) {
+  return (
+    <main className="runv">
+      <div className="rb-body solo">
+        <section className="rb-ask">
+          <span className="rb-when">No guided run</span>
+          <h1>{name} does not carry a run.</h1>
+          <p className="rb-setup">A run is a short list of decisions a reader is walked through,
+             and it lives in the model file beside the scenarios and the levers it is made of.
+             This model has not got one, which changes nothing about the model itself.</p>
+          <div className="rb-opts rb-opts-lead">
+            <a className="rb-opt rb-go" href="#/model"><b>Open the full model &rarr;</b>
+              <span>Every team, month, scenario and assumption, with nothing skipped.</span></a>
+          </div>
+        </section>
+      </div>
+    </main>
+  );
 }
 
 export function Run() {
-  const [started, setStarted] = useState(false);
+  const { model } = useStore();
+  return model.run && model.run.decisions.length > 0
+    ? <RunFor model={model} spec={model.run} />
+    : <NoRun name={model.name} />;
+}
+
+function RunFor({ model, spec }: { model: OperatingModel; spec: RunSpec }) {
+  /* Whether these are the sample numbers or somebody's own. "Calibrated" is a statement
+     about a model's internal consistency, not about whether the company exists, and
+     reading it as the latter had this page calling a fictional company real. */
+  const { isFixture } = useStore();
   const [picks, setPicks] = useState<(string | null)[]>([]);
+  const [started, setStarted] = useState(false);
   const [preview, setPreview] = useState<string | null | undefined>(undefined);
 
+  const decisions = spec.decisions;
   const chosen = picks.filter((p): p is string => !!p);
   const step = picks.length;
-  const done = step >= DECISIONS.length;
+  const done = step >= decisions.length;
 
-  const current = useMemo(() => runYear(chosen), [chosen.join('|')]);
-  const doNothing = useMemo(() => runYear(), []);
+  const months = useMemo(
+    () => MONTHS.slice(0, 12).map((_, i) => MONTHS[i]),
+    [],
+  );
+  /* The month the year changes under you, taken from the scenario rather than typed in. */
+  const scenario = spec.scenarioId ? model.scenarios.find((s) => s.id === spec.scenarioId) : undefined;
+  const spike = useMemo(() => {
+    const from = (scenario as { fromMonth?: string } | undefined)?.fromMonth;
+    if (!from) return null;
+    const i = monthIndex(model.calendar.startMonth, from);
+    return i >= 0 && i < months.length ? i : null;
+  }, [scenario, model.calendar.startMonth, months.length]);
+
+  const go = (ivs: string[] = []) => runWith(model, spec, ivs);
+  const current = useMemo(() => go(chosen), [model, spec, chosen.join('|')]);
+  const doNothing = useMemo(() => go(), [model, spec]);
   const previous = useMemo(
-    () => runYear(picks.slice(0, -1).filter((p): p is string => !!p)),
-    [picks.length, chosen.join('|')],
+    () => go(picks.slice(0, -1).filter((p): p is string => !!p)),
+    [model, spec, picks.length, chosen.join('|')],
   );
-
   const previewResult = useMemo(
-    () => (preview === undefined ? null : runYear(preview ? [...chosen, preview] : chosen)),
-    [preview, chosen.join('|')],
+    () => (preview === undefined ? null : go(preview ? [...chosen, preview] : chosen)),
+    [model, spec, preview, chosen.join('|')],
   );
-
   const shown = previewResult ?? current;
+
+  /* Computed once per model: the cloud behind the triangle, and the bounds every
+     position on it is measured against. */
+  const endings = useMemo(() => allEndings(model, spec), [model, spec]);
+  const cal = useMemo(() => calibrate(endings), [endings]);
+  const cloud = useMemo(() => endings.map((r) => triangleOf(r, cal)), [endings, cal]);
 
   /* One position per state the run has been in, ending on whatever is on screen now,
      so hovering a choice moves the marker before you commit to it. */
   const trail = useMemo(() => {
     const steps: TriPos[] = [];
     for (let i = 0; i <= picks.length; i++) {
-      steps.push(triangleOf(runYear(picks.slice(0, i).filter((p): p is string => !!p))));
+      steps.push(triangleOf(go(picks.slice(0, i).filter((p): p is string => !!p)), cal));
     }
-    if (previewResult) steps.push(triangleOf(previewResult));
+    if (previewResult) steps.push(triangleOf(previewResult, cal));
     return steps;
-  }, [picks.join('|'), preview]);
+  }, [model, spec, cal, picks.join('|'), preview]);
+
   const triNow = trail[trail.length - 1];
-  const d = DECISIONS[Math.min(step, DECISIONS.length - 1)];
-  const lastLines = step > 0 && !done ? consequence(previous, current) : [];
+  const d: RunDecision = decisions[Math.min(step, decisions.length - 1)];
+  const lastLines = step > 0 && !done ? consequence(model, previous, current) : [];
+  const beforeSpike = spike === null ? 0 : decisions.filter((x) => x.monthIndex < spike).length;
 
   return (
     <main className="runv">
@@ -413,14 +390,14 @@ export function Run() {
       <header className="rb-dash">
         <div className="rb-dash-in">
           <div className="rb-dash-id">
-            <b>Atlas Systems</b>
-            <span>2027 &middot; fictional company, real arithmetic</span>
+            <b>{model.name}</b>
+            <span>{model.calendar.startMonth.slice(0, 4)} &middot; {isFixture ? 'fictional company' : 'your numbers'}, real arithmetic</span>
             {/* Nothing is pending before you begin, so nothing is marked. Highlighting
                 February on the opening screen implied a decision you had not been asked for. */}
             <YearStrip
-              at={!started || done ? null : DECISIONS[Math.min(step, DECISIONS.length - 1)].monthIndex}
-              decided={started ? DECISIONS.slice(0, step).map((dd) => dd.monthIndex) : []}
-              spike={SPIKE_MONTH} />
+              at={!started || done ? null : d.monthIndex}
+              decided={started ? decisions.slice(0, step).map((dd) => dd.monthIndex) : []}
+              spike={spike} months={months} />
           </div>
           <div className="rb-dash-tri">
             <Triangle trail={trail} />
@@ -440,34 +417,44 @@ export function Run() {
             <>
               <span className="rb-when">Before you start</span>
               <h1>One decision, followed all the way through.</h1>
-              <p className="rb-setup">This is a year of a fictional company&rsquo;s plan, with one
-                 thing in it the plan did not budget for: demand steps up 30% in April and stays
-                 there. Two of your five calls come before it lands. Before you run it, here is what
-                 the model does with a single choice: a support tool, the team it helps, the teams
-                 downstream of that team, the hire it makes unnecessary, and what that is worth.</p>
+              <p className="rb-setup">
+                This is a year of {isFixture ? 'a fictional company’s' : 'your'} plan
+                {scenario?.description
+                  ? <>, with one thing in it the plan did not budget for: {uncap(scenario.description)}</>
+                  : '.'}
+                {beforeSpike > 0
+                  ? <> {Word(beforeSpike)} of your {word(decisions.length)} calls
+                      come{beforeSpike === 1 ? 's' : ''} before it lands.</>
+                  : <> You make {word(decisions.length)} calls of your own.</>}
+              </p>
               {/* Above the board, not below it. At 900px the button sat under a 380px
                   animation and the only thing you could do on the page was off screen. */}
               <div className="rb-opts rb-opts-lead">
                 <button className="rb-opt rb-go" onClick={() => setStarted(true)}>
                   <b>Start the year &rarr;</b>
-                  <span>Five decisions, January to December. Nothing to configure, and no way to lose.</span>
+                  <span>{Word(decisions.length)} decisions, {months[0]} to {months[months.length - 1]}. Nothing to configure, and no way to lose.</span>
                 </button>
                 <a className="rb-opt" href="#/answer">
                   <b>Or skip to the answer</b>
-                  <span>Tell it what you are protecting and it will tell you which five calls get you there.</span>
+                  <span>Tell it what you are protecting and it will tell you which calls get you there.</span>
                 </a>
               </div>
-              <p className="rb-intro-h">First, what the model does with one decision</p>
-              <figure className="rb-intro">
-                <iframe src="/simulator-flow.html?embed=1" loading="eager"
-                        title="One efficiency followed from the tool that buys it to the money it frees" />
-              </figure>
+              {spec.introEmbedUrl && (
+                <>
+                  <p className="rb-intro-h">First, what the model does with one decision</p>
+                  <figure className="rb-intro">
+                    <iframe src={spec.introEmbedUrl} loading="eager"
+                            title="One efficiency followed from the tool that buys it to the money it frees" />
+                  </figure>
+                </>
+              )}
             </>
           ) : !done ? (
             <>
-              <span className="rb-when">{d.when} &middot; decision {step + 1} of {DECISIONS.length}</span>
+              <span className="rb-when">{d.when} &middot; decision {step + 1} of {decisions.length}</span>
               <h1>{d.question}</h1>
               <p className="rb-setup">{d.setup}</p>
+              {d.focusTeamId && <FocusLine model={model} result={current} teamId={d.focusTeamId} />}
 
               {lastLines.length > 0 && (
                 <div className="rb-result">
@@ -478,17 +465,17 @@ export function Run() {
 
               <div className="rb-opts">
                 {d.options.map((o) => {
-                  const spent = !!o.iv && chosen.includes(o.iv);
+                  const spent = !!o.interventionId && chosen.includes(o.interventionId);
                   return (
                     <button
                       key={o.label}
                       className={'rb-opt' + (spent ? ' spent' : '')}
                       disabled={spent}
-                      onMouseEnter={() => !spent && setPreview(o.iv)}
+                      onMouseEnter={() => !spent && setPreview(o.interventionId)}
                       onMouseLeave={() => setPreview(undefined)}
-                      onFocus={() => !spent && setPreview(o.iv)}
+                      onFocus={() => !spent && setPreview(o.interventionId)}
                       onBlur={() => setPreview(undefined)}
-                      onClick={() => { setPreview(undefined); setPicks([...picks, o.iv]); }}
+                      onClick={() => { setPreview(undefined); setPicks([...picks, o.interventionId]); }}
                     >
                       <b>{o.label}</b>
                       <em>{spent ? 'already done' : o.price}</em>
@@ -500,16 +487,18 @@ export function Run() {
               <p className="rb-hint">Hover a choice to see the board move before you commit.</p>
             </>
           ) : (
-            <Scorecard picks={picks} result={current} doNothing={doNothing} trail={trail} onReset={() => setPicks([])} />
+            <Scorecard model={model} spec={spec} picks={picks} result={current}
+                       doNothing={doNothing} trail={trail} cloud={cloud} cal={cal}
+                       onReset={() => setPicks([])} />
           )}
         </section>
 
         {started && <section className="rb-board">
           <span className="rb-board-h">Every team, at its busiest month</span>
-          <TeamBars result={shown} />
+          <TeamBars model={model} result={shown} />
           <p className="rb-legend">The mark on each bar is what that team can sustain. Past it, someone is working late all year.</p>
           <span className="rb-board-h" style={{ marginTop: 20 }}>What that puts at risk</span>
-          <InitiativeRisk result={shown} />
+          <InitiativeRisk model={model} result={shown} />
           <p className="rb-legend">Every programme can miss on its own. A team running short makes it likelier, and the money is what that costs.</p>
           {shown.summary.serviceLevelPct !== null && (
             <>
@@ -523,7 +512,7 @@ export function Run() {
                 <p className="rb-service">
                   <b>{hours(shown.summary.shedHours)}</b> of work never got done at all
                   {shown.summary.closingBacklogHours > 0
-                    ? <>, and <b>{hours(shown.summary.closingBacklogHours)}</b> was still waiting in December.</>
+                    ? <>, and <b>{hours(shown.summary.closingBacklogHours)}</b> was still waiting at year end.</>
                     : '.'}
                 </p>
               )}
@@ -547,17 +536,18 @@ export function Run() {
  * you made, and the captions are the same computed sentences the run showed you at the
  * time. Nothing here is authored per path.
  */
-function Replay({ picks, trail }: { picks: (string | null)[]; trail: TriPos[] }) {
+function Replay({ model, spec, picks, trail }:
+  { model: OperatingModel; spec: RunSpec; picks: (string | null)[]; trail: TriPos[] }) {
   const [at, setAt] = useState(0);
   const [playing, setPlaying] = useState(true);
 
   const states = useMemo(() => {
     const out: ModelResult[] = [];
     for (let i = 0; i <= picks.length; i++) {
-      out.push(runYear(picks.slice(0, i).filter((p): p is string => !!p)));
+      out.push(runWith(model, spec, picks.slice(0, i).filter((p): p is string => !!p)));
     }
     return out;
-  }, [picks.join('|')]);
+  }, [model, spec, picks.join('|')]);
 
   useEffect(() => {
     if (!playing) return;
@@ -567,14 +557,14 @@ function Replay({ picks, trail }: { picks: (string | null)[]; trail: TriPos[] })
   }, [at, playing, states.length]);
 
   const chosenAt = (i: number) => {
-    const d = DECISIONS[i];
+    const d = spec.decisions[i];
     const iv = picks[i];
-    return d.options.find((o) => o.iv === iv) ?? d.options[d.options.length - 1];
+    return d.options.find((o) => o.interventionId === iv) ?? d.options[d.options.length - 1];
   };
-  const lines = at > 0 ? consequence(states[at - 1], states[at]) : [];
+  const lines = at > 0 ? consequence(model, states[at - 1], states[at]) : [];
   const head = at === 0
-    ? { when: 'January', what: 'The plan as written' }
-    : { when: DECISIONS[at - 1].when, what: chosenAt(at - 1).label };
+    ? { when: MONTHS_LONG[0], what: 'The plan as written' }
+    : { when: spec.decisions[at - 1].when, what: chosenAt(at - 1).label };
 
   return (
     <div className="rb-replay">
@@ -596,7 +586,7 @@ function Replay({ picks, trail }: { picks: (string | null)[]; trail: TriPos[] })
         </div>
       </div>
       <div className="rb-replay-body">
-        <TeamBars result={states[at]} />
+        <TeamBars model={model} result={states[at]} />
         <div className="rb-replay-side">
           <Triangle trail={trail.slice(0, at + 1)} size={1.1} />
           <ul className="rb-replay-kpi">
@@ -608,22 +598,24 @@ function Replay({ picks, trail }: { picks: (string | null)[]; trail: TriPos[] })
         </div>
       </div>
       <div className="rb-replay-say">
-        {lines.length ? lines.map((l) => <p key={l}>{l}</p>) : <p className="dim">Eight teams, four programmes, and nothing decided yet.</p>}
+        {lines.length ? lines.map((l) => <p key={l}>{l}</p>)
+          : <p className="dim">{model.teams.length} teams, {model.initiatives.length} programmes, and nothing decided yet.</p>}
       </div>
     </div>
   );
 }
 
-function Scorecard({ picks, result, doNothing, onReset, trail }:
-  { picks: (string | null)[]; result: ModelResult; doNothing: ModelResult; onReset: () => void; trail: TriPos[] }) {
+function Scorecard({ model, spec, picks, result, doNothing, onReset, trail, cloud }:
+  { model: OperatingModel; spec: RunSpec; picks: (string | null)[]; result: ModelResult;
+    doNothing: ModelResult; onReset: () => void; trail: TriPos[]; cloud: TriPos[]; cal: TriCal }) {
   const s = result.summary, n = doNothing.summary;
-  const spent = changeSpend(result);
+  const spent = spendOf(result);
   const took = picks.filter(Boolean).length;
 
-  /* No win state. The run is read back as what it protected and what that cost. */
-  /* Read off service level and revenue, not the count of teams over capacity. On a spike
-     year that count is 7 whichever way you play it, so a verdict hung on it said the same
-     sentence about materially different years. */
+  /* No win state. The run is read back as what it protected and what that cost. Read off
+     service level and revenue, not the count of teams over capacity: on a year with real
+     pressure in it that count barely moves, so a verdict hung on it said the same sentence
+     about materially different years. */
   const riskCut = n.revenueExposureUsd - s.revenueExposureUsd;
   const svcUp = (s.serviceLevelPct ?? 0) - (n.serviceLevelPct ?? 0);
   const verdict =
@@ -638,15 +630,15 @@ function Scorecard({ picks, result, doNothing, onReset, trail }:
     <>
       <span className="rb-when">The year, as you ran it</span>
       <h1>{verdict}</h1>
-      <Replay picks={picks} trail={trail} />
+      <Replay model={model} spec={spec} picks={picks} trail={trail} />
       <div className="rb-final">
-        <Triangle trail={trail} cloud={reachable()} size={1.55} />
+        <Triangle trail={trail} cloud={cloud} size={1.55} />
         <div>
           <p className="rb-final-h">Every year you could have had</p>
-          <p className="rb-setup">Each faint mark is one of the {reachable().length} ways these five
-             decisions could have gone. Yours is the filled one, and the line is how it got there.
-             Leaving the plan alone sits dead centre, because it gives up none of the three.
-             Every mark away from the centre is one of them traded for another.</p>
+          <p className="rb-setup">Each faint mark is one of the {cloud.length} ways these
+             {' '}{spec.decisions.length} decisions could have gone. Yours is the filled one, and the
+             line is how it got there. Leaving the plan alone sits dead centre, because it gives
+             up none of the three. Every mark away from the centre is one of them traded for another.</p>
         </div>
       </div>
       <table className="rb-score">

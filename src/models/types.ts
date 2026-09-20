@@ -224,6 +224,50 @@ export interface DemoIntent {
   intents: string[];
 }
 
+/**
+ * The guided run, as data.
+ *
+ * This used to be a table written into the run view, which meant the demo only existed
+ * for the one model it was typed against: nine intervention ids, two team ids and a
+ * scenario, all hardcoded in a React component. Any other set of numbers loaded into the
+ * app got the full model and no run at all. It belongs to the model, like the scenarios
+ * and the levers it is made of.
+ */
+export interface RunOption {
+  /** null is the do-nothing branch, which is a real answer and stays on the table. */
+  interventionId: string | null;
+  label: string;
+  /** What it costs, said the way a person would say it: "$120K", "nothing". */
+  price: string;
+  why: string;
+}
+
+export interface RunDecision {
+  id: string;
+  /** How the moment is named to the reader: "February", "Mid-year", "The last call". */
+  when: string;
+  /** Which month of the plan year it lands in, zero-based. */
+  monthIndex: number;
+  question: string;
+  setup: string;
+  /**
+   * The team the question is about, if it is about one. The view reads that team's worst
+   * month off the model and states it under the question, so the prose never has to carry
+   * a figure that can go stale. Every number in the old copy did go stale, the day the run
+   * moved onto a different year.
+   */
+  focusTeamId?: string;
+  options: RunOption[];
+}
+
+export interface RunSpec {
+  /** The year the run is played on. Omitted means the base plan. */
+  scenarioId?: string;
+  /** An explainer to show before the first decision. Omitted means none. */
+  introEmbedUrl?: string;
+  decisions: RunDecision[];
+}
+
 export interface OperatingModel {
   modelVersion: string;
   id: string;
@@ -244,6 +288,8 @@ export interface OperatingModel {
   scenarios: Scenario[];
   interventions: Intervention[];
   decisionWeights: DecisionWeights;
+  /** The guided run. Optional: a model without one still opens in the full board. */
+  run?: RunSpec;
   /** Author metadata. Never read by the engine. */
   demoIntent?: DemoIntent;
 }
