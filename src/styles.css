@@ -800,6 +800,8 @@ details.tuck p{font-size:12.5px;color:var(--muted);margin:8px 0 6px}
    run and the way home survive. The explainer is reachable from the first story beat and
    the board's own tabs; Your numbers is a tool affordance and this is a demonstration. */
 @media (max-width:900px){
+  /* Two things fit here. Now that the run is where you land, the one worth keeping is the
+     way out of it; Your numbers is a tool affordance and this is a demonstration. */
   .mast-how,.mast-mine{display:none}
 }
 /* The run is the short way in, so it survives the narrow masthead where the
@@ -861,6 +863,11 @@ details.tuck p{font-size:12.5px;color:var(--muted);margin:8px 0 6px}
 @media (max-width:760px){.rb-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
 
 .rb-body{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:clamp(24px,4vw,44px);align-items:start}
+/* The opening has no decisions to give context to yet, so it takes the whole width
+   and the chain board gets enough of it to stay legible. */
+.rb-body.solo{grid-template-columns:minmax(0,1fr)}
+.rb-body.solo .rb-ask h1{max-width:26ch}
+.rb-body.solo .rb-setup{max-width:72ch}
 @media (max-width:900px){.rb-body{grid-template-columns:minmax(0,1fr)}}
 
 .rb-when{font:500 10px/1 var(--mono);letter-spacing:.13em;text-transform:uppercase;color:var(--accent)}
@@ -957,3 +964,12 @@ details.tuck p{font-size:12.5px;color:var(--muted);margin:8px 0 6px}
   .rb-kpi b{font-size:16px}
   .rb-kpi span{font-size:8px;margin-top:4px}
 }
+
+/* The opening: the mechanism, before the questions. The board is the same file the
+   explainer embeds, so there is one animation in this project and not two. */
+.rb-intro{margin:20px 0 22px;padding:0;container-type:inline-size}
+.rb-intro iframe{display:block;width:100%;aspect-ratio:1180/420;height:auto;border:0;
+  border-radius:3px;background:var(--deep)}
+@container (max-width:620px){.rb-intro iframe{aspect-ratio:620/790}}
+.rb-go{border-color:var(--accent);background:var(--accent-soft)}
+.rb-go b{color:var(--accent)}

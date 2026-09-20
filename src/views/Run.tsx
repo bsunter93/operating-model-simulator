@@ -293,6 +293,7 @@ function reachable(): TriPos[] {
 }
 
 export function Run() {
+  const [started, setStarted] = useState(false);
   const [picks, setPicks] = useState<(string | null)[]>([]);
   const [preview, setPreview] = useState<string | null | undefined>(undefined);
 
@@ -355,9 +356,28 @@ export function Run() {
         </div>
       </header>
 
-      <div className="rb-body">
+      <div className={'rb-body' + (started ? '' : ' solo')}>
         <section className="rb-ask">
-          {!done ? (
+          {!started ? (
+            <>
+              <span className="rb-when">Before you start</span>
+              <h1>One decision, followed all the way through.</h1>
+              <p className="rb-setup">This is a year of one company's plan. Before you run it,
+                 here is what the model does with a single choice: a support tool, the team it
+                 helps, the teams downstream of that team, the hire it makes unnecessary, and
+                 what that is worth. Then you make five calls of your own.</p>
+              <figure className="rb-intro">
+                <iframe src="/simulator-flow.html?embed=1" loading="eager"
+                        title="One efficiency followed from the tool that buys it to the money it frees" />
+              </figure>
+              <div className="rb-opts">
+                <button className="rb-opt rb-go" onClick={() => setStarted(true)}>
+                  <b>Start the year &rarr;</b>
+                  <span>Five decisions. Nothing to configure, and no way to lose.</span>
+                </button>
+              </div>
+            </>
+          ) : !done ? (
             <>
               <span className="rb-when">{d.when} &middot; decision {step + 1} of {DECISIONS.length}</span>
               <h1>{d.question}</h1>
@@ -398,14 +418,14 @@ export function Run() {
           )}
         </section>
 
-        <section className="rb-board">
+        {started && <section className="rb-board">
           <span className="rb-board-h">Every team, at its busiest month</span>
           <TeamBars result={shown} />
           <p className="rb-legend">The mark on each bar is what that team can sustain. Past it, someone is working late all year.</p>
           <span className="rb-board-h" style={{ marginTop: 20 }}>What that puts at risk</span>
           <InitiativeRisk result={shown} />
           <p className="rb-legend">Every programme can miss on its own. A team running short makes it likelier, and the money is what that costs.</p>
-        </section>
+        </section>}
       </div>
     </main>
   );
@@ -457,7 +477,7 @@ function Scorecard({ picks, result, doNothing, onReset, trail }:
       </p>
       <div className="rb-opts">
         <button className="rb-opt" onClick={onReset}><b>Run it again</b><span>Different calls, different year.</span></button>
-        <a className="rb-opt" href="#/"><b>Open the full model</b><span>Every team, month, scenario and assumption behind this.</span></a>
+        <a className="rb-opt" href="#/model"><b>Open the full model</b><span>Every team, month, scenario and assumption behind this.</span></a>
       </div>
     </>
   );

@@ -7,7 +7,13 @@ import { Summary } from './views/Summary';
 import { StoreProvider } from './state/store';
 
 function Screen() {
-  const which = () => (/^#\/run/.test(window.location.hash) ? 'run' : /^#\/mine/.test(window.location.hash) ? 'mine' : /^#\/summary/.test(window.location.hash) ? 'summary' : 'story');
+  /* Default is the run. Landing on the full board meant arriving at eight teams, twelve
+     months, eleven scenarios and five detail tabs before being told what any of it was
+     for, which is the thing this page is supposed to demonstrate the opposite of. */
+  const which = () => (/^#\/model|^#\/story/.test(window.location.hash) ? 'story'
+    : /^#\/mine/.test(window.location.hash) ? 'mine'
+    : /^#\/summary/.test(window.location.hash) ? 'summary'
+    : 'run');
   const [view, setView] = useState(which);
   useEffect(() => { const on = () => setView(which()); window.addEventListener('hashchange', on); return () => window.removeEventListener('hashchange', on); }, []);
   return view === 'run' ? <Run /> : view === 'mine' ? <Mine /> : view === 'summary' ? <Summary /> : <Story />;
