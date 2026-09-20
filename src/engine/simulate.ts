@@ -332,6 +332,14 @@ export function run(input: OperatingModel, opts: RunOptions = {}): ModelResult {
       const gap = Math.max(0, work - targetCap);
       const gapVsPlan = Math.max(0, work - availProd * t.targetUtilization);
       const required = prod * target > 0 ? work / (prod * target) : 0;
+      /* Anything they could not reach either waits for next month or is gone. A month of
+         hours is the most that can be waiting at once: past that the queue is not a
+         backlog any more, it is a team that needs a different plan, and the model should
+         not pretend a number that large is still being worked through. Whatever the
+         policy declines, plus whatever overflows that ceiling, is shed, so that
+         work = done + carried + shed exactly and nothing quietly disappears. */
+      const unserved = Math.max(0, work - availProd);
+      const carriedOut = Math.min(unserved * carry, availProd);
       rows.push({
         teamId: t.id, month: months[m], monthIndex: m,
         startingFte: starting, attritionLoss: loss, hiresLanded: landed, reallocated: realloc,
@@ -343,18 +351,14 @@ export function run(input: OperatingModel, opts: RunOptions = {}): ModelResult {
         // n servers against an offered load of `a` person-equivalents, so a/n is exactly
         // utilisation and the team's size still changes the answer.
         carriedInHours: carriedIn,
-        unservedHours: Math.max(0, work - availProd),
-        shedHours: Math.max(0, work - availProd) * (1 - carry),
+        unservedHours: unserved,
+        carriedOutHours: carriedOut,
+        shedHours: unserved - carriedOut,
         serviceLevel: queue && prod > 0
           ? erlangServiceLevel(available, work / prod, queue.ahtSeconds, queue.targetSeconds)
           : null,
       });
-      // Anything they could not reach either waits or is gone. A month of hours is the
-      // most that can be waiting at once: past that the queue is not a backlog any more,
-      // it is a team that needs a different plan, and the model should not pretend a
-      // number that large is still being worked through.
-      const unserved = Math.max(0, work - availProd);
-      waiting = Math.min(unserved * carry, availProd);
+      waiting = carriedOut;
 
       // Feed this month's overage into the index the next month reads.
       const overShare = util > target ? (util - target) / Math.max(0.05, 1 - target) : 0;
@@ -488,10 +492,8 @@ export function run(input: OperatingModel, opts: RunOptions = {}): ModelResult {
     revenueExposureUsd: exposure.totalUsd,
     initiativesDelayed: schedule.filter((s) => s.delayMonths > 0).length,
     peopleLostToAttrition: teamResults.reduce((a, t) => a + t.months.reduce((b, m) => b + m.attritionLoss, 0), 0),
-    closingBacklogHours: teamResults.reduce((a, t) => {
-      const last = t.months[t.months.length - 1];
-      return a + Math.max(0, last.unservedHours - last.shedHours);
-    }, 0),
+    closingBacklogHours: teamResults.reduce(
+      (a, t) => a + t.months[t.months.length - 1].carriedOutHours, 0),
     shedHours: teamResults.reduce((a, t) => a + t.months.reduce((b, m) => b + m.shedHours, 0), 0),
     ...(() => {
       // Weighted by workload, because a bad month on the biggest queue matters more than a

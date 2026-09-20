@@ -39,6 +39,8 @@ export interface TeamMonth {
   carriedInHours: number;
   /** Work this team could not get to, which either waits or is lost. */
   unservedHours: number;
+  /** Of that, what is still waiting at the end of the month. The rest was shed. */
+  carriedOutHours: number;
   /** Of that, the share that will not come back. */
   shedHours: number;
   runCostUsd: number;

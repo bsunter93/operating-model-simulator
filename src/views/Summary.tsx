@@ -3,7 +3,7 @@ import { useStore } from '../state/store';
 import { verdict } from '../lib/verdict';
 import { whatChanged } from '../lib/whatChanged';
 import { thresholds } from '../lib/thresholds';
-import { money, monthLabel, pct } from '../lib/format';
+import { hours, money, monthLabel, pct } from '../lib/format';
 import { monthIndex } from '../engine';
 
 /** One page an operator can hand to an executive. Print to PDF. */
@@ -34,6 +34,12 @@ export function Summary() {
         <div><b>{s.teamsConstrained} of {model.teams.length}</b><span>teams over capacity</span></div>
         <div><b>{money(result.financials.annualTotalCostUsd)}</b><span>cost, {money(result.financials.annualVarianceUsd, { sign: true })} against budget</span></div>
         <div><b>{money(s.revenueExposureUsd)}</b><span>revenue exposure</span></div>
+        {/* Only when there is some. On a plan that stays inside its capacity this is zero
+            every month, and a cell reading "0 hours" is noise on an executive's page. */}
+        {s.shedHours > 0 && (
+          <div><b>{hours(s.shedHours)}</b><span>work never done{s.closingBacklogHours > 0
+            ? `, ${hours(s.closingBacklogHours)} still waiting at year end` : ''}</span></div>
+        )}
       </div>
 
       {changed && (

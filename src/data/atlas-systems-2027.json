@@ -31,7 +31,10 @@
       "shrinkage": 0.18,
       "targetUtilization": 0.7,
       "monthlyFteCostUsd": 18000,
-      "burnoutSensitivity": 0.4
+      "burnoutSensitivity": 0.4,
+      "backlog": {
+        "carryForward": 0.9
+      }
     },
     {
       "id": "team-customer-ops",
@@ -42,7 +45,10 @@
       "shrinkage": 0.15,
       "targetUtilization": 0.8,
       "monthlyFteCostUsd": 12500,
-      "burnoutSensitivity": 0.9
+      "burnoutSensitivity": 0.9,
+      "backlog": {
+        "carryForward": 0.85
+      }
     },
     {
       "id": "team-consumer-ops",
@@ -53,7 +59,10 @@
       "shrinkage": 0.16,
       "targetUtilization": 0.82,
       "monthlyFteCostUsd": 11000,
-      "burnoutSensitivity": 0.9
+      "burnoutSensitivity": 0.9,
+      "backlog": {
+        "carryForward": 0.85
+      }
     },
     {
       "id": "team-enterprise-support",
@@ -64,7 +73,10 @@
       "shrinkage": 0.15,
       "targetUtilization": 0.78,
       "monthlyFteCostUsd": 11500,
-      "burnoutSensitivity": 0.9
+      "burnoutSensitivity": 0.9,
+      "backlog": {
+        "carryForward": 0.85
+      }
     },
     {
       "id": "team-consumer-support",
@@ -75,7 +87,10 @@
       "shrinkage": 0.15,
       "targetUtilization": 0.78,
       "monthlyFteCostUsd": 10500,
-      "burnoutSensitivity": 0.9
+      "burnoutSensitivity": 0.9,
+      "backlog": {
+        "carryForward": 0.85
+      }
     },
     {
       "id": "team-implementation",
@@ -86,7 +101,10 @@
       "shrinkage": 0.15,
       "targetUtilization": 0.8,
       "monthlyFteCostUsd": 14500,
-      "burnoutSensitivity": 0.9
+      "burnoutSensitivity": 0.9,
+      "backlog": {
+        "carryForward": 0.85
+      }
     },
     {
       "id": "team-platform-engineering",
@@ -97,7 +115,10 @@
       "shrinkage": 0.12,
       "targetUtilization": 0.8,
       "monthlyFteCostUsd": 19000,
-      "burnoutSensitivity": 0.6
+      "burnoutSensitivity": 0.6,
+      "backlog": {
+        "carryForward": 0.95
+      }
     },
     {
       "id": "team-data-platform",
@@ -108,7 +129,10 @@
       "shrinkage": 0.12,
       "targetUtilization": 0.8,
       "monthlyFteCostUsd": 18500,
-      "burnoutSensitivity": 0.6
+      "burnoutSensitivity": 0.6,
+      "backlog": {
+        "carryForward": 0.95
+      }
     }
   ],
   "seasonality": {

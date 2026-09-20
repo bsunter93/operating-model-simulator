@@ -41,3 +41,8 @@ export function signed(v: number, fmt: (n: number) => string): string {
   if (Math.abs(v) < 1e-9) return '±0';
   return (v > 0 ? '+' : '−') + fmt(Math.abs(v));
 }
+
+/** Hours of work, at the scale a year of them actually lands on: thousands. */
+export function hours(v: number): string {
+  return v >= 1000 ? (v / 1000).toFixed(1) + 'k hours' : Math.round(v) + ' hours';
+}
