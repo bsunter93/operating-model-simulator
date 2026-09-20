@@ -14,6 +14,7 @@ import type {
   InitiativeSchedule, ModelResult, Summary, TeamMonth, TeamResult, TeamStatus,
 } from '../models/results';
 import { addMonths, annualToMonthlyRate, calendarMonth, expandMonths, monthIndex } from './calendar';
+import { serviceLevel as erlangServiceLevel } from './pooled';
 import { scheduleInitiatives } from './schedule';
 import { assertValid } from './validate';
 
@@ -278,7 +279,23 @@ export function run(input: OperatingModel, opts: RunOptions = {}): ModelResult {
     return map;
   };
 
+  /* Only work that queues gets a service level. A team's target and handling time come
+     from its own demand streams; a team whose streams state no target is left out rather
+     than handed a number that means nothing. Where a team has several queueing streams,
+     handling time is weighted by how much work each brings. */
+  const queueOf = (teamId: string) => {
+    const qs = model.demandStreams.filter((s) => s.teamId === teamId && s.answerWithinSeconds);
+    if (qs.length === 0) return null;
+    const load = (s: typeof qs[number]) => s.annualVolume * s.handlingMinutesPerUnit;
+    const total = qs.reduce((a, s) => a + load(s), 0) || 1;
+    return {
+      ahtSeconds: qs.reduce((a, s) => a + s.handlingMinutesPerUnit * 60 * load(s), 0) / total,
+      targetSeconds: qs.reduce((a, s) => a + (s.answerWithinSeconds ?? 0) * load(s), 0) / total,
+    };
+  };
+
   const rowsFor = (t: Team, landing: Map<string, number[]>): TeamMonth[] => {
+    const queue = queueOf(t.id);
     const ma = annualToMonthlyRate(Math.min(0.99, t.annualAttrition * eff.attritionMult.get(t.id)!));
     const burnout = t.burnoutSensitivity ?? 0;
     /* Pressure that has been building for months costs people; one hard month does not.
@@ -317,6 +334,11 @@ export function run(input: OperatingModel, opts: RunOptions = {}): ModelResult {
         utilization: util, targetUtilization: target, gapHours: gap, gapVsPlanHours: gapVsPlan, requiredFte: required,
         workforceGap: Math.max(0, required - available),
         status: classify(util, target), runCostUsd: available * t.monthlyFteCostUsd,
+        // n servers against an offered load of `a` person-equivalents, so a/n is exactly
+        // utilisation and the team's size still changes the answer.
+        serviceLevel: queue && prod > 0
+          ? erlangServiceLevel(available, work / prod, queue.ahtSeconds, queue.targetSeconds)
+          : null,
       });
       // Feed this month's overage into the index the next month reads.
       const overShare = util > target ? (util - target) / Math.max(0.05, 1 - target) : 0;
@@ -450,6 +472,22 @@ export function run(input: OperatingModel, opts: RunOptions = {}): ModelResult {
     revenueExposureUsd: exposure.totalUsd,
     initiativesDelayed: schedule.filter((s) => s.delayMonths > 0).length,
     peopleLostToAttrition: teamResults.reduce((a, t) => a + t.months.reduce((b, m) => b + m.attritionLoss, 0), 0),
+    ...(() => {
+      // Weighted by workload, because a bad month on the biggest queue matters more than a
+      // bad month on a small one. The worst single month is carried separately: an average
+      // of 95% can hide a month where nobody could reach anybody.
+      const rows = teamResults.flatMap((t) => t.months).filter((m) => m.serviceLevel !== null);
+      if (rows.length === 0) {
+        return { serviceLevelPct: null, worstServiceLevel: null, worstServiceMonth: null };
+      }
+      const den = rows.reduce((a, m) => a + m.workloadHours, 0);
+      const worst = rows.reduce((a, b) => (b.serviceLevel! < a.serviceLevel! ? b : a), rows[0]);
+      return {
+        serviceLevelPct: den > 0 ? rows.reduce((a, m) => a + m.serviceLevel! * m.workloadHours, 0) / den : 1,
+        worstServiceLevel: worst.serviceLevel,
+        worstServiceMonth: worst.month,
+      };
+    })(),
     retentionRate: (() => {
       const start = model.teams.reduce((a, t) => a + t.currentFte, 0);
       const lost = teamResults.reduce((a, t) => a + t.months.reduce((b, m) => b + m.attritionLoss, 0), 0);

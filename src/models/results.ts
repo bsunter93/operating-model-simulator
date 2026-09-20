@@ -28,6 +28,13 @@ export interface TeamMonth {
   requiredFte: number;
   workforceGap: number;
   status: TeamStatus;
+  /**
+   * Share of this month's arriving work picked up inside its target, by Erlang C. Null
+   * where the team's work does not queue. This is not utilisation restated: at the same
+   * 85%, ten people hold 53% and a hundred and fifty hold 99%, because pooling absorbs
+   * variance and a small team has none to spare.
+   */
+  serviceLevel: number | null;
   runCostUsd: number;
 }
 
@@ -151,6 +158,11 @@ export interface Summary {
    * made it invisible next to cost and time.
    */
   portfolioValueUsd: number;
+  /** Work picked up inside target across the year, weighted by how much work there was. */
+  serviceLevelPct: number | null;
+  /** The worst single team-month, because an average hides a month nobody could reach anyone. */
+  worstServiceLevel: number | null;
+  worstServiceMonth: MonthKey | null;
   /** People who left over the year, including the ones strain pushed out. */
   peopleLostToAttrition: number;
   /** Share of the starting workforce still there at year end. */

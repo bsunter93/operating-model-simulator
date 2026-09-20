@@ -70,6 +70,14 @@ export interface DemandStream {
   workMix: WorkMix;
   /** 'default' uses the model-level profile; otherwise a full 12-month override. */
   seasonality: 'default' | Record<MonthKey, number>;
+  /**
+   * How quickly a unit of this work is supposed to be picked up, in seconds. Present only
+   * on work that queues: a request arrives, waits, and somebody is kept waiting. Absent
+   * on project work, where "answered within" is not a thing anyone measures. Streams
+   * without it are left out of the service-level calculation entirely rather than being
+   * given a number that means nothing.
+   */
+  answerWithinSeconds?: number;
 }
 
 export interface HiringRequest {

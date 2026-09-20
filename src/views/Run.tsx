@@ -432,6 +432,18 @@ export function Run() {
           <span className="rb-board-h" style={{ marginTop: 20 }}>What that puts at risk</span>
           <InitiativeRisk result={shown} />
           <p className="rb-legend">Every programme can miss on its own. A team running short makes it likelier, and the money is what that costs.</p>
+          {shown.summary.serviceLevelPct !== null && (
+            <>
+              <span className="rb-board-h" style={{ marginTop: 20 }}>What the customer sees</span>
+              <p className="rb-service">
+                <b>{(shown.summary.serviceLevelPct * 100).toFixed(1)}%</b> of requests picked up
+                inside their target. Worst month{' '}
+                <b>{((shown.summary.worstServiceLevel ?? 1) * 100).toFixed(0)}%</b>.
+              </p>
+              <p className="rb-legend">Queues do not degrade in a line. They hold, and then they
+                 fall over, and a team half the size falls over sooner at the same load.</p>
+            </>
+          )}
         </section>}
       </div>
     </main>
@@ -552,6 +564,11 @@ function Scorecard({ picks, result, doNothing, onReset, trail }:
           <tr><td>Revenue at risk</td><td>{mUsd(n.revenueExposureUsd)}</td><td>{mUsd(s.revenueExposureUsd)}</td></tr>
           <tr><td>Kept their people</td><td>{(n.retentionRate * 100).toFixed(1)}%</td><td>{(s.retentionRate * 100).toFixed(1)}%</td></tr>
           <tr><td>Months a team ran over</td><td>{n.strainMonths}</td><td>{s.strainMonths}</td></tr>
+          {s.serviceLevelPct !== null && (
+            <tr><td>Requests picked up in time</td>
+              <td>{(n.serviceLevelPct! * 100).toFixed(1)}%</td>
+              <td>{(s.serviceLevelPct * 100).toFixed(1)}%</td></tr>
+          )}
           <tr><td>Spent on changes</td><td>{mUsd(0)}</td><td>{mUsd(spent)}</td></tr>
         </tbody>
       </table>

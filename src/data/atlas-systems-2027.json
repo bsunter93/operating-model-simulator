@@ -154,7 +154,8 @@
         "configurable": 0.3,
         "bespoke": 0.15
       },
-      "seasonality": "default"
+      "seasonality": "default",
+      "answerWithinSeconds": 14400
     },
     {
       "id": "demand-consumer-cases",
@@ -169,7 +170,8 @@
         "configurable": 0.25,
         "bespoke": 0.05
       },
-      "seasonality": "default"
+      "seasonality": "default",
+      "answerWithinSeconds": 120
     },
     {
       "id": "demand-enterprise-support",
@@ -184,7 +186,8 @@
         "configurable": 0.25,
         "bespoke": 0.1
       },
-      "seasonality": "default"
+      "seasonality": "default",
+      "answerWithinSeconds": 900
     },
     {
       "id": "demand-consumer-support",
@@ -199,7 +202,8 @@
         "configurable": 0.2,
         "bespoke": 0.05
       },
-      "seasonality": "default"
+      "seasonality": "default",
+      "answerWithinSeconds": 120
     },
     {
       "id": "demand-platform-projects",

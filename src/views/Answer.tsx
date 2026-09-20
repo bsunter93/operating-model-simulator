@@ -52,6 +52,10 @@ const OBJECTIVES: Objective[] = [
   { id: 'portfolio', label: 'What you promised', who: 'a product or delivery organisation',
     score: (r) => -r.summary.portfolioValueUsd,
     read: (r) => `${mUsd(r.summary.portfolioValueUsd)} of the portfolio delivered` },
+  { id: 'service', label: 'The customer', who: 'anyone whose queue is somebody waiting',
+    score: (r) => -(r.summary.serviceLevelPct ?? 1),
+    read: (r) => r.summary.serviceLevelPct === null ? 'no queueing work in this model'
+      : `${(r.summary.serviceLevelPct * 100).toFixed(1)}% of requests picked up in time, worst month ${((r.summary.worstServiceLevel ?? 1) * 100).toFixed(0)}%` },
   { id: 'schedule', label: 'The schedule', who: 'anyone who has committed to a date',
     score: lateness, read: (r) => `${lateness(r)} months of delay across the portfolio` },
 ];

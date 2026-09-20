@@ -1060,3 +1060,6 @@ details.tuck p{font-size:12.5px;color:var(--muted);margin:8px 0 6px}
 .ans-lesson li:last-child{margin-bottom:0}
 .ans-lesson b{color:var(--ink);font-weight:600}
 .ans-go{display:grid;gap:10px}
+.rb-service{margin:0 0 6px;font-size:14px;line-height:1.55;color:var(--body)}
+.rb-service b{font:600 17px/1 var(--display);color:var(--ink);
+  font-variant-numeric:tabular-nums lining-nums}
