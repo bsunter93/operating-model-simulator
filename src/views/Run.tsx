@@ -558,6 +558,10 @@ function RunFor({ model, spec }: { model: OperatingModel; spec: RunSpec }) {
                   <b>Start the year &rarr;</b>
                   <span>{Word(decisions.length)} decisions, {months[0]} to {months[months.length - 1]}. Nothing to configure, and no way to lose.</span>
                 </button>
+                <a className="rb-opt" href="#/sandbox">
+                  <b>Or just turn the dials</b>
+                  <span>Three controls and a year you can scrub through. Find the month it breaks.</span>
+                </a>
                 <a className="rb-opt" href="#/answer">
                   <b>Or skip to the answer</b>
                   <span>Tell it what you are protecting and it will tell you which calls get you there.</span>

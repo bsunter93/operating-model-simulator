@@ -17,7 +17,7 @@ export function Masthead({ view }: { view: string }) {
         {/* These belong to the full model, where you pick them. On the run they described
             a year the run was not playing: the chip read "Base plan" while the run was on
             the spike, and the levers it listed were not the five decisions being made. */}
-        {view !== 'run' && view !== 'answer' && (
+        {view !== 'run' && view !== 'answer' && view !== 'sandbox' && (
           <div className="state">
             <span className="strip-l">Scenario</span><span className="chip">{scenario.name}</span>
             <span className="strip-l">Levers on</span>{on.length === 0 ? <span className="chip dim">none</span> : on.map((iv) => <span key={iv.id} className="chip on" title={iv.name}>{iv.name}</span>)}

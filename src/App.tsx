@@ -1,4 +1,5 @@
 import { Masthead } from './components/Masthead';
+import { Sandbox } from './views/Sandbox';
 import { useEffect, useState } from 'react';
 import { Run } from './views/Run';
 import { Answer } from './views/Answer';
@@ -13,6 +14,7 @@ import { StoreProvider } from './state/store';
 function useView() {
   const which = () => (/^#\/answer/.test(window.location.hash) ? 'answer'
     : /^#\/model|^#\/story/.test(window.location.hash) ? 'story'
+    : /^#\/sandbox/.test(window.location.hash) ? 'sandbox'
     : /^#\/mine/.test(window.location.hash) ? 'mine'
     : /^#\/summary/.test(window.location.hash) ? 'summary'
     : 'run');
@@ -26,7 +28,7 @@ function useView() {
 }
 
 function Screen({ view }: { view: string }) {
-  return view === 'answer' ? <Answer /> : view === 'run' ? <Run /> : view === 'mine' ? <Mine /> : view === 'summary' ? <Summary /> : <Story />;
+  return view === 'answer' ? <Answer /> : view === 'run' ? <Run /> : view === 'sandbox' ? <Sandbox /> : view === 'mine' ? <Mine /> : view === 'summary' ? <Summary /> : <Story />;
 }
 
 export default function App() {
@@ -34,7 +36,7 @@ export default function App() {
   // The full model pins the shell to the viewport for its fixed stepper. The run and the
   // short version are ordinary documents; inheriting that left them cut off at the fold
   // with nothing to scroll.
-  const scrolls = view === 'run' || view === 'answer';
+  const scrolls = view === 'run' || view === 'answer' || view === 'sandbox';
   return (
     <StoreProvider>
       <div className={'app' + (scrolls ? ' app-scroll' : '')}>

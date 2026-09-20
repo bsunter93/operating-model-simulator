@@ -156,7 +156,7 @@ interface Ctx {
 
 const StoreContext = createContext<Ctx | null>(null);
 
-const PAGES = ['#/mine', '#/summary', '#/model', '#/answer'];
+const PAGES = ['#/mine', '#/summary', '#/model', '#/answer', '#/sandbox'];
 
 /**
  * A shared model arrives in the hash, and it has to be read before anything else touches

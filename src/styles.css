@@ -1190,3 +1190,73 @@ details.tuck p{font-size:12.5px;color:var(--muted);margin:8px 0 6px}
 .rb-bind-k{font-weight:600;color:var(--ink)}
 .rb-bind-idle{color:var(--muted)}
 @media (max-width:900px){ .rb-bind{font-size:12px} }
+
+/* ── The sandbox ────────────────────────────────────────────────────────────
+   Three dials and a year you can scrub. Deliberately the same visual language as
+   everything else: no dark canvas, no glass, no glow. The point is that the numbers
+   are real, and a surface that looks like a trading terminal argues the opposite. */
+.sandbox{max-width:1140px;margin:0 auto;padding:0 clamp(16px,3vw,32px) 64px}
+.sb-top{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:clamp(16px,3vw,32px);
+  align-items:end;padding:26px 0 18px;border-bottom:1px solid var(--line)}
+.sb-top h1{margin:6px 0 8px;font:600 clamp(26px,3.4vw,38px)/1.1 var(--display);color:var(--ink);
+  text-wrap:balance}
+.sb-lede{margin:0;font:400 14px/1.6 var(--sans);color:var(--body);max-width:60ch}
+.sb-verdict{font:400 14px/1.55 var(--sans);color:var(--body);padding:12px 14px;
+  border-left:2px solid var(--warm);background:var(--warm-soft);border-radius:0 6px 6px 0}
+.sb-verdict b{color:var(--ink);font-weight:600}
+
+.sb-body{display:grid;grid-template-columns:minmax(220px,300px) minmax(0,1fr);
+  gap:clamp(18px,3vw,36px);padding-top:22px}
+.sb-rail-h{margin:0 0 8px;font:600 9px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;
+  color:var(--muted)}
+.sb-presets{display:grid;gap:6px;margin-bottom:22px}
+.sb-preset{display:block;text-align:left;padding:8px 10px;border:1px solid var(--line);
+  border-radius:6px;background:var(--bg);cursor:pointer}
+.sb-preset b{display:block;font:600 13px/1.3 var(--sans);color:var(--ink)}
+.sb-preset span{display:block;margin-top:2px;font:400 11.5px/1.4 var(--sans);color:var(--muted)}
+.sb-preset:hover{border-color:var(--accent)}
+.sb-preset.on{border-color:var(--accent);background:var(--accent-soft)}
+
+.sb-dial{display:block;margin-bottom:14px}
+.sb-dial-h{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:5px;
+  font:500 12.5px/1 var(--sans);color:var(--body)}
+.sb-dial-h b{font:600 13px/1 var(--mono);color:var(--ink);font-variant-numeric:tabular-nums}
+.sb-dial input[type=range]{width:100%;accent-color:var(--accent)}
+.sb-note{margin:16px 0 0;font:400 12px/1.55 var(--sans);color:var(--muted)}
+
+.sb-canvas-h{display:flex;align-items:baseline;gap:12px;margin-bottom:12px}
+.sb-canvas-h span{font:600 20px/1 var(--display);color:var(--ink)}
+.sb-canvas-h em{font:500 12px/1 var(--mono);color:var(--muted);font-style:normal}
+.sb-canvas-h em.mid{color:var(--warm)}
+.sb-canvas-h em.bad{color:var(--bad,#A3352B)}
+
+.sb-teams{list-style:none;margin:0 0 18px;padding:0;display:grid;gap:6px}
+.sb-teams li{display:grid;grid-template-columns:minmax(0,1fr) minmax(90px,2.2fr) auto;
+  gap:12px;align-items:center}
+.sb-name{font-size:13px;color:var(--body);min-width:0;overflow-wrap:break-word}
+.sb-track{position:relative;height:12px;border-radius:3px;background:var(--hair);overflow:hidden}
+.sb-track i{display:block;height:100%;background:var(--accent);
+  transition:width .18s ease}
+.sb-track b{position:absolute;top:-2px;bottom:-2px;width:2px;background:var(--ink);opacity:.5}
+.sb-teams li.over .sb-track i{background:var(--warm)}
+.sb-teams li.hard .sb-track i{background:var(--bad,#A3352B)}
+.sb-pct{font:500 12px/1 var(--mono);color:var(--muted);font-variant-numeric:tabular-nums;
+  min-width:38px;text-align:right}
+.sb-teams li.hard .sb-pct{color:var(--bad,#A3352B)}
+
+.sb-scrub{display:grid;grid-template-columns:auto minmax(0,1fr);gap:12px;align-items:center;
+  padding:14px 0 6px;border-top:1px solid var(--hair)}
+.sb-play{padding:6px 12px;border:1px solid var(--line);border-radius:999px;background:var(--bg);
+  font:500 12px/1 var(--sans);color:var(--ink);cursor:pointer;white-space:nowrap}
+.sb-play:hover{border-color:var(--accent)}
+.sb-scrub input[type=range]{width:100%;accent-color:var(--warm)}
+.sb-months{grid-column:2;display:flex;list-style:none;margin:0;padding:0;justify-content:space-between}
+.sb-months li{font:500 9px/1 var(--mono);color:var(--muted)}
+.sb-months li.on{color:var(--ink);font-weight:700}
+.sb-bind{border-top:1px solid var(--hair);margin-top:14px}
+.sb-go{margin-top:28px}
+
+@media (max-width:860px){
+  .sb-top{grid-template-columns:1fr;align-items:start}
+  .sb-body{grid-template-columns:1fr}
+}
