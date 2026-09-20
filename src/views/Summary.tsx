@@ -19,7 +19,9 @@ export function Summary() {
   const s = result.summary;
   let peak: { team: string; month: string; fte: number } | null = null;
   for (const t of result.teams) for (const m of t.months) if (!peak || m.workforceGap > peak.fte) peak = { team: t.teamId, month: m.month, fte: m.workforceGap };
-  const back = '#/' + (window.location.hash.includes('?') ? '?' + window.location.hash.split('?')[1] : '');
+  /* Back to the model, explicitly. This used to build '#/', which stopped meaning the
+     model the day the run became the landing page and quietly ejected the reader to it. */
+  const back = '#/model' + (window.location.hash.includes('?') ? '?' + window.location.hash.split('?')[1] : '');
 
   return (
     <div className="summary">

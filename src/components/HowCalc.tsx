@@ -32,7 +32,7 @@ export function HowCalc({ kind }: { kind: keyof typeof TEXT }) {
     <details className="howcalc">
       <summary>How is this calculated?</summary>
       <ul>{lines.map((l) => <li key={l}>{l}</li>)}</ul>
-      <p>Full method and every assumption: <a href="#/?p=about">How this works</a>. Source and tests on <a href="https://github.com/bsunter93/operating-model-simulator">GitHub</a>.</p>
+      <p>Full method and every assumption: <a href="#/model?p=about">How this works</a>. Source and tests on <a href="https://github.com/bsunter93/operating-model-simulator">GitHub</a>.</p>
     </details>
   );
 }
