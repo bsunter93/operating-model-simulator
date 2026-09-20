@@ -1,0 +1,53 @@
+# Runs what the repo already had and nobody was running.
+#
+# Before this, 199 tests existed and the only thing that ever executed them was a person
+# remembering to. The build is the typecheck too: `npm run build` is `tsc -b && vite
+# build`, and `tsc --noEmit -p tsconfig.json` checks nothing here, because the root config
+# is `{"files": [], "references": [...]}` and needs `-b` to do anything at all.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# A second push to the same branch makes the first one pointless.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # Warnings only today, so this reports rather than blocks. If it ever starts
+      # failing the build, that is oxlint finding a real error and worth stopping for.
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck and build
+        run: npm run build
+
+      - name: Tests
+        run: npm test
+
+      # The site serves a copy of dist/ from another repo, so a build that works here can
+      # still ship broken if the copy is stale. This at least pins that the page and the
+      # bundle it names were produced together.
+      - name: The built page names a bundle that exists
+        run: |
+          ref=$(grep -o 'assets/index-[A-Za-z0-9_-]*\.js' dist/index.html)
+          test -n "$ref" || { echo "dist/index.html names no bundle"; exit 1; }
+          test -f "dist/$ref" || { echo "dist/index.html names $ref, which was not built"; exit 1; }
+          echo "ok: $ref"
