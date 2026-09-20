@@ -707,6 +707,9 @@ button.cell{cursor:pointer}
 
 /* ── stepper: one control per concept, no page scroll ──────────────────── */
 .app{height:100vh;overflow:hidden;grid-template-rows:auto 1fr}
+/* The run and the short version are documents, not a fixed board. Pinning the shell to
+   the viewport left them cut off at the fold with no way to scroll. */
+.app.app-scroll{height:auto;min-height:100vh;overflow:visible}
 .shell{grid-template-columns:38px minmax(360px,420px) minmax(0,1fr);height:100%;min-height:0;max-width:none;gap:0}
 .dots{position:static;padding:16px 0;gap:9px}
 .stepper{display:grid;grid-template-rows:auto minmax(0,1fr) auto;border-right:1px solid var(--line);min-height:0;background:var(--surface)}
@@ -777,6 +780,7 @@ details.tuck p{font-size:12.5px;color:var(--muted);margin:8px 0 6px}
 .board .stage-q h3{font-size:16px}
 .board .howcalc{margin-top:8px;padding-top:6px}
 .app{grid-template-rows:auto minmax(0,1fr)}
+  .app.app-scroll{grid-template-rows:auto auto}
 .shell{min-height:0}
 .stage{min-height:0}
 

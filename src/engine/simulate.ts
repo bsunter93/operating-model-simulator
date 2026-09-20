@@ -301,6 +301,10 @@ export function run(input: OperatingModel, opts: RunOptions = {}): ModelResult {
     /* Pressure that has been building for months costs people; one hard month does not.
        Smoothed, so it is sustained strain that bites, and capped so the loop converges. */
     let strainIdx = 0;
+    // Work waiting from the months before this one. Zero for a team with no backlog policy,
+    // which keeps every model that predates this behaving exactly as it did.
+    const carry = t.backlog?.carryForward ?? 0;
+    let waiting = 0;
     const prod = productivePerFte(t);
     const target = eff.targetUtil.get(t.id)!;
     const rows: TeamMonth[] = [];
@@ -321,7 +325,9 @@ export function run(input: OperatingModel, opts: RunOptions = {}): ModelResult {
       const targetCap = availProd * target;
       const rh = runHours.get(t.id)![m];
       const ph = portfolioHours.get(t.id)![m];
-      const work = rh + ph;
+      const carriedIn = waiting;
+      // What is in front of them: what arrived, plus what is still waiting from before.
+      const work = rh + ph + carriedIn;
       const util = availProd > 0 ? work / availProd : (work > 0 ? Infinity : 0);
       const gap = Math.max(0, work - targetCap);
       const gapVsPlan = Math.max(0, work - availProd * t.targetUtilization);
@@ -336,10 +342,20 @@ export function run(input: OperatingModel, opts: RunOptions = {}): ModelResult {
         status: classify(util, target), runCostUsd: available * t.monthlyFteCostUsd,
         // n servers against an offered load of `a` person-equivalents, so a/n is exactly
         // utilisation and the team's size still changes the answer.
+        carriedInHours: carriedIn,
+        unservedHours: Math.max(0, work - availProd),
+        shedHours: Math.max(0, work - availProd) * (1 - carry),
         serviceLevel: queue && prod > 0
           ? erlangServiceLevel(available, work / prod, queue.ahtSeconds, queue.targetSeconds)
           : null,
       });
+      // Anything they could not reach either waits or is gone. A month of hours is the
+      // most that can be waiting at once: past that the queue is not a backlog any more,
+      // it is a team that needs a different plan, and the model should not pretend a
+      // number that large is still being worked through.
+      const unserved = Math.max(0, work - availProd);
+      waiting = Math.min(unserved * carry, availProd);
+
       // Feed this month's overage into the index the next month reads.
       const overShare = util > target ? (util - target) / Math.max(0.05, 1 - target) : 0;
       strainIdx = strainIdx * BURNOUT_DECAY + Math.min(1, overShare) * (1 - BURNOUT_DECAY);
@@ -472,6 +488,11 @@ export function run(input: OperatingModel, opts: RunOptions = {}): ModelResult {
     revenueExposureUsd: exposure.totalUsd,
     initiativesDelayed: schedule.filter((s) => s.delayMonths > 0).length,
     peopleLostToAttrition: teamResults.reduce((a, t) => a + t.months.reduce((b, m) => b + m.attritionLoss, 0), 0),
+    closingBacklogHours: teamResults.reduce((a, t) => {
+      const last = t.months[t.months.length - 1];
+      return a + Math.max(0, last.unservedHours - last.shedHours);
+    }, 0),
+    shedHours: teamResults.reduce((a, t) => a + t.months.reduce((b, m) => b + m.shedHours, 0), 0),
     ...(() => {
       // Weighted by workload, because a bad month on the biggest queue matters more than a
       // bad month on a small one. The worst single month is carried separately: an average

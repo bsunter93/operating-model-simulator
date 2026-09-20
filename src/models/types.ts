@@ -41,6 +41,17 @@ export interface Team {
    * models a company that ends the year with nobody in it.
    */
   burnoutSensitivity?: number;
+  /**
+   * What happens to work this team could not get to. Without it, a team at 130% simply
+   * did 100% and the rest evaporated, so being over capacity cost nothing that lasted and
+   * next month always started clean.
+   *
+   * `carryForward` is the share that waits and arrives again next month. The remainder is
+   * gone: declined, abandoned, the customer went elsewhere. A queue that keeps everything
+   * sets 1; a team that turns work away past a point sets less. Absent means the old
+   * behaviour, which is a model with no memory.
+   */
+  backlog?: { carryForward: number };
   id: string;
   name: string;
   teamType: TeamType;

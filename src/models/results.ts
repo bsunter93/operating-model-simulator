@@ -35,6 +35,12 @@ export interface TeamMonth {
    * variance and a small team has none to spare.
    */
   serviceLevel: number | null;
+  /** Work waiting at the start of this month, left over from the ones before it. */
+  carriedInHours: number;
+  /** Work this team could not get to, which either waits or is lost. */
+  unservedHours: number;
+  /** Of that, the share that will not come back. */
+  shedHours: number;
   runCostUsd: number;
 }
 
@@ -158,6 +164,10 @@ export interface Summary {
    * made it invisible next to cost and time.
    */
   portfolioValueUsd: number;
+  /** Work still waiting at the end of the year. */
+  closingBacklogHours: number;
+  /** Work nobody ever did, because it was turned away rather than queued. */
+  shedHours: number;
   /** Work picked up inside target across the year, weighted by how much work there was. */
   serviceLevelPct: number | null;
   /** The worst single team-month, because an average hides a month nobody could reach anyone. */
