@@ -11,7 +11,7 @@ export function Masthead() {
     <header className="mast">
       <div className="mast-in">
         <a className="brand" href="#/">
-          <b>Operating Model Simulator</b>
+          <h1>Operating Model Simulator</h1>
           <span>{model.name} · {model.calendar.startMonth.slice(0, 4)} plan{isFixture ? ' · fictional' : ' · your numbers'}</span>
         </a>
         <div className="state">
