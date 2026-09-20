@@ -18,16 +18,16 @@ import type { ModelResult } from '../models/results';
 
 const M = FIXTURE;
 
-type Option = {
+export type Option = {
   /** null is the do-nothing branch, which is a real answer and stays available. */
   iv: string | null;
   label: string;
   price: string;
   why: string;
 };
-type Decision = { id: string; when: string; question: string; setup: string; options: Option[] };
+export type Decision = { id: string; when: string; question: string; setup: string; options: Option[] };
 
-const DECISIONS: Decision[] = [
+export const DECISIONS: Decision[] = [
   {
     id: 'd1',
     when: 'February',
@@ -159,12 +159,12 @@ function Triangle({ trail, cloud, size = 1 }: { trail: TriPos[]; cloud?: TriPos[
   );
 }
 
-const pct = (n: number) => Math.round(n * 100) + '%';
+export const pct = (n: number) => Math.round(n * 100) + '%';
 /** "a", "a and b", "a, b and c". Joining three names with two "and"s reads like a list
     nobody proofread. */
 const list = (xs: string[]) =>
   xs.length < 3 ? xs.join(' and ') : xs.slice(0, -1).join(', ') + ' and ' + xs[xs.length - 1];
-const mUsd = (n: number) => '$' + (n / 1e6).toFixed(2) + 'M';
+export const mUsd = (n: number) => '$' + (n / 1e6).toFixed(2) + 'M';
 
 /** One grammar for every team: a bar, and the line it should not cross. */
 function TeamBars({ result, highlight }: { result: ModelResult; highlight?: string[] }) {
@@ -378,6 +378,10 @@ export function Run() {
                   <b>Start the year &rarr;</b>
                   <span>Five decisions. Nothing to configure, and no way to lose.</span>
                 </button>
+                <a className="rb-opt" href="#/answer">
+                  <b>Or skip to the answer</b>
+                  <span>Tell it what you are protecting and it will tell you which five calls get you there.</span>
+                </a>
               </div>
             </>
           ) : !done ? (
