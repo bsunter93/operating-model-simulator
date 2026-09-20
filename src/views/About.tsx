@@ -21,6 +21,17 @@ export function About() {
       </p>
       <Loop />
 
+        {/* The flow board, iframed rather than reimplemented, so the animation has one
+            source. loading="lazy" keeps its canvas and rAF loop idle until someone
+            actually opens this tab. */}
+        <figure className="flowframe">
+          <iframe src="/simulator-flow.html?embed=1" loading="lazy" title="A year of this plan running: where capacity breaks, and what one lever changes" />
+          <figcaption>
+            A year of this plan, running. Same engine, same fixture.{' '}
+            <a href="/simulator-flow.html">Open it full size &rarr;</a>
+          </figcaption>
+        </figure>
+
       <section className="sec">
         <h2>What the model does, in order</h2>
         <ol className="how">
