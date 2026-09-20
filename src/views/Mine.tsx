@@ -79,9 +79,13 @@ export function Mine() {
         <p className="keepline">
           {restoredFrom === 'link'
             ? 'Opened from a shared link. Nothing was sent anywhere: the whole model travelled in the URL.'
-            : 'Picked up where you left off. This is kept in this browser only.'}
-          <button className="linkbtn" onClick={() => { dismissRestored(); dispatch({ type: 'model', model: FIXTURE }); }}>Back to Atlas</button>
-          <button className="linkbtn" onClick={dismissRestored}>Keep it</button>
+            : restoredFrom === 'link-failed'
+              ? 'That link could not be read. It may have been cut short: these carry the whole model, so they are long, and some apps shorten them.'
+              : 'Picked up where you left off. This is kept in this browser only.'}
+          {restoredFrom !== 'link-failed' && (
+            <button className="linkbtn" onClick={() => { dismissRestored(); dispatch({ type: 'model', model: FIXTURE }); }}>Back to Atlas</button>
+          )}
+          <button className="linkbtn" onClick={dismissRestored}>{restoredFrom === 'link-failed' ? 'Dismiss' : 'Keep it'}</button>
         </p>
       )}
 

@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo, useReducer, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useReducer, useState } from 'react';
 import { makeFmt, type Fmt } from '../lib/format';
 import { migrateModel } from '../models/migrate';
 import { createModelStore, decodeShare, type ModelStore } from './persistence';
@@ -147,7 +147,7 @@ interface Ctx {
   /** Where saved models live. Swap the implementation, not the callers. */
   store: ModelStore;
   /** Set when this page picked a model up from somewhere, so it can say so. */
-  restoredFrom: 'session' | 'link' | null;
+  restoredFrom: 'session' | 'link' | 'link-failed' | null;
   dismissRestored: () => void;
   teamName: (id: string) => string;
   initName: (id: string) => string;
@@ -228,8 +228,39 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   useEffect(() => { writeQuery(state); }, [state]);
 
   const store = useMemo(() => createModelStore(), []);
-  const [restoredFrom, setRestoredFrom] = useState<'session' | 'link' | null>(null);
+  const [restoredFrom, setRestoredFrom] = useState<'session' | 'link' | 'link-failed' | null>(null);
   const [ready, setReady] = useState(false);
+
+  /* One routine for both ways a link arrives: a fresh load, and somebody pasting one into
+     a tab that already has the page open. They behaved differently before, which is to
+     say the second one did not behave at all. */
+  const openShared = useCallback(async (token: string, live: () => boolean) => {
+    const decoded = await decodeShare(token);
+    const parsed = decoded ? parseImportedModel(JSON.stringify(decoded)) : { errors: ['unreadable'] };
+    // Spent either way: a link that does not open should not keep failing on every refresh.
+    stripQuery('m');
+    if (!live()) return true;
+    if ('model' in parsed) {
+      dispatch({ type: 'model', model: parsed.model });
+      setRestoredFrom('link');
+    } else {
+      // Say so rather than sitting on whatever was already here and looking ignored.
+      setRestoredFrom('link-failed');
+    }
+    return true;
+  }, []);
+
+  /* Pasted into a tab that is already open. The hash changes and nothing remounts, so the
+     load-time read never happens; read it here, synchronously, before anything rewrites
+     the URL. replaceState does not fire hashchange, so stripping it cannot loop. */
+  useEffect(() => {
+    const onHash = () => {
+      const t = new URLSearchParams(window.location.hash.split('?')[1] ?? '').get('m');
+      if (t) void openShared(t, () => true);
+    };
+    window.addEventListener('hashchange', onHash);
+    return () => window.removeEventListener('hashchange', onHash);
+  }, [openShared]);
 
   /* On the way in: a shared link wins over whatever was here last, because somebody
      followed it on purpose. Both arrive through parseImportedModel rather than being
@@ -237,18 +268,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let live = true;
     void (async () => {
-      const token = SHARE_TOKEN;
-      if (token) {
-        const decoded = await decodeShare(token);
-        const parsed = decoded ? parseImportedModel(JSON.stringify(decoded)) : { errors: ['unreadable'] };
-        // Spent either way: a link that does not open should not keep failing on refresh.
-        stripQuery('m');
-        if (live && 'model' in parsed) {
-          dispatch({ type: 'model', model: parsed.model });
-          setRestoredFrom('link');
-          setReady(true);
-          return;
-        }
+      if (SHARE_TOKEN) {
+        await openShared(SHARE_TOKEN, () => live);
+        if (live) setReady(true);
+        return;
       }
       const saved = await store.readSession();
       if (live && saved) {
@@ -261,7 +284,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       if (live) setReady(true);
     })();
     return () => { live = false; };
-  }, [store]);
+  }, [store, openShared]);
 
   /* On the way out. Only once the restore has had its turn, or the first render would
      write the fixture over the very thing we are about to read back. */
