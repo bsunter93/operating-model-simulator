@@ -1063,3 +1063,24 @@ details.tuck p{font-size:12.5px;color:var(--muted);margin:8px 0 6px}
 .rb-service{margin:0 0 6px;font-size:14px;line-height:1.55;color:var(--body)}
 .rb-service b{font:600 17px/1 var(--display);color:var(--ink);
   font-variant-numeric:tabular-nums lining-nums}
+
+/* The year, always on. Replaces the five anonymous progress dots, which said how far
+   through the questions you were and nothing about when any of it happens. */
+.rb-year{display:flex;gap:3px;list-style:none;margin:10px 0 0;padding:0}
+.rb-year li{flex:1;min-width:0;text-align:center}
+.rb-year i{display:block;height:3px;border-radius:2px;background:var(--line);
+  transition:background .3s ease}
+.rb-year span{display:block;margin-top:4px;font:500 8px/1 var(--mono);letter-spacing:.04em;
+  color:var(--line);transition:color .3s ease}
+.rb-year li.past i{background:var(--hair)}
+.rb-year li.done i{background:var(--accent)}
+.rb-year li.done span{color:var(--muted)}
+.rb-year li.now i{background:var(--warm);height:5px;margin-top:-1px}
+.rb-year li.now span{color:var(--ink);font-weight:600}
+@media (max-width:620px){
+  .rb-year span{font-size:7px}
+}
+.rb-opts-lead{margin-bottom:26px}
+.rb-intro-h{margin:0 0 10px;font:500 9.5px/1 var(--mono);letter-spacing:.13em;
+  text-transform:uppercase;color:var(--muted)}
+@media (prefers-reduced-motion:reduce){.rb-year i,.rb-year span{transition:none}}

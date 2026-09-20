@@ -25,12 +25,12 @@ export type Option = {
   price: string;
   why: string;
 };
-export type Decision = { id: string; when: string; question: string; setup: string; options: Option[] };
+export type Decision = { id: string; when: string; /** Which month of the plan year this lands in. */ monthIndex: number; question: string; setup: string; options: Option[] };
 
 export const DECISIONS: Decision[] = [
   {
     id: 'd1',
-    when: 'February',
+    when: 'February', monthIndex: 1,
     question: 'Implementation cannot absorb the year in front of it.',
     setup:
       'Fifty people, and the work arriving needs closer to sixty. Ten more are already approved, but recruiting takes five months, so they land in June and the problem starts now.',
@@ -45,7 +45,7 @@ export const DECISIONS: Decision[] = [
   },
   {
     id: 'd2',
-    when: 'March',
+    when: 'March', monthIndex: 2,
     question: 'Two programmes are drawing on the same engineers.',
     setup:
       'Platform Scale and Enterprise Growth both staff out of Platform Engineering and Data Platform, and Data Platform is the tightest team in the company.',
@@ -60,7 +60,7 @@ export const DECISIONS: Decision[] = [
   },
   {
     id: 'd3',
-    when: 'Mid-year',
+    when: 'Mid-year', monthIndex: 5,
     question: 'Consumer Operations is the next one to go.',
     setup:
       'A hundred and fifty people against four hundred thousand cases, and twelve more already approved to start in May. The question is whether you still want them.',
@@ -75,7 +75,7 @@ export const DECISIONS: Decision[] = [
   },
   {
     id: 'd4',
-    when: 'Q3',
+    when: 'Q3', monthIndex: 8,
     question: 'The portfolio is bigger than the year.',
     setup:
       'Four programmes, all committed, all staffed from teams that are already tight. You do not have to drop one to take pressure off.',
@@ -90,7 +90,7 @@ export const DECISIONS: Decision[] = [
   },
   {
     id: 'd5',
-    when: 'The last call',
+    when: 'The last call', monthIndex: 11,
     question: 'One more move before the year closes.',
     setup:
       'International Expansion is the biggest thing left, staffed out of four teams that are all running tight.',
@@ -159,7 +159,27 @@ function Triangle({ trail, cloud, size = 1 }: { trail: TriPos[]; cloud?: TriPos[
   );
 }
 
-export const pct = (n: number) => Math.round(n * 100) + '%';
+export const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+/**
+ * The year, always on screen. A model that runs on an annual cycle and never shows you a
+ * calendar leaves you guessing where "mid-year" is relative to the hire that lands in May.
+ * Months already decided are filled; the one you are being asked about is marked.
+ */
+function YearStrip({ at, decided }: { at: number | null; decided: number[] }) {
+  return (
+    <ol className="rb-year" aria-label="The plan year">
+      {MONTHS.map((m, i) => (
+        <li key={m}
+            className={i === at ? 'now' : decided.some((d) => d === i) ? 'done' : i < (at ?? -1) ? 'past' : ''}>
+          <i /><span>{m}</span>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
+const pct = (n: number) => Math.round(n * 100) + '%';
 /** "a", "a and b", "a, b and c". Joining three names with two "and"s reads like a list
     nobody proofread. */
 const list = (xs: string[]) =>
@@ -341,11 +361,11 @@ export function Run() {
           <div className="rb-dash-id">
             <b>Atlas Systems</b>
             <span>2027 &middot; fictional company, real arithmetic</span>
-            <div className="rb-dots" aria-label={`Decision ${Math.min(step + 1, DECISIONS.length)} of ${DECISIONS.length}`}>
-              {DECISIONS.map((dd, i) => (
-                <i key={dd.id} className={i < step ? 'done' : i === step ? 'now' : ''} />
-              ))}
-            </div>
+            {/* Nothing is pending before you begin, so nothing is marked. Highlighting
+                February on the opening screen implied a decision you had not been asked for. */}
+            <YearStrip
+              at={!started || done ? null : DECISIONS[Math.min(step, DECISIONS.length - 1)].monthIndex}
+              decided={started ? DECISIONS.slice(0, step).map((dd) => dd.monthIndex) : []} />
           </div>
           <div className="rb-dash-tri">
             <Triangle trail={trail} />
@@ -369,20 +389,23 @@ export function Run() {
                  here is what the model does with a single choice: a support tool, the team it
                  helps, the teams downstream of that team, the hire it makes unnecessary, and
                  what that is worth. Then you make five calls of your own.</p>
-              <figure className="rb-intro">
-                <iframe src="/simulator-flow.html?embed=1" loading="eager"
-                        title="One efficiency followed from the tool that buys it to the money it frees" />
-              </figure>
-              <div className="rb-opts">
+              {/* Above the board, not below it. At 900px the button sat under a 380px
+                  animation and the only thing you could do on the page was off screen. */}
+              <div className="rb-opts rb-opts-lead">
                 <button className="rb-opt rb-go" onClick={() => setStarted(true)}>
                   <b>Start the year &rarr;</b>
-                  <span>Five decisions. Nothing to configure, and no way to lose.</span>
+                  <span>Five decisions, January to December. Nothing to configure, and no way to lose.</span>
                 </button>
                 <a className="rb-opt" href="#/answer">
                   <b>Or skip to the answer</b>
                   <span>Tell it what you are protecting and it will tell you which five calls get you there.</span>
                 </a>
               </div>
+              <p className="rb-intro-h">First, what the model does with one decision</p>
+              <figure className="rb-intro">
+                <iframe src="/simulator-flow.html?embed=1" loading="eager"
+                        title="One efficiency followed from the tool that buys it to the money it frees" />
+              </figure>
             </>
           ) : !done ? (
             <>
