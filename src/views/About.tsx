@@ -2,12 +2,12 @@ import { useMemo } from 'react';
 import { modelWarnings } from '../engine';
 import { href, useStore } from '../state/store';
 import { STATUS_BAND_PP } from '../engine';
-import { money, num, pct } from '../lib/format';
+import { pct } from '../lib/format';
 import { Loop } from '../components/Loop';
 
 /** How the model works and every assumption it makes, with the live values. */
 export function About() {
-  const { model, result, isFixture } = useStore();
+  const { model, result, isFixture, fmt } = useStore();
   const warnings = useMemo(() => modelWarnings(model), [model]);
   const modeled = model.teams.reduce((s, t) => s + t.currentFte, 0);
   const year = model.calendar.startMonth.slice(0, 4);
@@ -56,8 +56,8 @@ export function About() {
         <div className="tbl-wrap">
           <table className="tbl assum">
             <tbody>
-              <tr><td className="ink left">Scope</td><td className="left">{num(modeled)} people in {model.teams.length} modeled teams, of {num(model.strategy.employeeCount)} employees. Everyone else is outside the model.</td></tr>
-              <tr><td className="ink left">Budget</td><td className="left">{money(model.budget.modeledAnnualBudgetUsd)} for the modeled teams, inside a company operating cost target of {money(model.strategy.operatingCostTargetUsd)}.</td></tr>
+              <tr><td className="ink left">Scope</td><td className="left">{fmt.num(modeled)} people in {model.teams.length} modeled teams, of {fmt.num(model.strategy.employeeCount)} employees. Everyone else is outside the model.</td></tr>
+              <tr><td className="ink left">Budget</td><td className="left">{fmt.money(model.budget.modeledAnnualBudgetUsd)} for the modeled teams, inside a company operating cost target of {fmt.money(model.strategy.operatingCostTargetUsd)}.</td></tr>
               <tr><td className="ink left">Growth</td><td className="left">The strategy targets {pct(model.strategy.growthTargetPct)} revenue growth. Stream volumes are the {year} plan and already include it; scenarios move them from there.</td></tr>
               <tr><td className="ink left">Hours</td><td className="left">{model.calendar.workHoursPerFteMonth} paid hours per person per month, {model.calendar.startMonth} to {model.calendar.endMonth}.</td></tr>
               <tr><td className="ink left">Attrition</td><td className="left">Annual rates converted to a monthly rate, applied to each month's starting headcount. Expected values, not random draws.</td></tr>
@@ -81,8 +81,8 @@ export function About() {
                 return (
                   <tr key={t.id}>
                     <td className="ink left">{t.name}</td>
-                    <td>{t.currentFte}</td><td>{pct(t.targetUtilization)}</td><td>{pct(t.shrinkage)}</td><td>{pct(t.annualAttrition)}</td><td>{money(t.monthlyFteCostUsd, { compact: false })}</td>
-                    <td className="left dim">{streams.length ? streams.map((s) => `${num(s.annualVolume)} ${s.unit} × ${s.handlingMinutesPerUnit >= 60 ? `${parseFloat((s.handlingMinutesPerUnit / 60).toFixed(1))} h` : `${s.handlingMinutesPerUnit} min`}`).join('; ') : 'initiative work only'}</td>
+                    <td>{t.currentFte}</td><td>{pct(t.targetUtilization)}</td><td>{pct(t.shrinkage)}</td><td>{pct(t.annualAttrition)}</td><td>{fmt.money(t.monthlyFteCostUsd, { compact: false })}</td>
+                    <td className="left dim">{streams.length ? streams.map((s) => `${fmt.num(s.annualVolume)} ${s.unit} × ${s.handlingMinutesPerUnit >= 60 ? `${parseFloat((s.handlingMinutesPerUnit / 60).toFixed(1))} h` : `${s.handlingMinutesPerUnit} min`}`).join('; ') : 'initiative work only'}</td>
                   </tr>
                 );
               })}
@@ -119,7 +119,7 @@ export function About() {
           <li>Queueing figures on the pods-or-pooled page assume phone-style work that arrives at random. Ticket and email work that can wait behaves better than the model says.</li>
           <li>It does not recommend. The decision score ranks options by weights you set.</li>
         </ul>
-        <p className="note">Result summary for the current configuration: {result.summary.teamsConstrained} of {model.teams.length} teams over capacity, {money(result.summary.revenueExposureUsd)} exposed, {money(result.financials.annualVarianceUsd, { sign: true })} against budget. Source and tests: <a href="https://github.com/bsunter93/operating-model-simulator">github.com/bsunter93/operating-model-simulator</a>.</p>
+        <p className="note">Result summary for the current configuration: {result.summary.teamsConstrained} of {model.teams.length} teams over capacity, {fmt.money(result.summary.revenueExposureUsd)} exposed, {fmt.money(result.financials.annualVarianceUsd, { sign: true })} against budget. Source and tests: <a href="https://github.com/bsunter93/operating-model-simulator">github.com/bsunter93/operating-model-simulator</a>.</p>
       </section>
     </main>
   );

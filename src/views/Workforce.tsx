@@ -1,14 +1,14 @@
 import { href, useStore } from '../state/store';
 import { BarLine } from '../components/charts/BarLine';
 import { Term } from '../components/Term';
-import { monthLabel, num, pct } from '../lib/format';
+import { monthLabel, pct } from '../lib/format';
 import { monthIndex } from '../engine';
 
 const people = (n: number) => (Math.round(n) === 1 ? '1 person' : `${Math.round(n)} people`);
 
 /** Who we actually have, month by month: attrition, arrivals, and when each team first needs more than it has. */
 export function Workforce() {
-  const { result, base, model, state, teamName } = useStore();
+  const { result, base, model, state, teamName, fmt } = useStore();
   const months = result.months;
   const n = months.length;
   const totalFte = months.map((_, i) => result.teams.reduce((s, t) => s + t.months[i].availableFte, 0));
@@ -151,7 +151,7 @@ export function Workforce() {
             </tbody>
           </table>
         </div>
-        <p className="note">Leaving is the expected attrition applied month by month; the plan contains no backfill unless a hiring request says so. {num(Math.round(totalLoss))} people across all teams.</p>
+        <p className="note">Leaving is the expected attrition applied month by month; the plan contains no backfill unless a hiring request says so. {fmt.num(Math.round(totalLoss))} people across all teams.</p>
       </section>
 
       <nav className="next">

@@ -11,7 +11,7 @@ import { Tornado } from '../components/Tornado';
 import { verdict } from '../lib/verdict';
 import { thresholds } from '../lib/thresholds';
 import { whatChanged } from '../lib/whatChanged';
-import { money, monthLabel, num, pct } from '../lib/format';
+import { monthLabel, pct } from '../lib/format';
 
 const people = (n: number) => (Math.round(n) === 1 ? '1 person' : `${Math.round(n)} people`);
 
@@ -34,13 +34,13 @@ function Weights({ weights, onChange }: { weights: DecisionWeights; onChange: (w
 }
 
 export function Story() {
-  const { state, dispatch, model, result, base, doNothing, interventions, teamName, initName, isFixture, isBase } = useStore();
+  const { state, dispatch, model, result, base, doNothing, interventions, teamName, initName, isFixture, isBase, fmt } = useStore();
   const s = result.summary;
   const team = state.teamId ?? s.firstBreakTeamId ?? model.teams[0].id;
   const [step, setStep] = useState(0);
   const [detail, setDetail] = useState<Detail>(null);
   const [copied, setCopied] = useState(false);
-  const v = verdict(result, teamName, initName, isBase ? undefined : base);
+  const v = verdict(result, fmt, teamName, initName, isBase ? undefined : base);
   const year = model.calendar.startMonth.slice(0, 4);
   const idx = (k: string) => monthIndex(model.calendar.startMonth, k);
   const active = useMemo(() => interventions.filter((iv) => state.interventionIds.includes(iv.id)), [interventions, state.interventionIds]);
@@ -99,10 +99,10 @@ export function Story() {
   const steps: { id: string; label: string; title: ReactNode; body: ReactNode }[] = [
     {
       id: 'situation', label: 'The situation',
-      title: <>{model.name} plans {pct(model.strategy.growthTargetPct)} growth with {num(model.teams.reduce((a, t) => a + t.currentFte, 0))} people.</>,
+      title: <>{model.name} plans {pct(model.strategy.growthTargetPct)} growth with {fmt.num(model.teams.reduce((a, t) => a + t.currentFte, 0))} people.</>,
       body: (
         <>
-          <p>{model.teams.length} teams, {model.initiatives.length} initiatives, {model.hiringPlan.length} hiring requests, a {money(model.budget.modeledAnnualBudgetUsd)} budget.{isFixture ? ' A fictional company.' : ''}</p>
+          <p>{model.teams.length} teams, {model.initiatives.length} initiatives, {model.hiringPlan.length} hiring requests, a {fmt.money(model.budget.modeledAnnualBudgetUsd)} budget.{isFixture ? ' A fictional company.' : ''}</p>
           <Loop />
           <details className="tuck"><summary>How the model works</summary>
             <p>Strategy becomes work, work becomes hours, hours become people, month by month. Decisions change the strategy and the loop runs again. Every number on the board is computed from the inputs; none is typed in.</p>
@@ -114,7 +114,7 @@ export function Story() {
     },
     {
       id: 'year', label: 'The year',
-      title: <>{num(Math.round(result.teams.reduce((a, t) => a + t.annualWorkloadHours, 0)))} hours of work across twelve months.</>,
+      title: <>{fmt.num(Math.round(result.teams.reduce((a, t) => a + t.annualWorkloadHours, 0)))} hours of work across twelve months.</>,
       body: (
         <>
           <p>Each cell on the board is one team's month, as a share of the hours its people can actually work. Colored cells are over that team's capacity.</p>
@@ -216,7 +216,7 @@ export function Story() {
                 <button onClick={() => { if (c.teamId) dispatch({ type: 'team', id: c.teamId }); else setDetail('initiatives'); }}>
                   <span className="bc-when">{c.firstMonth ? monthLabel(c.firstMonth) : '—'}</span>
                   <span className="bc-t">{c.title}{rank(c.id) && <em className="bc-tag">{rank(c.id)}</em>}</span>
-                  <span className="bc-i">{c.businessImpactUsd > 0 ? money(c.businessImpactUsd) : ''}</span>
+                  <span className="bc-i">{c.businessImpactUsd > 0 ? fmt.money(c.businessImpactUsd) : ''}</span>
                 </button>
               </li>
             ))}

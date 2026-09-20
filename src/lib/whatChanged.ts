@@ -5,7 +5,7 @@
  */
 import type { Intervention, OperatingModel, Scenario, ScenarioEffect } from '../models/types';
 import type { ModelResult } from '../models/results';
-import { money, monthLabel, pct } from './format';
+import { fmtFor, monthLabel, pct } from './format';
 
 export interface Step { label: string; from: string; to: string; note?: string }
 export interface Changed { cause: string; steps: Step[] }
@@ -25,6 +25,7 @@ function effectCause(e: ScenarioEffect, model: OperatingModel, teamName: (id: st
 }
 
 export function whatChanged(model: OperatingModel, scenario: Scenario, levers: Intervention[], cur: ModelResult, base: ModelResult, teamName: (id: string) => string, initName: (id: string) => string): Changed | null {
+  const { money, num } = fmtFor(model);
   const causes: string[] = [];
   if (scenario.type === 'combined') causes.push(...scenario.effects.map((e) => effectCause(e, model, teamName)));
   else if (scenario.type !== 'base') causes.push(effectCause(scenario, model, teamName));
@@ -34,7 +35,7 @@ export function whatChanged(model: OperatingModel, scenario: Scenario, levers: I
   const steps: Step[] = [];
   const t = (r: ModelResult, id: string) => r.teams.find((x) => x.teamId === id)!;
   const workB = base.teams.reduce((s, x) => s + x.annualWorkloadHours, 0), workC = cur.teams.reduce((s, x) => s + x.annualWorkloadHours, 0);
-  if (Math.abs(workC - workB) / workB > 0.005) steps.push({ label: 'Work', from: `${Math.round(workB).toLocaleString()} h`, to: `${Math.round(workC).toLocaleString()} h`, note: pct((workC - workB) / workB) });
+  if (Math.abs(workC - workB) / workB > 0.005) steps.push({ label: 'Work', from: `${num(workB)} h`, to: `${num(workC)} h`, note: pct((workC - workB) / workB) });
   if (Math.round(cur.summary.endingFte) !== Math.round(base.summary.endingFte)) steps.push({ label: 'People in December', from: `${Math.round(base.summary.endingFte)}`, to: `${Math.round(cur.summary.endingFte)}` });
   const land = (r: ModelResult) => r.teams.flatMap((x) => x.months.filter((m) => m.hiresLanded > 0).map((m) => `${teamName(x.teamId)} ${monthLabel(m.month)}`));
   const lb = land(base), lc = land(cur);

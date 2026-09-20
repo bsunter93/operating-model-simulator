@@ -4,7 +4,7 @@ import { TeamTimeline } from './charts/TeamTimeline';
 import { StatusPill } from './StatusPill';
 import { Term } from './Term';
 import { HowCalc } from './HowCalc';
-import { monthLabel, num, pct } from '../lib/format';
+import { monthLabel, pct } from '../lib/format';
 import { Portfolio } from '../views/Portfolio';
 import { Workforce } from '../views/Workforce';
 import { Cost } from '../views/Cost';
@@ -22,7 +22,7 @@ const people = (n: number) => (Math.round(n) === 1 ? '1 person' : `${Math.round(
  * Changes against the base plan are marked on the map itself.
  */
 export function Board({ teamId, onTeam, detail, onDetail }: { teamId: string; onTeam: (id: string) => void; detail: Detail; onDetail: (d: Detail) => void }) {
-  const { result, base, doNothing, model, state, teamName, isBase } = useStore();
+  const { result, base, doNothing, model, state, teamName, isBase, fmt } = useStore();
   const [showBase, setShowBase] = useState(true);
   const team = result.teams.find((t) => t.teamId === teamId)!;
   const ghost = doNothing.teams.find((t) => t.teamId === teamId)!;
@@ -73,7 +73,7 @@ export function Board({ teamId, onTeam, detail, onDetail }: { teamId: string; on
                     const mark = !isBase && showBase && c.dir !== 'same';
                     return (
                       <td key={m.month} className={i === nowIdx ? 'now' : ''}>
-                        <button className={'cell' + (mark ? ' ' + c.dir : '')} data-s={m.status} onClick={() => onTeam(t.teamId)} title={`${teamName(t.teamId)}, ${monthLabel(m.month, true)}: ${num(m.workloadHours)} h of ${num(m.availableProductiveHours)} h${!isBase ? ` (base plan ${Math.round(base.teams.find((x) => x.teamId === t.teamId)!.months[i].utilization * 100)}%)` : ''}`}>
+                        <button className={'cell' + (mark ? ' ' + c.dir : '')} data-s={m.status} onClick={() => onTeam(t.teamId)} title={`${teamName(t.teamId)}, ${monthLabel(m.month, true)}: ${fmt.num(m.workloadHours)} h of ${fmt.num(m.availableProductiveHours)} h${!isBase ? ` (base plan ${Math.round(base.teams.find((x) => x.teamId === t.teamId)!.months[i].utilization * 100)}%)` : ''}`}>
                           {Number.isFinite(m.utilization) ? Math.round(m.utilization * 100) : '∞'}
                           {!isBase && showBase && c.d !== 0 && <sup>{c.d > 0 ? '+' : ''}{c.d}</sup>}
                         </button>

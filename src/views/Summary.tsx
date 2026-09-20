@@ -3,15 +3,15 @@ import { useStore } from '../state/store';
 import { verdict } from '../lib/verdict';
 import { whatChanged } from '../lib/whatChanged';
 import { thresholds } from '../lib/thresholds';
-import { hours, money, monthLabel, pct } from '../lib/format';
+import { monthLabel, pct } from '../lib/format';
 import { monthIndex } from '../engine';
 
 /** One page an operator can hand to an executive. Print to PDF. */
 export function Summary() {
-  const { model, state, result, base, interventions, teamName, initName, isBase } = useStore();
+  const { model, state, result, base, interventions, teamName, initName, isBase, fmt } = useStore();
   const active = interventions.filter((iv) => state.interventionIds.includes(iv.id));
   const scen = model.scenarios.find((s) => s.id === state.scenarioId)!;
-  const v = verdict(result, teamName, initName, isBase ? undefined : base);
+  const v = verdict(result, fmt, teamName, initName, isBase ? undefined : base);
   const changed = isBase ? null : whatChanged(model, scen, active, result, base, teamName, initName);
   const th = useMemo(() => thresholds(model, state.scenarioId, active, teamName), [model, state.scenarioId, active, teamName]);
   const idx = (k: string) => monthIndex(model.calendar.startMonth, k);
@@ -34,13 +34,13 @@ export function Summary() {
         <div><b>{Math.round(s.startingFte)} → {Math.round(s.endingFte)}</b><span>people, Jan to Dec</span></div>
         <div><b>{peak && peak.fte >= 0.5 ? `${Math.round(peak.fte)} people` : 'none'}</b><span>peak shortfall{peak && peak.fte >= 0.5 ? `, ${teamName(peak.team)}, ${monthLabel(peak.month)}` : ''}</span></div>
         <div><b>{s.teamsConstrained} of {model.teams.length}</b><span>teams over capacity</span></div>
-        <div><b>{money(result.financials.annualTotalCostUsd)}</b><span>cost, {money(result.financials.annualVarianceUsd, { sign: true })} against budget</span></div>
-        <div><b>{money(s.revenueExposureUsd)}</b><span>revenue exposure</span></div>
+        <div><b>{fmt.money(result.financials.annualTotalCostUsd)}</b><span>cost, {fmt.money(result.financials.annualVarianceUsd, { sign: true })} against budget</span></div>
+        <div><b>{fmt.money(s.revenueExposureUsd)}</b><span>revenue exposure</span></div>
         {/* Only when there is some. On a plan that stays inside its capacity this is zero
             every month, and a cell reading "0 hours" is noise on an executive's page. */}
         {s.shedHours > 0 && (
-          <div><b>{hours(s.shedHours)}</b><span>work never done{s.closingBacklogHours > 0
-            ? `, ${hours(s.closingBacklogHours)} still waiting at year end` : ''}</span></div>
+          <div><b>{fmt.hours(s.shedHours)}</b><span>work never done{s.closingBacklogHours > 0
+            ? `, ${fmt.hours(s.closingBacklogHours)} still waiting at year end` : ''}</span></div>
         )}
       </div>
 
@@ -54,14 +54,14 @@ export function Summary() {
 
       <section>
         <h2>Key findings, in date order</h2>
-        <table className="summary-tbl"><tbody>{dated.slice(0, 5).map((c) => <tr key={c.id}><td><b>{c.firstMonth ? monthLabel(c.firstMonth) : '—'}</b></td><td>{c.title}</td><td>{c.detail}</td><td>{c.businessImpactUsd > 0 ? money(c.businessImpactUsd) : ''}</td></tr>)}</tbody></table>
+        <table className="summary-tbl"><tbody>{dated.slice(0, 5).map((c) => <tr key={c.id}><td><b>{c.firstMonth ? monthLabel(c.firstMonth) : '—'}</b></td><td>{c.title}</td><td>{c.detail}</td><td>{c.businessImpactUsd > 0 ? fmt.money(c.businessImpactUsd) : ''}</td></tr>)}</tbody></table>
       </section>
 
       <section>
         <h2>What has to be true</h2>
         <ul>
           {active.length === 0 && <li>Nothing beyond the plan as written.</li>}
-          {active.map((iv) => <li key={iv.id}>{iv.type === 'expediteHiring' ? `The planned hires can be brought in with a ${iv.newLeadTimeMonths}-month lead time for ${money(iv.oneTimeCostUsd)}.` : iv.type === 'hire' ? `${iv.headcount} more people for ${teamName(iv.teamId)} can be hired and land after ${iv.leadTimeMonths} months.` : iv.type === 'automation' ? `${pct(iv.workloadReductionRate)} of ${teamName(iv.teamId)}'s hours can be removed, live ${iv.timeToImpactMonths} months after kickoff, for ${money(iv.implementationCostUsd)}.` : iv.type === 'reallocation' ? `${iv.headcount} people from ${teamName(iv.fromTeamId)} can do ${teamName(iv.toTeamId)}'s work after ${iv.timeToImpactMonths} month${iv.timeToImpactMonths === 1 ? '' : 's'}.` : iv.type === 'defer' ? `${initName(iv.initiativeId)} can move by ${iv.months} months without losing its value.` : iv.type === 'cancel' ? `${initName(iv.initiativeId)} can be dropped.` : iv.type === 'rescope' ? `${initName(iv.initiativeId)} ships at ${pct(iv.scopeMultiplier)} of its scope.` : iv.type === 'restaff' ? `${initName(iv.initiativeId)} is restaffed, which moves when it lands.` : `${teamName(iv.teamId)} can run at ${pct(iv.newTargetUtilization)} and the service level can take it.`}</li>)}
+          {active.map((iv) => <li key={iv.id}>{iv.type === 'expediteHiring' ? `The planned hires can be brought in with a ${iv.newLeadTimeMonths}-month lead time for ${fmt.money(iv.oneTimeCostUsd)}.` : iv.type === 'hire' ? `${iv.headcount} more people for ${teamName(iv.teamId)} can be hired and land after ${iv.leadTimeMonths} months.` : iv.type === 'automation' ? `${pct(iv.workloadReductionRate)} of ${teamName(iv.teamId)}'s hours can be removed, live ${iv.timeToImpactMonths} months after kickoff, for ${fmt.money(iv.implementationCostUsd)}.` : iv.type === 'reallocation' ? `${iv.headcount} people from ${teamName(iv.fromTeamId)} can do ${teamName(iv.toTeamId)}'s work after ${iv.timeToImpactMonths} month${iv.timeToImpactMonths === 1 ? '' : 's'}.` : iv.type === 'defer' ? `${initName(iv.initiativeId)} can move by ${iv.months} months without losing its value.` : iv.type === 'cancel' ? `${initName(iv.initiativeId)} can be dropped.` : iv.type === 'rescope' ? `${initName(iv.initiativeId)} ships at ${pct(iv.scopeMultiplier)} of its scope.` : iv.type === 'restaff' ? `${initName(iv.initiativeId)} is restaffed, which moves when it lands.` : `${teamName(iv.teamId)} can run at ${pct(iv.newTargetUtilization)} and the service level can take it.`}</li>)}
         </ul>
       </section>
 

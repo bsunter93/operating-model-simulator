@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useReducer, useState } from 'react';
+import { makeFmt, type Fmt } from '../lib/format';
 import type { ReactNode } from 'react';
 import { run, validateModel } from '../engine';
 import type { OperatingModel, DecisionWeights, Intervention } from '../models/types';
@@ -139,6 +140,8 @@ interface Ctx {
   base: ModelResult;
   isBase: boolean;
   isFixture: boolean;
+  /** Number and money formatting, bound to this model's currency and locale. */
+  fmt: Fmt;
   teamName: (id: string) => string;
   initName: (id: string) => string;
 }
@@ -197,6 +200,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     state, dispatch, model, interventions, result, doNothing, base,
     isBase: state.scenarioId === baseId(model) && active.length === 0,
     isFixture: model.id === FIXTURE.id,
+    fmt: makeFmt(model.currency, model.locale),
     teamName: (id) => model.teams.find((t) => t.id === id)?.name ?? id,
     initName: (id) => model.initiatives.find((i) => i.id === id)?.name ?? id,
   }), [state, model, interventions, result, doNothing, base, active.length]);

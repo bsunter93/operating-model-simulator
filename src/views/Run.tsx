@@ -3,7 +3,7 @@ import { monthIndex, run } from '../engine';
 import { useStore } from '../state/store';
 import type { ModelResult } from '../models/results';
 import type { OperatingModel, RunDecision, RunSpec } from '../models/types';
-import { hours } from '../lib/format';
+import type { Fmt } from '../lib/format';
 
 /**
  * The run: five decisions, and whatever they add up to.
@@ -153,7 +153,9 @@ const uncap = (t: string) => (t ? t[0].toLowerCase() + t.slice(1) : t);
     nobody proofread. */
 const list = (xs: string[]) =>
   xs.length < 3 ? xs.join(' and ') : xs.slice(0, -1).join(', ') + ' and ' + xs[xs.length - 1];
-export const mUsd = (n: number) => '$' + (n / 1e6).toFixed(2) + 'M';
+/* Two decimals, because these sit next to each other on a dashboard and the difference
+   between $47.04M and $43.57M is the whole point of showing them. */
+const cash = (fmt: Fmt, n: number) => fmt.money(n, { precise: true });
 
 /** One grammar for every team: a bar, and the line it should not cross. */
 function TeamBars({ model, result, highlight }:
@@ -206,6 +208,7 @@ function FocusLine({ model, result, teamId }:
  * it beats adding a dice roll, which would be the only invented number on the page.
  */
 function InitiativeRisk({ model, result }: { model: OperatingModel; result: ModelResult }) {
+  const { fmt } = useStore();
   const named = (id: string) => model.initiatives.find((i) => i.id === id)?.name ?? id;
   const items = [...result.exposure.items].sort((a, b) => b.exposureUsd - a.exposureUsd);
   return (
@@ -219,7 +222,7 @@ function InitiativeRisk({ model, result }: { model: OperatingModel; result: Mode
               {pct(e.baseProbability)}
               {added > 0.005 && <i> &rarr; {pct(e.effectiveProbability)}</i>}
             </span>
-            <span className="rb-rcash">{mUsd(e.exposureUsd)}</span>
+            <span className="rb-rcash">{cash(fmt, e.exposureUsd)}</span>
           </li>
         );
       })}
@@ -228,6 +231,7 @@ function InitiativeRisk({ model, result }: { model: OperatingModel; result: Mode
 }
 
 function Kpis({ result, prev }: { result: ModelResult; prev?: ModelResult }) {
+  const { fmt } = useStore();
   const s = result.summary;
   const p = prev?.summary;
   const cell = (label: string, value: string, delta?: number, goodIsDown = true) => {
@@ -249,14 +253,14 @@ function Kpis({ result, prev }: { result: ModelResult; prev?: ModelResult }) {
                p?.serviceLevelPct != null ? s.serviceLevelPct - p.serviceLevelPct : undefined, false)
         : cell('Teams over capacity', String(s.teamsConstrained), p && s.teamsConstrained - p.teamsConstrained)}
       {cell('People, year end', String(Math.round(s.endingFte)), p && s.endingFte - p.endingFte)}
-      {cell('Revenue at risk', mUsd(s.revenueExposureUsd), p && s.revenueExposureUsd - p.revenueExposureUsd)}
-      {cell('Spent on changes', mUsd(spendOf(result)), undefined)}
+      {cell('Revenue at risk', cash(fmt, s.revenueExposureUsd), p && s.revenueExposureUsd - p.revenueExposureUsd)}
+      {cell('Spent on changes', cash(fmt, spendOf(result)), undefined)}
     </div>
   );
 }
 
 /** Said in sentences, computed from the two runs. Never authored. */
-function consequence(model: OperatingModel, before: ModelResult, after: ModelResult): string[] {
+function consequence(model: OperatingModel, fmt: Fmt, before: ModelResult, after: ModelResult): string[] {
   const out: string[] = [];
   const moved = after.teams
     .map((t, i) => ({
@@ -285,10 +289,10 @@ function consequence(model: OperatingModel, before: ModelResult, after: ModelRes
   if (Math.abs(dSvc) > 0.005) out.push(`Requests answered in time ${dSvc > 0 ? 'rise' : 'fall'} to ${Math.round((after.summary.serviceLevelPct ?? 0) * 100)}%.`);
 
   const dShed = after.summary.shedHours - before.summary.shedHours;
-  if (Math.abs(dShed) > 100) out.push(`Work that never gets done ${dShed < 0 ? 'falls' : 'rises'} to ${hours(after.summary.shedHours)}.`);
+  if (Math.abs(dShed) > 100) out.push(`Work that never gets done ${dShed < 0 ? 'falls' : 'rises'} to ${fmt.hours(after.summary.shedHours)}.`);
 
   const dRisk = after.summary.revenueExposureUsd - before.summary.revenueExposureUsd;
-  if (Math.abs(dRisk) > 50000) out.push(`Revenue at risk ${dRisk < 0 ? 'falls' : 'rises'} to ${mUsd(after.summary.revenueExposureUsd)}.`);
+  if (Math.abs(dRisk) > 50000) out.push(`Revenue at risk ${dRisk < 0 ? 'falls' : 'rises'} to ${cash(fmt, after.summary.revenueExposureUsd)}.`);
 
   return out.length === 1 && !moved.length ? ['Nothing changed. That is an answer too.'] : out;
 }
@@ -325,7 +329,7 @@ function RunFor({ model, spec }: { model: OperatingModel; spec: RunSpec }) {
   /* Whether these are the sample numbers or somebody's own. "Calibrated" is a statement
      about a model's internal consistency, not about whether the company exists, and
      reading it as the latter had this page calling a fictional company real. */
-  const { isFixture } = useStore();
+  const { isFixture, fmt } = useStore();
   const [picks, setPicks] = useState<(string | null)[]>([]);
   const [started, setStarted] = useState(false);
   const [preview, setPreview] = useState<string | null | undefined>(undefined);
@@ -380,7 +384,7 @@ function RunFor({ model, spec }: { model: OperatingModel; spec: RunSpec }) {
 
   const triNow = trail[trail.length - 1];
   const d: RunDecision = decisions[Math.min(step, decisions.length - 1)];
-  const lastLines = step > 0 && !done ? consequence(model, previous, current) : [];
+  const lastLines = step > 0 && !done ? consequence(model, fmt, previous, current) : [];
   const beforeSpike = spike === null ? 0 : decisions.filter((x) => x.monthIndex < spike).length;
 
   return (
@@ -510,9 +514,9 @@ function RunFor({ model, spec }: { model: OperatingModel; spec: RunSpec }) {
               </p>
               {shown.summary.shedHours > 0 && (
                 <p className="rb-service">
-                  <b>{hours(shown.summary.shedHours)}</b> of work never got done at all
+                  <b>{fmt.hours(shown.summary.shedHours)}</b> of work never got done at all
                   {shown.summary.closingBacklogHours > 0
-                    ? <>, and <b>{hours(shown.summary.closingBacklogHours)}</b> was still waiting at year end.</>
+                    ? <>, and <b>{fmt.hours(shown.summary.closingBacklogHours)}</b> was still waiting at year end.</>
                     : '.'}
                 </p>
               )}
@@ -538,6 +542,7 @@ function RunFor({ model, spec }: { model: OperatingModel; spec: RunSpec }) {
  */
 function Replay({ model, spec, picks, trail }:
   { model: OperatingModel; spec: RunSpec; picks: (string | null)[]; trail: TriPos[] }) {
+  const { fmt } = useStore();
   const [at, setAt] = useState(0);
   const [playing, setPlaying] = useState(true);
 
@@ -561,7 +566,7 @@ function Replay({ model, spec, picks, trail }:
     const iv = picks[i];
     return d.options.find((o) => o.interventionId === iv) ?? d.options[d.options.length - 1];
   };
-  const lines = at > 0 ? consequence(model, states[at - 1], states[at]) : [];
+  const lines = at > 0 ? consequence(model, fmt, states[at - 1], states[at]) : [];
   const head = at === 0
     ? { when: MONTHS_LONG[0], what: 'The plan as written' }
     : { when: spec.decisions[at - 1].when, what: chosenAt(at - 1).label };
@@ -592,7 +597,7 @@ function Replay({ model, spec, picks, trail }:
           <ul className="rb-replay-kpi">
             <li><b>{Math.round((states[at].summary.serviceLevelPct ?? 1) * 100)}%</b><span>answered in time</span></li>
             <li><b>{Math.round(states[at].summary.endingFte)}</b><span>people</span></li>
-            <li><b>{mUsd(states[at].summary.revenueExposureUsd)}</b><span>at risk</span></li>
+            <li><b>{cash(fmt, states[at].summary.revenueExposureUsd)}</b><span>at risk</span></li>
             <li><b>{(states[at].summary.retentionRate * 100).toFixed(1)}%</b><span>retention</span></li>
           </ul>
         </div>
@@ -608,6 +613,7 @@ function Replay({ model, spec, picks, trail }:
 function Scorecard({ model, spec, picks, result, doNothing, onReset, trail, cloud }:
   { model: OperatingModel; spec: RunSpec; picks: (string | null)[]; result: ModelResult;
     doNothing: ModelResult; onReset: () => void; trail: TriPos[]; cloud: TriPos[]; cal: TriCal }) {
+  const { fmt } = useStore();
   const s = result.summary, n = doNothing.summary;
   const spent = spendOf(result);
   const took = picks.filter(Boolean).length;
@@ -646,7 +652,7 @@ function Scorecard({ model, spec, picks, result, doNothing, onReset, trail, clou
         <tbody>
           <tr><td>Teams over capacity</td><td>{n.teamsConstrained}</td><td>{s.teamsConstrained}</td></tr>
           <tr><td>People at year end</td><td>{Math.round(n.endingFte)}</td><td>{Math.round(s.endingFte)}</td></tr>
-          <tr><td>Revenue at risk</td><td>{mUsd(n.revenueExposureUsd)}</td><td>{mUsd(s.revenueExposureUsd)}</td></tr>
+          <tr><td>Revenue at risk</td><td>{cash(fmt, n.revenueExposureUsd)}</td><td>{cash(fmt, s.revenueExposureUsd)}</td></tr>
           <tr><td>Kept their people</td><td>{(n.retentionRate * 100).toFixed(1)}%</td><td>{(s.retentionRate * 100).toFixed(1)}%</td></tr>
           <tr><td>Months a team ran over</td><td>{n.strainMonths}</td><td>{s.strainMonths}</td></tr>
           {s.serviceLevelPct !== null && (
@@ -655,9 +661,9 @@ function Scorecard({ model, spec, picks, result, doNothing, onReset, trail, clou
               <td>{(s.serviceLevelPct * 100).toFixed(1)}%</td></tr>
           )}
           {(n.shedHours > 0 || s.shedHours > 0) && (
-            <tr><td>Work never done</td><td>{hours(n.shedHours)}</td><td>{hours(s.shedHours)}</td></tr>
+            <tr><td>Work never done</td><td>{fmt.hours(n.shedHours)}</td><td>{fmt.hours(s.shedHours)}</td></tr>
           )}
-          <tr><td>Spent on changes</td><td>{mUsd(0)}</td><td>{mUsd(spent)}</td></tr>
+          <tr><td>Spent on changes</td><td>{cash(fmt, 0)}</td><td>{cash(fmt, spent)}</td></tr>
         </tbody>
       </table>
       <p className="rb-setup">

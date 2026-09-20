@@ -2,8 +2,8 @@ import { useMemo, useState } from 'react';
 import { useStore } from '../state/store';
 import type { ModelResult } from '../models/results';
 import type { OperatingModel, RunSpec } from '../models/types';
-import { hours } from '../lib/format';
-import { Word, mUsd, runWith, word } from './Run';
+import type { Fmt } from '../lib/format';
+import { Word, runWith, word } from './Run';
 
 /**
  * The short version, for anyone who does not want to play.
@@ -26,7 +26,9 @@ type Objective = {
   who: string;
   /** Lower is better. */
   score: (r: ModelResult) => number;
-  read: (r: ModelResult) => string;
+  /* Takes the formatter, because what a figure reads as depends on the model's currency
+     and there is no sensible default to fall back on. */
+  read: (r: ModelResult, fmt: Fmt) => string;
 };
 
 const strain = (r: ModelResult) =>
@@ -37,11 +39,12 @@ const shedByTeam = (r: ModelResult) => r.teams
   .map((t) => ({ id: t.teamId, hours: t.months.reduce((a, m) => a + m.shedHours, 0) }))
   .sort((a, b) => b.hours - a.hours);
 const svcPct = (r: ModelResult) => Math.round((r.summary.serviceLevelPct ?? 1) * 100);
+const cash = (fmt: Fmt, n: number) => fmt.money(n, { precise: true });
 
 const OBJECTIVES: Objective[] = [
   { id: 'revenue', label: 'Revenue', who: 'a sales or GTM organisation',
     score: (r) => r.summary.revenueExposureUsd,
-    read: (r) => `${mUsd(r.summary.revenueExposureUsd)} of revenue still at risk` },
+    read: (r, fmt) => `${cash(fmt, r.summary.revenueExposureUsd)} of revenue still at risk` },
   { id: 'people', label: 'Your people', who: 'anyone who has watched a team burn out',
     score: strain,
     read: (r) => `${strain(r)} team-months over capacity, and ${Math.round(r.summary.peopleLostToAttrition)} people gone by year end` },
@@ -53,10 +56,10 @@ const OBJECTIVES: Objective[] = [
   { id: 'headcount', label: 'Headcount', who: 'a company under a hiring freeze',
     score: (r) => r.summary.endingFte, read: (r) => `${Math.round(r.summary.endingFte)} people at year end` },
   { id: 'budget', label: 'The budget', who: 'a non-profit, or anyone with a hard cap',
-    score: spend, read: (r) => `${mUsd(spend(r))} spent on changes` },
+    score: spend, read: (r, fmt) => `${cash(fmt, spend(r))} spent on changes` },
   { id: 'portfolio', label: 'What you promised', who: 'a product or delivery organisation',
     score: (r) => -r.summary.portfolioValueUsd,
-    read: (r) => `${mUsd(r.summary.portfolioValueUsd)} of the portfolio delivered` },
+    read: (r, fmt) => `${cash(fmt, r.summary.portfolioValueUsd)} of the portfolio delivered` },
   { id: 'service', label: 'The customer', who: 'anyone whose queue is somebody waiting',
     score: (r) => -(r.summary.serviceLevelPct ?? 1),
     read: (r) => r.summary.serviceLevelPct === null ? 'no queueing work in this model'
@@ -86,6 +89,7 @@ export function Answer() {
 }
 
 function AnswerFor({ model, spec }: { model: OperatingModel; spec: RunSpec }) {
+  const { fmt } = useStore();
   const [objId, setObjId] = useState(OBJECTIVES[0].id);
   const obj = OBJECTIVES.find((o) => o.id === objId)!;
 
@@ -158,7 +162,7 @@ function AnswerFor({ model, spec }: { model: OperatingModel; spec: RunSpec }) {
      objectives, because "it costs you something" is only worth reading with a number. */
   const costs = OBJECTIVES.filter((o) => o.id !== obj.id).map((o) => {
     const champ = [...paths].sort(rank(o))[0];
-    return { o, mine: o.read(best.result), theirs: o.read(champ.result),
+    return { o, mine: o.read(best.result, fmt), theirs: o.read(champ.result, fmt),
              worse: o.score(best.result) > o.score(champ.result) };
   }).filter((c) => c.worse);
 
@@ -203,13 +207,13 @@ function AnswerFor({ model, spec }: { model: OperatingModel; spec: RunSpec }) {
         <p className="ans-h">What that buys</p>
         <p className="ans-body">
           {obj.score(best.result) === obj.score(doNothing) ? (
-            <><b>{obj.read(best.result)}</b>, which is exactly what leaving the plan alone gets
+            <><b>{obj.read(best.result, fmt)}</b>, which is exactly what leaving the plan alone gets
               you. On this measure nothing here beats doing nothing
-              {spend(best.result) > 0 ? `, and the cheapest way to tie still costs ${mUsd(spend(best.result))}.` : '.'}</>
+              {spend(best.result) > 0 ? `, and the cheapest way to tie still costs ${cash(fmt, spend(best.result))}.` : '.'}</>
           ) : (
-            <><b>{obj.read(best.result)}</b>, against <b>{obj.read(doNothing)}</b> if you leave
+            <><b>{obj.read(best.result, fmt)}</b>, against <b>{obj.read(doNothing, fmt)}</b> if you leave
               the plan alone. {spend(best.result) > 0
-                ? `It costs ${mUsd(spend(best.result))} to get there.`
+                ? `It costs ${cash(fmt, spend(best.result))} to get there.`
                 : 'It costs nothing to get there, which is its own kind of answer.'}</>
           )}
         </p>
@@ -245,7 +249,7 @@ function AnswerFor({ model, spec }: { model: OperatingModel; spec: RunSpec }) {
             <p className="ans-h">Why the year answers to some calls and not others</p>
             <p className="ans-body">
               {scenario?.description ? <>{scenario.description} </> : null}
-              Leaving the plan alone ends the year with <b>{hours(doNothing.summary.shedHours)}</b> of
+              Leaving the plan alone ends the year with <b>{fmt.hours(doNothing.summary.shedHours)}</b> of
               work never done, and {share}% of that lands on one team: <b>{worstName}</b>. Every
               lever the run offers, each applied on its own to that same year:
             </p>
@@ -254,7 +258,7 @@ function AnswerFor({ model, spec }: { model: OperatingModel; spec: RunSpec }) {
                 <li key={l.iv} className={l.iv === top.iv ? 'top' : l.iv === 'none' ? 'nil' : ''}>
                   <span className="lev-name">{l.label}</span>
                   <span className="lev-track"><i style={{ width: (l.r.summary.shedHours / max) * 100 + '%' }} /></span>
-                  <span className="lev-num">{hours(l.r.summary.shedHours)} undone</span>
+                  <span className="lev-num">{fmt.hours(l.r.summary.shedHours)} undone</span>
                   <span className="lev-num">{svcPct(l.r)}% answered</span>
                 </li>
               ))}
@@ -264,7 +268,7 @@ function AnswerFor({ model, spec }: { model: OperatingModel; spec: RunSpec }) {
               that changes what the customer sees: {svcPct(top.r)}% of requests answered in
               time against {svcPct(doNothing)}% for leaving it alone.
               {hire && hire.iv !== top.iv && <> Pulling hires forward only
-                saves {hours(doNothing.summary.shedHours - hire.r.summary.shedHours)}, because it adds
+                saves {fmt.hours(doNothing.summary.shedHours - hire.r.summary.shedHours)}, because it adds
                 people to a team the pressure did not land on.</>}
               {move && move.iv !== top.iv && <> Moving people across takes the answer rate
                 to {svcPct(move.r)}%, because the people come out of a queue that was already

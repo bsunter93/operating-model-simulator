@@ -4,7 +4,7 @@ import { FIXTURE, parseImportedModel, useStore } from '../state/store';
 import { TEMPLATES } from '../data/templates';
 import { Controls } from '../components/Controls';
 import { verdict } from '../lib/verdict';
-import { money, monthLabel, num, pct } from '../lib/format';
+import { monthLabel, pct } from '../lib/format';
 
 function N({ value, onChange, step = 1, min = 0, width = 64 }: { value: number; onChange: (v: number) => void; step?: number; min?: number; width?: number }) {
   return <input className="cellin" type="number" value={value} step={step} min={min} style={{ width }} onChange={(e) => { const v = Number(e.target.value); if (Number.isFinite(v) && v >= min) onChange(v); }} />;
@@ -12,10 +12,10 @@ function N({ value, onChange, step = 1, min = 0, width = 64 }: { value: number; 
 
 /** Your numbers: one screen, no scrolling. Inputs on the left in labeled cards, the answer on the right. */
 export function Mine() {
-  const { model, dispatch, result, state, teamName, initName, isBase } = useStore();
+  const { model, dispatch, result, state, teamName, initName, isBase, fmt } = useStore();
   const [errors, setErrors] = useState<string[]>([]);
   const focus = state.teamId ?? result.summary.firstBreakTeamId ?? model.teams[0].id;
-  const v = verdict(result, teamName, initName);
+  const v = verdict(result, fmt, teamName, initName);
   const edit = (fn: (m: OperatingModel) => void) => { const m = structuredClone(model); fn(m); m.id = m.id.replace(/(-edited)?$/, '-edited'); m.status = 'provisional'; dispatch({ type: 'editModel', model: m }); };
   const top3 = useMemo(() => [...result.constraints].slice(0, 3), [result.constraints]);
   const totalFte = model.teams.reduce((s, t) => s + t.currentFte, 0);
@@ -78,7 +78,7 @@ export function Mine() {
             </div>
           </section>
           <section className="card tight span2">
-            <h5>People <span>{num(totalFte)} today</span></h5>
+            <h5>People <span>{fmt.num(totalFte)} today</span></h5>
             <div className="scroll">
               <table className="tbl edit mini"><thead><tr><th>Team</th><th>People</th><th>Target %</th><th>Attrition %</th><th>Hiring</th><th>Lead, mo</th></tr></thead>
                 <tbody>{model.teams.map((t, i) => { const hi = model.hiringPlan.findIndex((h) => h.teamId === t.id); const h = hi >= 0 ? model.hiringPlan[hi] : null; return (
@@ -104,7 +104,7 @@ export function Mine() {
               </table>
             </div>
             <ol className="top3">
-              {top3.length === 0 ? <li className="dim">Nothing breaks. Every team stays within capacity.</li> : top3.map((c) => <li key={c.id} data-kind={c.kind}><b>{c.firstMonth ? monthLabel(c.firstMonth) : '—'}</b> {c.title}{c.businessImpactUsd > 0 ? <span> · {money(c.businessImpactUsd)}</span> : null}</li>)}
+              {top3.length === 0 ? <li className="dim">Nothing breaks. Every team stays within capacity.</li> : top3.map((c) => <li key={c.id} data-kind={c.kind}><b>{c.firstMonth ? monthLabel(c.firstMonth) : '—'}</b> {c.title}{c.businessImpactUsd > 0 ? <span> · {fmt.money(c.businessImpactUsd)}</span> : null}</li>)}
             </ol>
           </section>
           <Controls teamId={focus} onTeam={(id) => dispatch({ type: 'team', id })} compact />

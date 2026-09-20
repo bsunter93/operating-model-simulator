@@ -3,6 +3,8 @@
   "id": "atlas-systems-2027",
   "name": "Atlas Systems",
   "status": "calibrated",
+  "currency": "USD",
+  "locale": "en-US",
   "calendar": {
     "startMonth": "2027-01",
     "endMonth": "2027-12",

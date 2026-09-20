@@ -3,7 +3,8 @@
  * nothing here is a fixed conclusion about any fixture.
  */
 import type { ModelResult } from '../models/results';
-import { money, monthLabel } from './format';
+import type { Fmt } from './format';
+import { monthLabel } from './format';
 
 export interface Verdict {
   /** Short answer to "can this organization execute the plan?" */
@@ -19,7 +20,8 @@ function listNames(names: string[]): string {
   return `${names.slice(0, -1).join(', ')}, and ${names[names.length - 1]}`;
 }
 
-export function verdict(r: ModelResult, teamName: (id: string) => string, initName: (id: string) => string, base?: ModelResult): Verdict {
+export function verdict(r: ModelResult, fmt: Fmt, teamName: (id: string) => string, initName: (id: string) => string, base?: ModelResult): Verdict {
+  const { money, num } = fmt;
   const nTeams = r.teams.length;
   const severe = r.teams.filter((t) => t.worstStatus === 'severe');
   const over = r.teams.filter((t) => t.worstStatus === 'severe' || t.worstStatus === 'constrained');
@@ -64,7 +66,7 @@ export function verdict(r: ModelResult, teamName: (id: string) => string, initNa
     for (const t of base.teams) for (const m of t.months) bpeak = Math.max(bpeak, m.workforceGap);
     if (Math.round(bpeak) !== Math.round(peak?.fte ?? 0)) parts.push(`peak shortfall ${Math.round(bpeak)} → ${Math.round(peak?.fte ?? 0)} people`);
     const gapB = base.teams.reduce((a, t) => a + t.totalGapVsPlanHours, 0), gapR = r.teams.reduce((a, t) => a + t.totalGapVsPlanHours, 0);
-    if (Math.abs(gapB - gapR) > 50) parts.push(`hours over capacity ${Math.round(gapB).toLocaleString()} → ${Math.round(gapR).toLocaleString()}`);
+    if (Math.abs(gapB - gapR) > 50) parts.push(`hours over capacity ${num(gapB)} → ${num(gapR)}`);
     if (Math.abs(base.summary.revenueExposureUsd - s.revenueExposureUsd) > 1e5) parts.push(`revenue exposure ${money(base.summary.revenueExposureUsd)} → ${money(s.revenueExposureUsd)}`);
     if (Math.abs(base.financials.annualTotalCostUsd - r.financials.annualTotalCostUsd) > 1e4) parts.push(`cost ${money(base.financials.annualTotalCostUsd)} → ${money(r.financials.annualTotalCostUsd)}`);
     versus = parts.length ? `Against the base plan: ${parts.join('; ')}.` : 'No material change from the base plan.';

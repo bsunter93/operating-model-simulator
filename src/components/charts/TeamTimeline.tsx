@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { TeamResult } from '../../models/results';
-import { monthLabel, num, pct } from '../../lib/format';
+import { monthLabel, pct } from '../../lib/format';
+import { useStore } from '../../state/store';
 
 interface Props {
   team: TeamResult;
@@ -19,6 +20,7 @@ function niceStep(max: number): number {
 }
 
 export function TeamTimeline({ team, ghost }: Props) {
+  const { fmt } = useStore();
   const [hover, setHover] = useState<number | null>(null);
   const months = team.months;
   const n = months.length;
@@ -108,9 +110,9 @@ export function TeamTimeline({ team, ghost }: Props) {
       {h && (
         <div className="tip" style={{ left: `${((cx(hover!) + (hover! > n / 2 ? -band / 2 : band / 2)) / W) * 100}%`, top: 8, transform: hover! > n / 2 ? 'translateX(-100%)' : undefined }}>
           <b>{monthLabel(h.month, true)} · {pct(h.utilization)} of productive hours</b>
-          run work {num(h.runHours)} h · initiatives {num(h.portfolioHours)} h<br />
-          target capacity {num(h.targetCapacityHours)} h at {h.availableFte.toFixed(1)} FTE<br />
-          {h.gapHours > 0 ? `${num(h.gapHours)} h over capacity · ${h.workforceGap.toFixed(1)} FTE short` : 'within capacity'}
+          run work {fmt.num(h.runHours)} h · initiatives {fmt.num(h.portfolioHours)} h<br />
+          target capacity {fmt.num(h.targetCapacityHours)} h at {h.availableFte.toFixed(1)} FTE<br />
+          {h.gapHours > 0 ? `${fmt.num(h.gapHours)} h over capacity · ${h.workforceGap.toFixed(1)} FTE short` : 'within capacity'}
           {h.hiresLanded > 0 ? ` · ${Math.round(h.hiresLanded)} hires land` : ''}
         </div>
       )}

@@ -288,6 +288,21 @@ export interface OperatingModel {
   scenarios: Scenario[];
   interventions: Intervention[];
   decisionWeights: DecisionWeights;
+  /**
+   * ISO 4217 code for every money figure in this model. Absent means USD.
+   *
+   * The `...Usd` suffix on the amount fields is historical and says nothing about the
+   * unit: the unit is whatever this says. Renaming those thirty fields touches the
+   * engine, the results, every view and every fixture without changing one number, so it
+   * is a separate job from getting the figures to render in the right currency.
+   */
+  currency?: string;
+  /**
+   * BCP 47 tag for number formatting. Absent means en-US, deliberately rather than the
+   * reader's own: a figure that formats differently depending on who is looking makes
+   * screenshots, printed pages and tests disagree for no visible reason.
+   */
+  locale?: string;
   /** The guided run. Optional: a model without one still opens in the full board. */
   run?: RunSpec;
   /** Author metadata. Never read by the engine. */

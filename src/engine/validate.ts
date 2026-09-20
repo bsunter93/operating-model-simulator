@@ -189,6 +189,21 @@ export function validateModel(m: OperatingModel): string[] {
     }
   }
 
+  /* Money and number formatting. A currency Intl does not know renders as the code
+     itself with no warning, which looks like a bug in the numbers rather than a typo in
+     the model. */
+  if (m.currency !== undefined) {
+    if (!/^[A-Z]{3}$/.test(m.currency)) say(`currency "${m.currency}" is not a three-letter ISO 4217 code`);
+    else {
+      try { new Intl.NumberFormat('en-US', { style: 'currency', currency: m.currency }).format(1); }
+      catch { say(`currency "${m.currency}" is not one this runtime knows`); }
+    }
+  }
+  if (m.locale !== undefined) {
+    try { new Intl.NumberFormat(m.locale).format(1); }
+    catch { say(`locale "${m.locale}" is not a valid BCP 47 tag`); }
+  }
+
   /* The guided run, if the model carries one. Every reference has to resolve or the run
      offers a choice that does nothing and says nothing about why. */
   if (m.run) {

@@ -13,6 +13,7 @@ import type {
   BudgetLever, Constraint, Exposure, ExposureItem, FinancialMonth, Financials,
   InitiativeSchedule, ModelResult, Summary, TeamMonth, TeamResult, TeamStatus,
 } from '../models/results';
+import { fmtFor } from '../lib/format';
 import { addMonths, annualToMonthlyRate, calendarMonth, expandMonths, monthIndex } from './calendar';
 import { serviceLevel as erlangServiceLevel } from './pooled';
 import { scheduleInitiatives } from './schedule';
@@ -542,6 +543,9 @@ export function run(input: OperatingModel, opts: RunOptions = {}): ModelResult {
 }
 
 function detectConstraints(model: OperatingModel, teams: TeamResult[], schedule: InitiativeSchedule[], fin: Financials, months: MonthKey[]): Constraint[] {
+  /* Bound to the model, not to the host: a pure function whose output changes with the
+     machine's locale is not a pure function, and these strings are shown to a reader. */
+  const f = fmtFor(model);
   const out: Constraint[] = [];
   const teamById = new Map(model.teams.map((t) => [t.id, t]));
   const initById = new Map(model.initiatives.map((i) => [i.id, i]));
@@ -555,7 +559,7 @@ function detectConstraints(model: OperatingModel, teams: TeamResult[], schedule:
     out.push({
       id: `capacity:${r.teamId}`, kind: 'capacity', teamId: r.teamId,
       title: `${t.name} over capacity`,
-      detail: `${r.monthsConstrained} of ${months.length} months over capacity against a ${Math.round(r.months[0].targetUtilization * 100)}% target; peak ${Math.round(r.peakUtilization * 100)}% in ${r.peakMonth}; ${Math.round(r.totalGapHours).toLocaleString()} gap hours; peak shortfall ${r.peakWorkforceGap.toFixed(1)} FTE.`,
+      detail: `${r.monthsConstrained} of ${months.length} months over capacity against a ${Math.round(r.months[0].targetUtilization * 100)}% target; peak ${Math.round(r.peakUtilization * 100)}% in ${r.peakMonth}; ${f.num(r.totalGapHours)} gap hours; peak shortfall ${r.peakWorkforceGap.toFixed(1)} FTE.`,
       businessImpactUsd: impact, firstMonth: r.firstConstrainedMonth,
       metric: 'peak utilization', value: r.peakUtilization, threshold: r.months[0].targetUtilization,
     });
@@ -586,7 +590,7 @@ function detectConstraints(model: OperatingModel, teams: TeamResult[], schedule:
     out.push({
       id: 'budget', kind: 'budget',
       title: 'Modeled cost exceeds the budget cap',
-      detail: `${Math.round(fin.annualVarianceUsd).toLocaleString()} over across the horizon; peak monthly overage ${Math.round(fin.peakMonthlyVarianceUsd).toLocaleString()}.`,
+      detail: `${f.money(fin.annualVarianceUsd, { compact: false })} over across the horizon; peak monthly overage ${f.money(fin.peakMonthlyVarianceUsd, { compact: false })}.`,
       businessImpactUsd: fin.annualVarianceUsd, firstMonth: fin.monthly.find((f) => f.varianceUsd > 0)?.month ?? null,
       metric: 'annual variance', value: fin.annualVarianceUsd, threshold: 0,
     });

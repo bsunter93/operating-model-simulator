@@ -4,7 +4,7 @@ import { sensitivity } from '../lib/sensitivity';
 
 /** What actually moves the answer: one assumption nudged at a time, rerun through the model. */
 export function Tornado() {
-  const { state, model, interventions, result } = useStore();
+  const { state, model, interventions, result, fmt } = useStore();
   const active = interventions.filter((iv) => state.interventionIds.includes(iv.id));
   const scen = model.scenarios.find((s) => s.id === state.scenarioId)!;
   const rows = useMemo(() => sensitivity(model, scen, active, result), [model, scen, active, result]);
@@ -17,7 +17,7 @@ export function Tornado() {
             <tr key={r.variable}>
               <td className="ink left">{r.variable} <span className="dim">{r.change}</span></td>
               <td className="tbar"><span className={'tb' + (r.gapHours >= 0 ? ' worse' : ' better')} style={{ width: `${(Math.abs(r.gapHours) / max) * 100}%` }} /></td>
-              <td className={r.gapHours >= 0 ? 'ink' : ''}>{r.gapHours >= 0 ? '+' : '−'}{Math.round(Math.abs(r.gapHours)).toLocaleString()} h</td>
+              <td className={r.gapHours >= 0 ? 'ink' : ''}>{r.gapHours >= 0 ? '+' : '−'}{fmt.num(Math.abs(r.gapHours))} h</td>
             </tr>
           ))}
         </tbody>

@@ -4,14 +4,14 @@ import { FIXTURE, parseImportedModel, useStore } from '../state/store';
 import { TEMPLATES } from '../data/templates';
 import { modelWarnings } from '../engine';
 import { Term } from '../components/Term';
-import { num } from '../lib/format';
+
 
 function NumberCell({ value, onChange, step = 1, min = 0, width = 84 }: { value: number; onChange: (v: number) => void; step?: number; min?: number; width?: number }) {
   return <input className="cellin" type="number" value={value} step={step} min={min} style={{ width }} onChange={(e) => { const v = Number(e.target.value); if (Number.isFinite(v) && v >= min) onChange(v); }} />;
 }
 
 export function ModelView() {
-  const { model, dispatch, isFixture } = useStore();
+  const { model, dispatch, isFixture, fmt } = useStore();
   const [errors, setErrors] = useState<string[]>([]);
   const [scale, setScale] = useState(1);
   const file = useRef<HTMLInputElement>(null);
@@ -93,12 +93,12 @@ export function ModelView() {
 
       <section className="sec">
         <h2>Scale</h2>
-        <p className="sub">Drag to resize the whole organization. Headcount, volumes, hiring, initiative staffing, and budget all scale together, so the same story plays out at your size. Currently <b>{num(totalFte)} people</b>.</p>
+        <p className="sub">Drag to resize the whole organization. Headcount, volumes, hiring, initiative staffing, and budget all scale together, so the same story plays out at your size. Currently <b>{fmt.num(totalFte)} people</b>.</p>
         {isFixture || model.id.startsWith('atlas') ? (
           <label className="wrow scale" data-tour="scale">
             <span className="wl">×{scale.toFixed(2)}</span>
             <input type="range" min={0.1} max={10} step={0.05} value={scale} onChange={(e) => applyScale(Number(e.target.value))} />
-            <span className="wv">{num(totalFte)} people</span>
+            <span className="wv">{fmt.num(totalFte)} people</span>
           </label>
         ) : <p className="note">Scaling applies to the Atlas model. Your imported model keeps its own numbers; edit them below.</p>}
       </section>
@@ -138,7 +138,7 @@ export function ModelView() {
                   <td className="dim left">{model.teams.find((t) => t.id === s.teamId)?.name}</td>
                   <td><NumberCell value={s.annualVolume} onChange={(v) => edit((m) => { m.demandStreams[i].annualVolume = v; })} width={96} /></td>
                   <td><NumberCell value={s.handlingMinutesPerUnit} onChange={(v) => edit((m) => { m.demandStreams[i].handlingMinutesPerUnit = v; })} width={96} /></td>
-                  <td className="dim">{num(s.annualVolume * s.handlingMinutesPerUnit / 60 * s.complexityFactor)}</td>
+                  <td className="dim">{fmt.num(s.annualVolume * s.handlingMinutesPerUnit / 60 * s.complexityFactor)}</td>
                 </tr>
               ))}
             </tbody>
