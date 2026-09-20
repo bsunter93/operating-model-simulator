@@ -198,6 +198,27 @@ export function run(input: OperatingModel, opts: RunOptions = {}): ModelResult {
     }
   }
 
+  // 2b. Routed work: hours one team creates for another by escalating or handing off.
+  //     The share comes off the upstream units AFTER automation, because a case that
+  //     self-service resolved is a case nobody escalates. This is the only mechanism by
+  //     which making one team faster changes what another team sees.
+  const streamById = new Map(model.demandStreams.map((s) => [s.id, s]));
+  for (const r of model.routes ?? []) {
+    const up = streamById.get(r.fromStreamId);
+    if (!up) continue;
+    const arr = runHours.get(r.toTeamId);
+    if (!arr) continue;
+    const shares = seasonShares(model, up, months);
+    const auto = eff.automationMult.get(up.teamId)!;
+    const dm = eff.demandMult.get(up.id)!;
+    const toProd = eff.productivityMult.get(r.toTeamId)!;
+    for (let m = 0; m < n; m++) {
+      const upstreamUnits = up.annualVolume * shares[m] * dm[m] * auto[m];
+      const units = upstreamUnits * r.share;
+      arr[m] += (units * r.handlingMinutesPerUnit * (r.complexityFactor ?? 1) / 60) / toProd;
+    }
+  }
+
   // 3. Portfolio hours per team-month: assigned FTE × that team's productive hours.
   const productivePerFte = (t: Team) => hours * (1 - t.shrinkage);
   const portfolioHours = new Map<string, number[]>(model.teams.map((t) => [t.id, new Array(n).fill(0)]));
@@ -212,14 +233,16 @@ export function run(input: OperatingModel, opts: RunOptions = {}): ModelResult {
   }
 
   // 4. Workforce and capacity per team-month.
-  const landing = new Map<string, number[]>(model.teams.map((t) => [t.id, new Array(n).fill(0)]));
-  for (const h of eff.hiringPlan) {
-    const m = monthIndex(model.calendar.startMonth, h.requestMonth) + h.leadTimeMonths;
-    if (m >= 0 && m < n) landing.get(h.teamId)![m] += h.headcount;
-  }
+  const landingFrom = (plan: typeof eff.hiringPlan) => {
+    const map = new Map<string, number[]>(model.teams.map((t) => [t.id, new Array(n).fill(0)]));
+    for (const h of plan) {
+      const m = monthIndex(model.calendar.startMonth, h.requestMonth) + h.leadTimeMonths;
+      if (m >= 0 && m < n) map.get(h.teamId)![m] += h.headcount;
+    }
+    return map;
+  };
 
-  const teamResults: TeamResult[] = [];
-  for (const t of model.teams) {
+  const rowsFor = (t: Team, landing: Map<string, number[]>): TeamMonth[] => {
     const ma = annualToMonthlyRate(Math.min(0.99, t.annualAttrition * eff.attritionMult.get(t.id)!));
     const prod = productivePerFte(t);
     const target = eff.targetUtil.get(t.id)!;
@@ -252,6 +275,35 @@ export function run(input: OperatingModel, opts: RunOptions = {}): ModelResult {
       });
       fte = available;
     }
+    return rows;
+  };
+
+  /*
+   * A conditional hire is judged against a year run WITHOUT it, because a hire that is
+   * only justified by having been made is not a decision. One pass decides, the second
+   * pass is the answer. Dropped requests are reported so the reason is visible rather
+   * than inferred from a headcount that quietly went missing.
+   */
+  const conditional = eff.hiringPlan.filter((h) => h.cancelIfSlack);
+  const hiresDropped: string[] = [];
+  if (conditional.length > 0) {
+    const provisional = landingFrom(eff.hiringPlan.filter((h) => !h.cancelIfSlack));
+    for (const h of conditional) {
+      const t = teams.get(h.teamId);
+      if (!t) continue;
+      const rows = rowsFor(t, provisional);
+      const from = monthIndex(model.calendar.startMonth, h.requestMonth) + h.leadTimeMonths;
+      const window = rows.slice(Math.max(0, from), Math.max(0, from) + h.cancelIfSlack!.months);
+      if (window.length > 0 && window.every((r) => r.utilization < h.cancelIfSlack!.belowUtilization)) {
+        hiresDropped.push(h.id);
+      }
+    }
+  }
+  const landing = landingFrom(eff.hiringPlan.filter((h) => !hiresDropped.includes(h.id)));
+
+  const teamResults: TeamResult[] = [];
+  for (const t of model.teams) {
+    const rows = rowsFor(t, landing);
     const peak = rows.reduce((a, b) => (b.utilization > a.utilization ? b : a), rows[0]);
     const constrained = rows.filter((r) => STATUS_RANK[r.status] >= 2);
     teamResults.push({
@@ -348,6 +400,10 @@ export function run(input: OperatingModel, opts: RunOptions = {}): ModelResult {
     annualBudgetVarianceUsd: financials.annualVarianceUsd,
     revenueExposureUsd: exposure.totalUsd,
     initiativesDelayed: schedule.filter((s) => s.delayMonths > 0).length,
+    hiresDropped,
+    hiresDroppedFte: eff.hiringPlan
+      .filter((h) => hiresDropped.includes(h.id))
+      .reduce((a, h) => a + h.headcount, 0),
   };
 
   return {

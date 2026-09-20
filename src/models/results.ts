@@ -145,6 +145,10 @@ export interface Summary {
   annualBudgetVarianceUsd: number;
   revenueExposureUsd: number;
   initiativesDelayed: number;
+  /** Conditional hires the plan no longer needs. Empty unless a request set cancelIfSlack. */
+  hiresDropped: string[];
+  /** Headcount those dropped requests would have added. */
+  hiresDroppedFte: number;
 }
 
 export interface ModelResult {

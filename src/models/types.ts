@@ -67,6 +67,33 @@ export interface HiringRequest {
   requestMonth: MonthKey;
   headcount: number;
   leadTimeMonths: number;
+  /**
+   * Makes the request conditional instead of certain. Without this the plan hires the
+   * people whatever else happens, so removing a team's work still buys its headcount and
+   * no efficiency ever shows up as money. With it, the hire is dropped when the team
+   * would sit below `belowUtilization` for `months` running without it.
+   */
+  cancelIfSlack?: { months: number; belowUtilization: number };
+}
+
+/**
+ * Work that one team's handling creates for another: escalations, handoffs, the second
+ * line behind the first. Without routes, teams in this model only touch when they staff
+ * the same initiative, so making one team faster can never help or hurt anyone else.
+ *
+ * The share is taken off the upstream stream's units AFTER automation, because a case
+ * that self-service resolved is a case nobody escalates. That is the whole propagation
+ * path: fewer units handled upstream means fewer units arriving downstream.
+ */
+export interface WorkRoute {
+  id: string;
+  name: string;
+  fromStreamId: string;
+  toTeamId: string;
+  /** Fraction of upstream units that arrive at the downstream team. 0 to 1. */
+  share: number;
+  handlingMinutesPerUnit: number;
+  complexityFactor?: number;
 }
 
 export interface Initiative {
@@ -160,6 +187,8 @@ export interface OperatingModel {
   teams: Team[];
   seasonality: Record<MonthKey, number>;
   demandStreams: DemandStream[];
+  /** Optional. Absent means teams are independent, which is how this model began. */
+  routes?: WorkRoute[];
   hiringPlan: HiringRequest[];
   initiatives: Initiative[];
   dependencies: Dependency[];

@@ -27,7 +27,7 @@ export function About() {
         <figure className="flowframe">
           <iframe src="/simulator-flow.html?embed=1" loading="lazy" title="A year of this plan running: where capacity breaks, and what one lever changes" />
           <figcaption>
-            A year of this plan, running. Same engine, same fixture.{' '}
+            One efficiency, followed from the tool to the money. Same engine, same fixture.{' '}
             <a href="/simulator-flow.html">Open it full size &rarr;</a>
           </figcaption>
         </figure>

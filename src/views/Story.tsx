@@ -106,7 +106,7 @@ export function Story() {
           <Loop />
           <details className="tuck"><summary>How the model works</summary>
             <p>Strategy becomes work, work becomes hours, hours become people, month by month. Decisions change the strategy and the loop runs again. Every number on the board is computed from the inputs; none is typed in.</p>
-            <p><a href="/simulator-flow.html">Watch a year of this plan run →</a></p>
+            <p><a href="/simulator-flow.html">See what one efficiency is worth →</a></p>
             <button className="linkbtn" onClick={() => setDetail('about')}>Full method and assumptions →</button>
           </details>
         </>
