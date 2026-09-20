@@ -21,6 +21,15 @@ function effectCause(e: ScenarioEffect, model: OperatingModel, teamName: (id: st
     case 'failureProbabilityMultiplier': return `Execution risk ×${e.multiplier} on every initiative`;
     case 'productivityMultiplier': return `Productivity ×${e.multiplier}${e.teamIds ? ` on ${e.teamIds.map(teamName).join(', ')}` : ''}`;
     case 'attritionMultiplier': return `Attrition ×${e.multiplier}${e.teamIds ? ` on ${e.teamIds.map(teamName).join(', ')}` : ' everywhere'}`;
+    case 'fundingShock': {
+      const which = e.fundIds
+        ? e.fundIds.map((id) => model.funds?.find((f) => f.id === id)?.name ?? id).join(', ')
+        : 'every fund';
+      const cut = e.fundMultiplier !== undefined && e.fundMultiplier !== 1
+        ? `${e.fundMultiplier < 1 ? 'cut to' : 'raised to'} ${pct(e.fundMultiplier)}` : '';
+      const late = e.delayMonths ? `${e.delayMonths} month${e.delayMonths === 1 ? '' : 's'} late` : '';
+      return `${which}: ${[cut, late].filter(Boolean).join(', ') || 'unchanged'}`;
+    }
   }
 }
 

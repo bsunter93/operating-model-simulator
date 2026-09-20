@@ -7,10 +7,10 @@
  * The input model is never mutated; run() works on a structured clone.
  */
 import type {
-  DemandStream, HiringRequest, Intervention, MonthKey, OperatingModel, Scenario, ScenarioEffect, Team,
+  DemandStream, Fund, HiringRequest, Intervention, MonthKey, OperatingModel, Scenario, ScenarioEffect, Team,
 } from '../models/types';
 import type {
-  BudgetLever, Constraint, Exposure, ExposureItem, FinancialMonth, Financials,
+  BudgetLever, FundResult, Constraint, Exposure, ExposureItem, FinancialMonth, Financials,
   InitiativeSchedule, ModelResult, Summary, TeamMonth, TeamResult, TeamStatus,
 } from '../models/results';
 import { fmtFor } from '../lib/format';
@@ -62,6 +62,7 @@ interface Effective {
   durationMult: Map<string, number>;      // initiativeId -> how much longer it runs
   fteMult: Map<string, number>;           // initiativeId -> people per month on it
   valueMult: Map<string, number>;         // initiativeId -> how much of the value survives
+  funds: Fund[];                          // after any shock to what lands, and when
 }
 
 function resolveScenario(model: OperatingModel, s: RunOptions['scenario']): Scenario {
@@ -98,6 +99,7 @@ function buildEffective(model: OperatingModel, scenario: Scenario, interventions
     automationMult: new Map(model.teams.map((t) => [t.id, new Array(n).fill(1)])),
     reallocDelta: new Map(model.teams.map((t) => [t.id, new Array(n).fill(0)])),
     changeCost: new Array(n).fill(0),
+    funds: (model.funds ?? []).map((f) => ({ ...f })),
     deferrals: new Map(),
     cancelled: new Set(),
     durationMult: new Map(),
@@ -128,6 +130,15 @@ function buildEffective(model: OperatingModel, scenario: Scenario, interventions
         break;
       case 'attritionMultiplier':
         for (const [tid, v] of eff.attritionMult) if (!e.teamIds || e.teamIds.includes(tid)) eff.attritionMult.set(tid, v * e.multiplier);
+        break;
+      case 'fundingShock':
+        for (const f of eff.funds) {
+          if (e.fundIds && !e.fundIds.includes(f.id)) continue;
+          if (e.fundMultiplier !== undefined) f.amount *= e.fundMultiplier;
+          // A tranche that lands late is money you have on paper and cannot spend yet,
+          // which is a different problem from having less of it, and usually a worse one.
+          if (e.delayMonths) f.fromMonth = addMonths(f.fromMonth ?? months[0], e.delayMonths);
+        }
         break;
     }
   };
@@ -423,6 +434,59 @@ export function run(input: OperatingModel, opts: RunOptions = {}): ModelResult {
     const change = eff.changeCost[m];
     return { month: k, runCost: runCost, changeCost: change, totalCost: runCost + change, budgetCap: monthlyBudget, variance: runCost + change - monthlyBudget };
   });
+  /*
+   * Restricted income, if this organisation lives on it.
+   *
+   * Each fund is a pot with a purpose. Costs are charged to whatever is allowed to pay
+   * for them, restricted money first, because unrestricted is the only money that can pay
+   * for anything and is therefore the thing to protect. What no fund may cover is
+   * unfunded: real cost with no income behind it. What a restricted fund still holds at
+   * the end is stranded: real money that nothing short was allowed to spend.
+   *
+   * One-off change spend goes to unrestricted only. A grant for water points does not pay
+   * for reorganising the rota, and pretending otherwise would make the one lever that
+   * actually hurts look free.
+   */
+  const byFund: FundResult[] = [];
+  let unfundedCost = 0;
+  if (eff.funds.length) {
+    const pots = eff.funds.map((f) => ({
+      f,
+      left: f.amount,
+      spent: 0,
+      from: f.fromMonth ? monthIndex(model.calendar.startMonth, f.fromMonth) : 0,
+      to: f.toMonth ? monthIndex(model.calendar.startMonth, f.toMonth) : n - 1,
+    }));
+    const allows = (p: (typeof pots)[number], teamId: string | null) => {
+      const r = p.f.restrictedTo;
+      if (!r) return true;
+      return teamId !== null && (r.teamIds ?? []).includes(teamId);
+    };
+    const charge = (amount: number, teamId: string | null, m: number) => {
+      let left = amount;
+      const open = pots
+        .filter((p) => m >= p.from && m <= p.to && p.left > 0 && allows(p, teamId))
+        .sort((a, b) => Number(!a.f.restrictedTo) - Number(!b.f.restrictedTo));
+      for (const p of open) {
+        if (left <= 0) break;
+        const take = Math.min(left, p.left);
+        p.left -= take; p.spent += take; left -= take;
+      }
+      unfundedCost += left;
+    };
+    for (let m = 0; m < n; m++) {
+      for (const t of teamResults) charge(t.months[m].runCost, t.teamId, m);
+      charge(eff.changeCost[m], null, m);
+    }
+    for (const p of pots) {
+      byFund.push({
+        fundId: p.f.id, name: p.f.name, restricted: !!p.f.restrictedTo,
+        amount: p.f.amount, spent: p.spent,
+        stranded: p.f.restrictedTo ? p.left : 0,
+      });
+    }
+  }
+
   const budgetLevers: BudgetLever[] = [];
   for (const h of eff.hiringPlan) {
     const m = monthIndex(model.calendar.startMonth, h.requestMonth) + h.leadTimeMonths;
@@ -439,6 +503,7 @@ export function run(input: OperatingModel, opts: RunOptions = {}): ModelResult {
   }
   const financials: Financials = {
     monthly: fin,
+    byFund,
     annualRunCost: fin.reduce((s, f) => s + f.runCost, 0),
     annualChangeCost: fin.reduce((s, f) => s + f.changeCost, 0),
     annualTotalCost: fin.reduce((s, f) => s + f.totalCost, 0),
@@ -495,6 +560,8 @@ export function run(input: OperatingModel, opts: RunOptions = {}): ModelResult {
     revenueExposure: exposure.total,
     initiativesDelayed: schedule.filter((s) => s.delayMonths > 0).length,
     peopleLostToAttrition: teamResults.reduce((a, t) => a + t.months.reduce((b, m) => b + m.attritionLoss, 0), 0),
+    unfundedCost,
+    strandedFunds: byFund.reduce((a2, f) => a2 + f.stranded, 0),
     closingBacklogHours: teamResults.reduce(
       (a, t) => a + t.months[t.months.length - 1].carriedOutHours, 0),
     shedHours: teamResults.reduce((a, t) => a + t.months.reduce((b, m) => b + m.shedHours, 0), 0),

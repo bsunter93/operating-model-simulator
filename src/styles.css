@@ -1162,3 +1162,20 @@ details.tuck p{font-size:12.5px;color:var(--muted);margin:8px 0 6px}
   .rb-ranks li{grid-template-columns:minmax(0,1fr) auto}
   .rank-track{grid-column:1/-1;order:3}
 }
+
+/* Where the money came from, for an organisation that does not own its own money. */
+.rb-funds{margin:22px 0 4px}
+.fundlist{list-style:none;margin:10px 0 0;padding:0;display:grid;gap:5px}
+.fundlist li{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(70px,1fr) auto;
+  gap:10px;align-items:center;padding:5px 8px;border-radius:5px}
+.fundlist li.stuck{background:var(--warm-soft)}
+.fund-name{font-size:13px;color:var(--ink);min-width:0;overflow-wrap:break-word}
+.fund-track{height:6px;border-radius:3px;background:var(--hair);overflow:hidden}
+.fund-track i{display:block;height:100%;background:var(--accent);border-radius:3px}
+.fundlist li.stuck .fund-track i{background:var(--warm)}
+.fund-num{font:500 11px/1 var(--mono);color:var(--muted);font-variant-numeric:tabular-nums;
+  white-space:nowrap;text-align:right}
+@media (max-width:620px){
+  .fundlist li{grid-template-columns:minmax(0,1fr) auto}
+  .fund-track{grid-column:1/-1;order:3}
+}

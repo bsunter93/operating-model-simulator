@@ -108,6 +108,17 @@ export interface FinancialMonth {
   variance: number;
 }
 
+/** One fund's year: what it held, what it paid for, and what it could not be used on. */
+export interface FundResult {
+  fundId: string;
+  name: string;
+  restricted: boolean;
+  amount: number;
+  spent: number;
+  /** Restricted money still held at year end. Real money, and unusable on what was short. */
+  stranded: number;
+}
+
 export interface Financials {
   monthly: FinancialMonth[];
   annualRunCost: number;
@@ -116,6 +127,8 @@ export interface Financials {
   annualBudget: number;
   annualVariance: number;
   peakMonthlyVariance: number;
+  /** Empty for a model with no funds declared. */
+  byFund: FundResult[];
   /** Levers the engine can name for a budget gap. It never applies them. */
   budgetLevers: BudgetLever[];
 }
@@ -168,6 +181,13 @@ export interface Summary {
   portfolioValue: number;
   /** Work still waiting at the end of the year. */
   closingBacklogHours: number;
+  /**
+   * Cost with no fund able to pay for it. Zero unless the model declares funds, and the
+   * number that matters most when it does.
+   */
+  unfundedCost: number;
+  /** Restricted money held at year end that nothing short was allowed to spend. */
+  strandedFunds: number;
   /** Work nobody ever did, because it was turned away rather than queued. */
   shedHours: number;
   /** Work picked up inside target across the year, weighted by how much work there was. */

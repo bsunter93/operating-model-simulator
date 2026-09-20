@@ -193,6 +193,32 @@ export function validateModel(m: OperatingModel): string[] {
     }
   }
 
+  /* Restricted income. A fund that names a team the model has not got would silently
+     become unrestricted money, which is the one mistake in this area that flatters. */
+  const fundIds = new Set<string>();
+  for (const f of m.funds ?? []) {
+    if (fundIds.has(f.id)) say(`duplicate fund id "${f.id}"`);
+    fundIds.add(f.id);
+    num(f.amount, (x) => x >= 0, `fund ${f.id}: amount`, 'cannot be negative');
+    if (f.confidence !== undefined) num(f.confidence, (x) => x >= 0 && x <= 1, `fund ${f.id}: confidence`, 'must be between 0 and 1');
+    for (const mk of [f.fromMonth, f.toMonth]) {
+      if (mk !== undefined && !isMonthKey(mk)) say(`fund ${f.id}: "${mk}" is not YYYY-MM`);
+    }
+    for (const tid of f.restrictedTo?.teamIds ?? []) {
+      if (!teamIds.has(tid)) say(`fund ${f.id} is restricted to unknown team "${tid}"`);
+    }
+    if (f.restrictedTo && !(f.restrictedTo.teamIds ?? []).length) {
+      say(`fund ${f.id} is marked restricted but names nothing it is restricted to`);
+    }
+  }
+  for (const sc of m.scenarios) {
+    const effects = sc.type === 'combined' ? sc.effects : [sc];
+    for (const e of effects) {
+      if (e.type !== 'fundingShock') continue;
+      for (const id of e.fundIds ?? []) if (!fundIds.has(id)) say(`scenario ${sc.id} shocks unknown fund "${id}"`);
+    }
+  }
+
   /* Money and number formatting. A currency Intl does not know renders as the code
      itself with no warning, which looks like a bug in the numbers rather than a typo in
      the model. */

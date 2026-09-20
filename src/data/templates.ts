@@ -14,6 +14,7 @@ import type { OperatingModel } from '../models/types';
 import base from './atlas-systems-2027.json';
 import health from './meadowbrook-health-2027.json';
 import agency from './northgate-studio-2027.json';
+import ngo from './riverbank-trust-2027.json';
 
 /**
  * `shape` says what the organisation mostly does, and only the three written-from-scratch
@@ -21,7 +22,7 @@ import agency from './northgate-studio-2027.json';
  * serve a queue or deliver projects" is a question anybody can answer about their own
  * work, and it picks the world for them without making them read four blurbs.
  */
-export type Shape = 'queue' | 'projects' | 'mixed';
+export type Shape = 'queue' | 'projects' | 'mixed' | 'restricted';
 export interface Template {
   id: string; name: string; blurb: string; build: () => OperatingModel;
   shape?: Shape;
@@ -66,6 +67,12 @@ export const TEMPLATES: Template[] = [
     blurb: 'A studio of 152 in euro, where almost all the work is engagements with a client on them. The constraint is a named group of senior designers, and the internal investment loses to billable work every time.',
     build: asModel(agency), shape: 'projects',
     shapeLine: 'Mostly projects. Named pieces of work with dates and people on them, and a bench you pay for either way.',
+  },
+  {
+    id: 'riverbank-trust-2027', name: 'Grant-funded organisation',
+    blurb: '398 people across field and support teams, paid for by four grants with purposes attached. It can be short of money and holding money at the same time, and the people who win next year\u2019s funding are the only ones no funder will pay for.',
+    build: asModel(ngo), shape: 'restricted',
+    shapeLine: 'Someone else\u2019s money. Income arrives earmarked, so what you can spend is decided before you decide anything.',
   },
   {
     id: 'atlas-startup', name: 'Series B startup', blurb: '70 people. Lean targets, fast hiring, high attrition, and a budget with almost no slack. Small numbers move fast.',

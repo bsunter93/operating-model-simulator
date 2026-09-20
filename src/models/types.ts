@@ -178,7 +178,17 @@ export type ScenarioEffect =
   | { type: 'budgetConstraint'; budgetMultiplier: number }
   | { type: 'failureProbabilityMultiplier'; multiplier: number }
   | { type: 'productivityMultiplier'; multiplier: number; /** Limit to these teams; all when absent. */ teamIds?: string[] }
-  | { type: 'attritionMultiplier'; multiplier: number; /** Limit to these teams; all when absent. */ teamIds?: string[] };
+  | { type: 'attritionMultiplier'; multiplier: number; /** Limit to these teams; all when absent. */ teamIds?: string[] }
+  /**
+   * A tranche that lands short, or late, or not at all.
+   *
+   * This is how grant volatility is expressed, and it is expressed as a scenario rather
+   * than a dice roll on purpose. The whole page rests on the same decisions producing the
+   * same year, which is what makes a place out of 243 mean anything; if disbursement were
+   * rolled, the scoreboard would be measuring luck and telling the reader it was judgement.
+   * Run the shock, or do not, and see what it costs either way.
+   */
+  | { type: 'fundingShock'; fundMultiplier?: number; delayMonths?: number; /** Limit to these funds; all when absent. */ fundIds?: string[] };
 
 export type Scenario = { id: string; name: string; description?: string } & (
   | { type: 'base' }
@@ -268,6 +278,37 @@ export interface RunSpec {
   decisions: RunDecision[];
 }
 
+/**
+ * Money with a purpose attached.
+ *
+ * A grant pays for the thing it names and nothing else. An organisation funded this way
+ * can be over budget and holding unspent money at the same time, because the money it
+ * holds is earmarked for something it is not short of. A single budget cap cannot say
+ * that, and for anyone living on restricted income it is the whole operating problem.
+ */
+export interface Fund {
+  id: string;
+  name: string;
+  /** What it will pay in total across its window. A pot, drawn down, not an allowance. */
+  amount: number;
+  /** Months it may be spent in, inclusive. Absent means the whole plan year. */
+  fromMonth?: MonthKey;
+  toMonth?: MonthKey;
+  /**
+   * What it is allowed to pay for. Absent means anything, which is what unrestricted
+   * funding is, and is the thing an organisation like this is always short of.
+   */
+  restrictedTo?: { teamIds?: string[] };
+  /**
+   * How likely this money is to arrive as promised. Shown, never rolled, exactly as an
+   * initiative's failure probability is: the reader is told what is uncertain and left to
+   * decide what to do about it.
+   */
+  confidence?: number;
+  /** Who it came from, for the reader. Never used by the engine. */
+  funder?: string;
+}
+
 export interface OperatingModel {
   modelVersion: string;
   id: string;
@@ -302,12 +343,18 @@ export interface OperatingModel {
    * screenshots, printed pages and tests disagree for no visible reason.
    */
   locale?: string;
+
   /**
    * A few nouns this organisation uses instead of the defaults. Deliberately tiny: a
    * health service does not have revenue and a charity does not have customers, and a
    * page that insists otherwise reads as somebody else's tool.
    */
   lexicon?: { revenueNoun?: string; customerNoun?: string };
+  /**
+   * Restricted income. Absent means the single budget cap is the whole story, which is
+   * true of a company and not of anyone living on grants.
+   */
+  funds?: Fund[];
   /** The guided run. Optional: a model without one still opens in the full board. */
   run?: RunSpec;
   /** Author metadata. Never read by the engine. */

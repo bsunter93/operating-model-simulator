@@ -238,7 +238,7 @@ function InitiativeRisk({ model, result }: { model: OperatingModel; result: Mode
   );
 }
 
-type Headline = 'service' | 'over' | 'undone';
+type Headline = 'service' | 'over' | 'undone' | 'unfunded';
 
 function Kpis({ result, prev, headline, riskNoun }:
   { result: ModelResult; prev?: ModelResult; headline: Headline; riskNoun: string }) {
@@ -259,7 +259,9 @@ function Kpis({ result, prev, headline, riskNoun }:
       {/* Not "teams over capacity": on a year with real pressure in it that reads the same
           number whatever you do, and a dashboard cell that never moves teaches the reader
           to stop looking at it. The board below still shows every team. */}
-      {headline === 'service' && s.serviceLevelPct !== null
+      {headline === 'unfunded'
+        ? cell('Cost with no funder', cash(fmt, s.unfundedCost), p && s.unfundedCost - p.unfundedCost)
+        : headline === 'service' && s.serviceLevelPct !== null
         ? cell('Answered in time', Math.round(s.serviceLevelPct * 100) + '%',
                p?.serviceLevelPct != null ? s.serviceLevelPct - p.serviceLevelPct : undefined, false)
         : headline === 'undone'
@@ -404,10 +406,13 @@ function RunFor({ model, spec }: { model: OperatingModel; spec: RunSpec }) {
        "42% of requests answered in time" is a sentence about a person waiting; "12k hours
        never done" is a sentence about a spreadsheet, and only one of them makes somebody
        care what they decided. */
+    /* Where income is restricted, the cost nobody is allowed to pay for is the number
+       that decides the year, and it is not one any other model has. */
+    if (model.funds?.length && span((r) => r.summary.unfundedCost) > 0) return 'unfunded';
     if (svc > 0.25) return 'service';
     const best = Math.max(svc, undone, over);
     return best <= 0 ? 'over' : best === undone ? 'undone' : 'over';
-  }, [endings]);
+  }, [endings, model]);
 
   /* One position per state the run has been in, ending on whatever is on screen now,
      so hovering a choice moves the marker before you commit to it. */
@@ -768,9 +773,35 @@ function Scorecard({ model, spec, picks, result, doNothing, onReset, trail, clou
           {(n.shedHours > 0 || s.shedHours > 0) && (
             <tr><td>Work never done</td><td>{fmt.hours(n.shedHours)}</td><td>{fmt.hours(s.shedHours)}</td></tr>
           )}
+          {model.funds?.length ? (
+            <>
+              <tr><td>Cost with no funder</td><td>{cash(fmt, n.unfundedCost)}</td><td>{cash(fmt, s.unfundedCost)}</td></tr>
+              <tr><td>Held, and not allowed to spend it</td><td>{cash(fmt, n.strandedFunds)}</td><td>{cash(fmt, s.strandedFunds)}</td></tr>
+            </>
+          ) : null}
           <tr><td>Spent on changes</td><td>{cash(fmt, 0)}</td><td>{cash(fmt, spent)}</td></tr>
         </tbody>
       </table>
+      {result.financials.byFund.length > 0 && (
+        <div className="rb-funds">
+          <p className="rb-final-h">Where the money came from, and what it was allowed to pay for</p>
+          <ul className="fundlist">
+            {result.financials.byFund.map((f) => (
+              <li key={f.fundId} className={f.stranded > 0 ? 'stuck' : ''}>
+                <span className="fund-name">{f.name}{f.restricted ? '' : ' (unrestricted)'}</span>
+                <span className="fund-track">
+                  <i style={{ width: (f.amount > 0 ? Math.min(100, (f.spent / f.amount) * 100) : 0) + '%' }} />
+                </span>
+                <span className="fund-num">{cash(fmt, f.spent)} of {cash(fmt, f.amount)}</span>
+              </li>
+            ))}
+          </ul>
+          <p className="rb-legend">Restricted money pays for the thing it names and nothing else. That
+             is why the unspent bar and the shortfall can grow at the same time: the money left over
+             is not allowed anywhere near what ran out.</p>
+        </div>
+      )}
+
       <p className="rb-setup">
         {s.hiresDroppedFte > 0
           ? `${s.hiresDroppedFte} approved hires were never made, because the work behind them stopped existing.`
