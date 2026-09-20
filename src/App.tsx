@@ -1,15 +1,16 @@
 import { Masthead } from './components/Masthead';
 import { useEffect, useState } from 'react';
+import { Run } from './views/Run';
 import { Story } from './views/Story';
 import { Mine } from './views/Mine';
 import { Summary } from './views/Summary';
 import { StoreProvider } from './state/store';
 
 function Screen() {
-  const which = () => (/^#\/mine/.test(window.location.hash) ? 'mine' : /^#\/summary/.test(window.location.hash) ? 'summary' : 'story');
+  const which = () => (/^#\/run/.test(window.location.hash) ? 'run' : /^#\/mine/.test(window.location.hash) ? 'mine' : /^#\/summary/.test(window.location.hash) ? 'summary' : 'story');
   const [view, setView] = useState(which);
   useEffect(() => { const on = () => setView(which()); window.addEventListener('hashchange', on); return () => window.removeEventListener('hashchange', on); }, []);
-  return view === 'mine' ? <Mine /> : view === 'summary' ? <Summary /> : <Story />;
+  return view === 'run' ? <Run /> : view === 'mine' ? <Mine /> : view === 'summary' ? <Summary /> : <Story />;
 }
 
 export default function App() {
