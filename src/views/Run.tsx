@@ -33,48 +33,77 @@ const DECISIONS: Decision[] = [
     when: 'February',
     question: 'Implementation cannot absorb the year in front of it.',
     setup:
-      'Fifty people, and the work arriving needs closer to sixty. The plan already has ten more starting, but recruiting takes five months, so they land in June and the problem starts now.',
+      'Fifty people, and the work arriving needs closer to sixty. Ten more are already approved, but recruiting takes five months, so they land in June and the problem starts now.',
     options: [
       { iv: 'intervention-expedite-implementation', label: 'Pull the hires forward', price: '$120K',
         why: 'Agency sourcing and a signing bonus. Five months becomes three.' },
       { iv: 'intervention-reallocate-to-implementation', label: 'Move five people across', price: '$150K',
-        why: 'Experienced account people cross-train and move within a month. Faster than hiring, and they come from somewhere.' },
+        why: 'Account people cross-train and move within a month. Faster than hiring, and they come from somewhere.' },
       { iv: null, label: 'Live with it', price: 'nothing',
         why: 'Run the team hot and deal with what breaks.' },
     ],
   },
   {
     id: 'd2',
-    when: 'Mid-year',
-    question: 'Consumer Operations is the next one to go.',
+    when: 'March',
+    question: 'Two programmes are drawing on the same engineers.',
     setup:
-      'A hundred and fifty people handling four hundred thousand cases, and twelve more already approved to start in May. The question is whether you still want them.',
+      'Platform Scale and Enterprise Growth both staff out of Platform Engineering and Data Platform, and Data Platform is the tightest team in the company.',
     options: [
-      { iv: 'intervention-automate-consumer', label: 'Buy the self-service tool', price: '$1.2M',
-        why: 'Auto-resolution for the commonest case types. Three months before it touches anything.' },
-      { iv: 'intervention-cancel-self-service', label: 'Cancel the portal project', price: 'nothing',
-        why: 'Drop an initiative and give two teams their people back. You lose what the portal was going to earn.' },
-      { iv: null, label: 'Live with it', price: 'nothing',
-        why: 'Keep the plan as written and hire the twelve.' },
+      { iv: 'intervention-stretch-platform', label: 'Run Platform Scale leaner', price: 'nothing',
+        why: 'Thirty percent fewer people on it, running half again as long. It lands later and earns a little less.' },
+      { iv: 'intervention-crash-enterprise', label: 'Crash Enterprise Growth', price: '$400K',
+        why: 'Forty percent more people for a shorter run, on contractors. It lands sooner and it strains the teams doing it.' },
+      { iv: null, label: 'Leave both as planned', price: 'nothing',
+        why: 'The schedule stands.' },
     ],
   },
   {
     id: 'd3',
+    when: 'Mid-year',
+    question: 'Consumer Operations is the next one to go.',
+    setup:
+      'A hundred and fifty people against four hundred thousand cases, and twelve more already approved to start in May. The question is whether you still want them.',
+    options: [
+      { iv: 'intervention-automate-consumer', label: 'Buy the self-service tool', price: '$1.2M',
+        why: 'Auto-resolution for the commonest case types. Three months before it touches anything.' },
+      { iv: 'intervention-cancel-self-service', label: 'Cancel the portal project', price: 'nothing',
+        why: 'Drop it and give two teams their people back. You lose what it was going to earn.' },
+      { iv: null, label: 'Hire the twelve', price: 'nothing',
+        why: 'Keep the plan as written.' },
+    ],
+  },
+  {
+    id: 'd4',
+    when: 'Q3',
+    question: 'The portfolio is bigger than the year.',
+    setup:
+      'Four programmes, all committed, all staffed from teams that are already tight. You do not have to drop one to take pressure off.',
+    options: [
+      { iv: 'intervention-half-portal', label: 'Ship half the portal', price: 'nothing',
+        why: 'Build the half that handles the commonest cases. Half the people on it, half the return.' },
+      { iv: 'intervention-core-markets-only', label: 'Three markets, not five', price: 'nothing',
+        why: 'International Expansion at sixty percent of its scope, and sixty percent of its upside.' },
+      { iv: null, label: 'Keep the full scope', price: 'nothing',
+        why: 'Everything ships as written, and everyone stays busy.' },
+    ],
+  },
+  {
+    id: 'd5',
     when: 'The last call',
     question: 'One more move before the year closes.',
     setup:
-      'International Expansion is the biggest thing left in the portfolio, and it is staffed out of four teams that are already tight.',
+      'International Expansion is the biggest thing left, staffed out of four teams that are all running tight.',
     options: [
-      { iv: 'intervention-defer-international', label: 'Defer International Expansion', price: 'nothing',
-        why: 'Push the start out by three months and give those four teams some air.' },
-      { iv: 'intervention-cancel-self-service', label: 'Cancel the portal project', price: 'nothing',
-        why: 'If it is still running, dropping it releases people in Customer and Consumer Operations.' },
+      { iv: 'intervention-defer-international', label: 'Defer it three months', price: 'nothing',
+        why: 'Push the start out and give those four teams some air.' },
+      { iv: 'intervention-expedite-implementation', label: 'Pull the Implementation hires in', price: '$120K',
+        why: 'If you have not already, buying three months of lead time still helps the team that broke first.' },
       { iv: null, label: 'Hold the line', price: 'nothing',
         why: 'Change nothing else and take the year as it stands.' },
     ],
   },
 ];
-
 const pct = (n: number) => Math.round(n * 100) + '%';
 /** "a", "a and b", "a, b and c". Joining three names with two "and"s reads like a list
     nobody proofread. */
@@ -99,6 +128,33 @@ function TeamBars({ result, highlight }: { result: ModelResult; highlight?: stri
               <b style={{ left: cap * 100 + '%' }} />
             </span>
             <span className="rb-pct">{pct(u)}</span>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+/**
+ * What the strain is doing to the odds. The engine computes this already: a team running
+ * short lifts the chance the work it is staffing misses, as 1-(1-p)(1-shortfall). Showing
+ * it beats adding a dice roll, which would be the only invented number on the page.
+ */
+function InitiativeRisk({ result }: { result: ModelResult }) {
+  const named = (id: string) => M.initiatives.find((i) => i.id === id)?.name ?? id;
+  const items = [...result.exposure.items].sort((a, b) => b.exposureUsd - a.exposureUsd);
+  return (
+    <ul className="rb-risks">
+      {items.map((e) => {
+        const added = e.effectiveProbability - e.baseProbability;
+        return (
+          <li key={e.initiativeId} className={added > 0.05 ? 'hot' : ''}>
+            <span className="rb-rname">{named(e.initiativeId)}</span>
+            <span className="rb-rodds">
+              {pct(e.baseProbability)}
+              {added > 0.005 && <i> &rarr; {pct(e.effectiveProbability)}</i>}
+            </span>
+            <span className="rb-rcash">{mUsd(e.exposureUsd)}</span>
           </li>
         );
       })}
@@ -214,21 +270,25 @@ export function Run() {
               )}
 
               <div className="rb-opts">
-                {d.options.map((o) => (
-                  <button
-                    key={o.label}
-                    className="rb-opt"
-                    onMouseEnter={() => setPreview(o.iv)}
-                    onMouseLeave={() => setPreview(undefined)}
-                    onFocus={() => setPreview(o.iv)}
-                    onBlur={() => setPreview(undefined)}
-                    onClick={() => { setPreview(undefined); setPicks([...picks, o.iv]); }}
-                  >
-                    <b>{o.label}</b>
-                    <em>{o.price}</em>
-                    <span>{o.why}</span>
-                  </button>
-                ))}
+                {d.options.map((o) => {
+                  const spent = !!o.iv && chosen.includes(o.iv);
+                  return (
+                    <button
+                      key={o.label}
+                      className={'rb-opt' + (spent ? ' spent' : '')}
+                      disabled={spent}
+                      onMouseEnter={() => !spent && setPreview(o.iv)}
+                      onMouseLeave={() => setPreview(undefined)}
+                      onFocus={() => !spent && setPreview(o.iv)}
+                      onBlur={() => setPreview(undefined)}
+                      onClick={() => { setPreview(undefined); setPicks([...picks, o.iv]); }}
+                    >
+                      <b>{o.label}</b>
+                      <em>{spent ? 'already done' : o.price}</em>
+                      <span>{spent ? 'You made this call earlier in the year.' : o.why}</span>
+                    </button>
+                  );
+                })}
               </div>
               <p className="rb-hint">Hover a choice to see the board move before you commit.</p>
             </>
@@ -241,6 +301,9 @@ export function Run() {
           <span className="rb-board-h">Every team, at its busiest month</span>
           <TeamBars result={shown} />
           <p className="rb-legend">The mark on each bar is what that team can sustain. Past it, someone is working late all year.</p>
+          <span className="rb-board-h" style={{ marginTop: 20 }}>What that puts at risk</span>
+          <InitiativeRisk result={shown} />
+          <p className="rb-legend">Every programme can miss on its own. A team running short makes it likelier, and the money is what that costs.</p>
         </section>
       </div>
     </main>
