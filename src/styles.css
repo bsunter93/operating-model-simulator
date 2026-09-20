@@ -1081,6 +1081,11 @@ details.tuck p{font-size:12.5px;color:var(--muted);margin:8px 0 6px}
 .rb-year li.done span{color:var(--muted)}
 .rb-year li.now i{background:var(--warm);height:5px;margin-top:-1px}
 .rb-year li.now span{color:var(--ink);font-weight:600}
+/* The month the year changes under you. Marked on the strip so "by October" in a
+   question has somewhere to point. */
+.rb-year li.spike i{background:var(--warm-bright)}
+.rb-year li.spike span{color:var(--warm-bright);font-weight:700}
+.rb-year li.spike span::after{content:'\2191'}
 @media (max-width:620px){
   .rb-year span{font-size:7px}
 }
@@ -1088,3 +1093,24 @@ details.tuck p{font-size:12.5px;color:var(--muted);margin:8px 0 6px}
 .rb-intro-h{margin:0 0 10px;font:500 9.5px/1 var(--mono);letter-spacing:.13em;
   text-transform:uppercase;color:var(--muted)}
 @media (prefers-reduced-motion:reduce){.rb-year i,.rb-year span{transition:none}}
+
+/* One lever at a time, ranked by the work it saves. Bars run long-is-bad, so the eye
+   lands on the short one at the top without needing the legend to say so. */
+.ans-levers{margin:26px 0 0}
+.ans-levers .ans-body + .ans-body{margin-top:11px}
+.lev-rank{list-style:none;margin:12px 0 14px;padding:0;display:grid;gap:5px}
+.lev-rank li{display:grid;grid-template-columns:minmax(0,1fr) minmax(60px,1.1fr) auto auto;
+  gap:10px;align-items:center;padding:5px 8px;border-radius:5px}
+.lev-rank li.top{background:var(--accent-soft)}
+.lev-rank li.nil{opacity:.72}
+.lev-name{font-size:13px;color:var(--ink);min-width:0;overflow-wrap:break-word}
+.lev-track{height:6px;border-radius:3px;background:var(--hair);overflow:hidden}
+.lev-track i{display:block;height:100%;background:var(--warm);border-radius:3px}
+.lev-rank li.top .lev-track i{background:var(--accent)}
+.lev-num{font:500 11px/1 var(--mono);color:var(--muted);font-variant-numeric:tabular-nums;
+  white-space:nowrap;text-align:right}
+@media (max-width:620px){
+  .lev-rank li{grid-template-columns:minmax(0,1fr) auto;row-gap:4px}
+  .lev-track{grid-column:1/-1;order:3}
+  .lev-num:last-child{grid-column:2}
+}

@@ -2,7 +2,7 @@ import { modelWarnings } from '../engine';
 import { useStore } from '../state/store';
 import { BUILT, TESTS, VERSION } from '../lib/meta';
 
-export function Masthead() {
+export function Masthead({ view }: { view: string }) {
   const { model, state, dispatch, interventions, isFixture, isBase } = useStore();
   const scenario = model.scenarios.find((s) => s.id === state.scenarioId)!;
   const on = interventions.filter((iv) => state.interventionIds.includes(iv.id));
@@ -14,11 +14,16 @@ export function Masthead() {
           <h1>Operating Model Simulator</h1>
           <span>{model.name} · {model.calendar.startMonth.slice(0, 4)} plan{isFixture ? ' · fictional' : ' · your numbers'}</span>
         </a>
-        <div className="state">
-          <span className="strip-l">Scenario</span><span className="chip">{scenario.name}</span>
-          <span className="strip-l">Levers on</span>{on.length === 0 ? <span className="chip dim">none</span> : on.map((iv) => <span key={iv.id} className="chip on" title={iv.name}>{iv.name}</span>)}
-          {!isBase && <button className="strip-reset" onClick={() => dispatch({ type: 'reset' })}>Reset</button>}
-        </div>
+        {/* These belong to the full model, where you pick them. On the run they described
+            a year the run was not playing: the chip read "Base plan" while the run was on
+            the spike, and the levers it listed were not the five decisions being made. */}
+        {view !== 'run' && view !== 'answer' && (
+          <div className="state">
+            <span className="strip-l">Scenario</span><span className="chip">{scenario.name}</span>
+            <span className="strip-l">Levers on</span>{on.length === 0 ? <span className="chip dim">none</span> : on.map((iv) => <span key={iv.id} className="chip on" title={iv.name}>{iv.name}</span>)}
+            {!isBase && <button className="strip-reset" onClick={() => dispatch({ type: 'reset' })}>Reset</button>}
+          </div>
+        )}
         <div className="mast-right">
         <details className="verified">
           <summary>{warnings.length ? '△ Model checks' : '✓ Model verified'}</summary>

@@ -38,7 +38,7 @@ export default function App() {
   return (
     <StoreProvider>
       <div className={'app' + (scrolls ? ' app-scroll' : '')}>
-        <Masthead />
+        <Masthead view={view} />
         <Screen view={view} />
         <footer className="foot">
           Atlas Systems is fictional. This is an illustrative operating model, not a financial forecast. Every number on this page is computed by a deterministic monthly model from one JSON file; nothing is stored as a result.

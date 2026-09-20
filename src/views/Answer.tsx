@@ -2,7 +2,8 @@ import { useMemo, useState } from 'react';
 import { run } from '../engine';
 import { FIXTURE } from '../state/store';
 import type { ModelResult } from '../models/results';
-import { DECISIONS, mUsd } from './Run';
+import { DECISIONS, RUN_SCENARIO, mUsd } from './Run';
+import { hours } from '../lib/format';
 
 /**
  * The short version, for anyone who does not want to play.
@@ -32,6 +33,10 @@ const strain = (r: ModelResult) =>
   r.teams.reduce((a, t) => a + t.months.filter((m) => m.utilization > m.targetUtilization).length, 0);
 const spend = (r: ModelResult) => r.financials.monthly.reduce((a, m) => a + m.changeCostUsd, 0);
 const lateness = (r: ModelResult) => r.initiatives.reduce((a, i) => a + (i.delayMonths ?? 0), 0);
+const shedByTeam = (r: ModelResult) => r.teams
+  .map((t) => ({ id: t.teamId, hours: t.months.reduce((a, m) => a + m.shedHours, 0) }))
+  .sort((a, b) => b.hours - a.hours);
+const svcPct = (r: ModelResult) => Math.round((r.summary.serviceLevelPct ?? 1) * 100);
 
 const OBJECTIVES: Objective[] = [
   { id: 'revenue', label: 'Revenue', who: 'a sales or GTM organisation',
@@ -62,10 +67,31 @@ const OBJECTIVES: Objective[] = [
 
 type Path = { picks: (string | null)[]; result: ModelResult };
 
+/*
+ * Every lever the run offers, applied on its own to the same year, ranked by how much
+ * work it saves from never being done. The ranking is the whole argument and none of it
+ * is authored: the levers that change how much work there is, or who is already there to
+ * do it, beat the lever that adds people, because people approved in February arrive
+ * after the spike has already happened.
+ */
+const LEVERS = (() => {
+  const seen = new Map<string, string>();
+  for (const d of DECISIONS) for (const o of d.options) if (o.iv && !seen.has(o.iv)) seen.set(o.iv, o.label);
+  const rows = [...seen].map(([iv, label]) => ({ iv, label, r: run(M, { scenario: RUN_SCENARIO, interventions: [iv] }) }));
+  rows.push({ iv: 'none', label: 'Leave the plan alone', r: run(M, { scenario: RUN_SCENARIO }) });
+  /* Ties at the precision the reader is shown break toward the better answer rate. Two
+     levers both saving 10.3k hours read as equally good until you notice one of them
+     takes the queue from 42% to 33%, and a list that ranked it second was saying the
+     opposite of what its own second column said. */
+  return rows.sort((a, b) =>
+    Math.round(a.r.summary.shedHours / 100) - Math.round(b.r.summary.shedHours / 100)
+    || (b.r.summary.serviceLevelPct ?? 0) - (a.r.summary.serviceLevelPct ?? 0));
+})();
+
 function allPaths(): Path[] {
   const out: Path[] = [];
   const walk = (i: number, ivs: string[], picks: (string | null)[]) => {
-    if (i === DECISIONS.length) { out.push({ picks, result: run(M, { interventions: ivs }) }); return; }
+    if (i === DECISIONS.length) { out.push({ picks, result: run(M, { scenario: RUN_SCENARIO, interventions: ivs }) }); return; }
     for (const o of DECISIONS[i].options) {
       walk(i + 1, o.iv && !ivs.includes(o.iv) ? [...ivs, o.iv] : ivs, [...picks, o.iv]);
     }
@@ -91,10 +117,17 @@ export function Answer() {
   /* Counted rather than claimed. The copy used to say "seven different winners" and that
      was simply wrong: two objectives share an answer, which is worth saying out loud. */
   const winners = useMemo(() => {
-    const keys = OBJECTIVES.map((o) => [...paths].sort(rank(o))[0].picks.join('|'));
-    return { distinct: new Set(keys).size, total: OBJECTIVES.length };
+    const groups = new Map<string, string[]>();
+    OBJECTIVES.forEach((o) => {
+      const k = [...paths].sort(rank(o))[0].picks.join('|');
+      groups.set(k, [...(groups.get(k) ?? []), o.label.toLowerCase()]);
+    });
+    return {
+      distinct: groups.size, total: OBJECTIVES.length,
+      shared: [...groups.values()].filter((v) => v.length > 1),
+    };
   }, [paths]);
-  const doNothing = useMemo(() => run(M), []);
+  const doNothing = useMemo(() => run(M, { scenario: RUN_SCENARIO }), []);
 
   /* What this winner gives up. Said by comparing it against whoever wins the other
      objectives, because "it costs you something" is only worth reading with a number. */
@@ -115,9 +148,11 @@ export function Answer() {
       <p className="ans-lede">
         This model can run a year {paths.length} different ways. Ranked against {winners.total} things
         a company might be trying to protect, it produces <b>{winners.distinct} different sets of
-        five decisions</b>. Every one of them is bad at something the others protect, and the only
-        two that share an answer are the two you would expect: looking after your people and
-        keeping them are the same five calls. So the useful question is the first one.
+        five decisions</b>. Every one of them is bad at something the others protect
+        {winners.shared.length === 0
+          ? ', and no two of them are the same plan'
+          : `, and the only ones that share an answer are ${winners.shared.map((g) => g.join(' and ')).join('; ')}`}.
+        So the useful question is the first one.
       </p>
 
       <p className="ans-ask">What are you protecting?</p>
@@ -167,12 +202,59 @@ export function Answer() {
         )}
       </div>
 
+      {doNothing.summary.shedHours > 0 && (() => {
+        const worst = shedByTeam(doNothing)[0];
+        const worstName = M.teams.find((t) => t.id === worst.id)?.name ?? worst.id;
+        const share = Math.round((worst.hours / doNothing.summary.shedHours) * 100);
+        const best = LEVERS[0];
+        const lev = (iv: string) => LEVERS.find((l) => l.iv === iv);
+        const hire = lev('intervention-expedite-implementation');
+        const move = lev('intervention-reallocate-to-implementation');
+        const max = Math.max(...LEVERS.map((l) => l.r.summary.shedHours)) || 1;
+        return (
+          <div className="ans-levers">
+            <p className="ans-h">Why the year answers to some calls and not others</p>
+            <p className="ans-body">
+              Demand steps up 30% in April. Leaving the plan alone ends the year
+              with <b>{hours(doNothing.summary.shedHours)}</b> of work never done, and {share}% of
+              that lands on one team: <b>{worstName}</b>. Every lever the run offers, each
+              applied on its own to that same year:
+            </p>
+            <ol className="lev-rank">
+              {LEVERS.map((l) => (
+                <li key={l.iv} className={l.iv === best.iv ? 'top' : l.iv === 'none' ? 'nil' : ''}>
+                  <span className="lev-name">{l.label}</span>
+                  <span className="lev-track"><i style={{ width: (l.r.summary.shedHours / max) * 100 + '%' }} /></span>
+                  <span className="lev-num">{hours(l.r.summary.shedHours)} undone</span>
+                  <span className="lev-num">{svcPct(l.r)}% answered</span>
+                </li>
+              ))}
+            </ol>
+            <p className="ans-body">
+              <b>{best.label}</b> takes work off {worstName} directly, and it is the only call
+              that changes what the customer sees: {svcPct(best.r)}% of requests answered in
+              time against {svcPct(doNothing)}% for leaving it alone.
+              {hire && <> Pulling hires forward only saves {hours(doNothing.summary.shedHours - hire.r.summary.shedHours)},
+                because it adds people to a team the spike did not land on.</>}
+              {move && <> Moving people across saves about the same and takes the answer rate
+                down to {svcPct(move.r)}%, because the people come out of a queue that was
+                already answering somebody.</>}
+            </p>
+            <p className="ans-body">
+              The lesson is not that tools beat people. It is that a response only works if it
+              is pointed at the constraint, and the constraint is one team in one set of months.
+              Knowing which team, before the year starts, is the whole job.
+            </p>
+          </div>
+        );
+      })()}
+
       <div className="ans-lesson">
         <p className="ans-h">The whole thing, in three lines</p>
         <ol>
-          <li><b>Name what you are protecting before you look at options.</b> Seven objectives,
-              six different answers, and nothing in this model tells you which objective is right.
-              That part is a judgement, and it is the one that matters most.</li>
+          <li><b>Name what you are protecting before you look at options.</b> {winners.total} objectives,
+              {' '}{winners.distinct} different answers, and nothing in this model tells you which objective
+              is right. That part is a judgement, and it is the one that matters most.</li>
           <li><b>Every lever moves more than the thing you aimed it at.</b> Moving five people
               fixes one team and breaks another. Buying a tool cancels a hire nobody revisited.
               A model that cannot show you the second effect is not worth running.</li>

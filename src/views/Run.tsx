@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { run } from '../engine';
 import { FIXTURE } from '../state/store';
 import type { ModelResult } from '../models/results';
+import { hours } from '../lib/format';
 
 /**
  * The run: three decisions, and whatever they add up to.
@@ -18,6 +19,46 @@ import type { ModelResult } from '../models/results';
 
 const M = FIXTURE;
 
+export const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+/*
+ * The run's year is not the base plan. It is the base plan with a demand spike in it.
+ *
+ * On the flat year every interesting measure was dead: service level sat between 99.5%
+ * and 99.9% across all 243 endings and no decision could shift it, and nothing was ever
+ * left undone. The spike is what gives the five calls something to be right or wrong
+ * about. It roughly doubles the spread between the best and worst year you can run
+ * ($9.9M of revenue at risk to $20.9M) without touching what the levers cost, so the
+ * cost/scope/time triangle keeps exactly the range it was calibrated against.
+ *
+ * It is stated up front rather than sprung, because the model computes the whole year at
+ * once: the dashboard would have shown its damage from the first screen anyway, and a
+ * surprise the instruments already gave away is just a confusing one. The lesson survives
+ * being announced, and is sharper for it. You can see it coming and still not hire in time.
+ */
+export const RUN_SCENARIO = 'scenario-demand-shock';
+const SPIKE_MONTH = 3;
+const runYear = (interventions: string[] = []) => run(M, { scenario: RUN_SCENARIO, interventions });
+
+/* The figures the questions quote, read off the model instead of typed in. The prose used
+   to carry numbers from the flat year, and every one of them quietly became wrong the
+   moment the run moved onto a spike. */
+const FACTS = (() => {
+  const r = runYear();
+  const peak = (id: string) => {
+    const t = r.teams.find((x) => x.teamId === id)!;
+    return t.months.reduce((a, b) => (b.utilization > a.utilization ? b : a));
+  };
+  const fte = (id: string) => Math.round(M.teams.find((t) => t.id === id)!.currentFte);
+  const imp = peak('team-implementation'), co = peak('team-consumer-ops');
+  const long = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  return {
+    impHas: fte('team-implementation'), impNeeds: Math.round(imp.requiredFte), impMonth: long[imp.monthIndex],
+    coHas: fte('team-consumer-ops'), coNeeds: Math.round(co.requiredFte), coMonth: long[co.monthIndex],
+    coCases: (M.demandStreams.find((d) => d.teamId === 'team-consumer-ops')!.annualVolume).toLocaleString(),
+  };
+})();
+
 export type Option = {
   /** null is the do-nothing branch, which is a real answer and stays available. */
   iv: string | null;
@@ -33,7 +74,7 @@ export const DECISIONS: Decision[] = [
     when: 'February', monthIndex: 1,
     question: 'Implementation cannot absorb the year in front of it.',
     setup:
-      'Fifty people, and the work arriving needs closer to sixty. Ten more are already approved, but recruiting takes five months, so they land in June and the problem starts now.',
+      `${FACTS.impHas} people, and ten more already approved. Recruiting takes five months, so those land in June, and by ${FACTS.impMonth} the work in front of this team needs ${FACTS.impNeeds}.`,
     options: [
       { iv: 'intervention-expedite-implementation', label: 'Pull the hires forward', price: '$120K',
         why: 'Agency sourcing and a signing bonus. Five months becomes three.' },
@@ -63,7 +104,7 @@ export const DECISIONS: Decision[] = [
     when: 'Mid-year', monthIndex: 5,
     question: 'Consumer Operations is the next one to go.',
     setup:
-      'A hundred and fifty people against four hundred thousand cases, and twelve more already approved to start in May. The question is whether you still want them.',
+      `${FACTS.coHas} people, planned for ${FACTS.coCases} cases, with twelve more approved to start in May. April moved the arrival rate, and by ${FACTS.coMonth} the same team is being asked for ${FACTS.coNeeds}. Twelve does not close that, so the question is what does.`,
     options: [
       { iv: 'intervention-automate-consumer', label: 'Buy the self-service tool', price: '$1.2M',
         why: 'Auto-resolution for the commonest case types. Three months before it touches anything.' },
@@ -159,19 +200,19 @@ function Triangle({ trail, cloud, size = 1 }: { trail: TriPos[]; cloud?: TriPos[
   );
 }
 
-export const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-
 /**
  * The year, always on screen. A model that runs on an annual cycle and never shows you a
  * calendar leaves you guessing where "mid-year" is relative to the hire that lands in May.
  * Months already decided are filled; the one you are being asked about is marked.
  */
-function YearStrip({ at, decided }: { at: number | null; decided: number[] }) {
+function YearStrip({ at, decided, spike }: { at: number | null; decided: number[]; spike?: number }) {
   return (
     <ol className="rb-year" aria-label="The plan year">
       {MONTHS.map((m, i) => (
         <li key={m}
-            className={i === at ? 'now' : decided.some((d) => d === i) ? 'done' : i < (at ?? -1) ? 'past' : ''}>
+            className={[i === at ? 'now' : decided.some((d) => d === i) ? 'done' : i < (at ?? -1) ? 'past' : '',
+                        i === spike ? 'spike' : ''].filter(Boolean).join(' ')}
+            title={i === spike ? 'Demand steps up 30% here and stays there' : undefined}>
           <i /><span>{m}</span>
         </li>
       ))}
@@ -251,7 +292,14 @@ function Kpis({ result, prev }: { result: ModelResult; prev?: ModelResult }) {
   };
   return (
     <div className="rb-kpis">
-      {cell('Teams over capacity', String(s.teamsConstrained), p && s.teamsConstrained - p.teamsConstrained)}
+      {/* Not "teams over capacity": on a spike year that reads 7 whatever you do, and a
+          dashboard cell that never moves teaches the reader to stop looking at it. The
+          board below still shows every team. Service level is the one the decisions
+          actually move, from 33% to 82% across the endings. */}
+      {s.serviceLevelPct !== null
+        ? cell('Answered in time', Math.round(s.serviceLevelPct * 100) + '%',
+               p?.serviceLevelPct != null ? s.serviceLevelPct - p.serviceLevelPct : undefined, false)
+        : cell('Teams over capacity', String(s.teamsConstrained), p && s.teamsConstrained - p.teamsConstrained)}
       {cell('People, year end', String(Math.round(s.endingFte)), p && s.endingFte - p.endingFte)}
       {cell('Revenue at risk', mUsd(s.revenueExposureUsd), p && s.revenueExposureUsd - p.revenueExposureUsd)}
       {cell('Spent on changes', mUsd(changeSpend(result)), undefined)}
@@ -290,6 +338,12 @@ function consequence(before: ModelResult, after: ModelResult): string[] {
   const dFte = Math.round(after.summary.endingFte) - Math.round(before.summary.endingFte);
   if (dFte < 0) out.push(`${-dFte} fewer people at year end, because the work behind ${after.summary.hiresDroppedFte} of the approved hires went away.`);
 
+  const dSvc = (after.summary.serviceLevelPct ?? 0) - (before.summary.serviceLevelPct ?? 0);
+  if (Math.abs(dSvc) > 0.005) out.push(`Requests answered in time ${dSvc > 0 ? 'rise' : 'fall'} to ${Math.round((after.summary.serviceLevelPct ?? 0) * 100)}%.`);
+
+  const dShed = after.summary.shedHours - before.summary.shedHours;
+  if (Math.abs(dShed) > 100) out.push(`Work that never gets done ${dShed < 0 ? 'falls' : 'rises'} to ${hours(after.summary.shedHours)}.`);
+
   const dRisk = after.summary.revenueExposureUsd - before.summary.revenueExposureUsd;
   if (Math.abs(dRisk) > 50000) out.push(`Revenue at risk ${dRisk < 0 ? 'falls' : 'rises'} to ${mUsd(after.summary.revenueExposureUsd)}.`);
 
@@ -305,7 +359,7 @@ function reachable(): TriPos[] {
   if (REACHABLE) return REACHABLE;
   const out: TriPos[] = [];
   const walk = (i: number, picked: string[]) => {
-    if (i === DECISIONS.length) { out.push(triangleOf(run(M, { interventions: picked }))); return; }
+    if (i === DECISIONS.length) { out.push(triangleOf(runYear(picked))); return; }
     for (const o of DECISIONS[i].options) {
       walk(i + 1, o.iv && !picked.includes(o.iv) ? [...picked, o.iv] : picked);
     }
@@ -324,15 +378,15 @@ export function Run() {
   const step = picks.length;
   const done = step >= DECISIONS.length;
 
-  const current = useMemo(() => run(M, { interventions: chosen }), [chosen.join('|')]);
-  const doNothing = useMemo(() => run(M), []);
+  const current = useMemo(() => runYear(chosen), [chosen.join('|')]);
+  const doNothing = useMemo(() => runYear(), []);
   const previous = useMemo(
-    () => run(M, { interventions: picks.slice(0, -1).filter((p): p is string => !!p) }),
+    () => runYear(picks.slice(0, -1).filter((p): p is string => !!p)),
     [picks.length, chosen.join('|')],
   );
 
   const previewResult = useMemo(
-    () => (preview === undefined ? null : run(M, { interventions: preview ? [...chosen, preview] : chosen })),
+    () => (preview === undefined ? null : runYear(preview ? [...chosen, preview] : chosen)),
     [preview, chosen.join('|')],
   );
 
@@ -343,7 +397,7 @@ export function Run() {
   const trail = useMemo(() => {
     const steps: TriPos[] = [];
     for (let i = 0; i <= picks.length; i++) {
-      steps.push(triangleOf(run(M, { interventions: picks.slice(0, i).filter((p): p is string => !!p) })));
+      steps.push(triangleOf(runYear(picks.slice(0, i).filter((p): p is string => !!p))));
     }
     if (previewResult) steps.push(triangleOf(previewResult));
     return steps;
@@ -365,7 +419,8 @@ export function Run() {
                 February on the opening screen implied a decision you had not been asked for. */}
             <YearStrip
               at={!started || done ? null : DECISIONS[Math.min(step, DECISIONS.length - 1)].monthIndex}
-              decided={started ? DECISIONS.slice(0, step).map((dd) => dd.monthIndex) : []} />
+              decided={started ? DECISIONS.slice(0, step).map((dd) => dd.monthIndex) : []}
+              spike={SPIKE_MONTH} />
           </div>
           <div className="rb-dash-tri">
             <Triangle trail={trail} />
@@ -385,10 +440,11 @@ export function Run() {
             <>
               <span className="rb-when">Before you start</span>
               <h1>One decision, followed all the way through.</h1>
-              <p className="rb-setup">This is a year of one company's plan. Before you run it,
-                 here is what the model does with a single choice: a support tool, the team it
-                 helps, the teams downstream of that team, the hire it makes unnecessary, and
-                 what that is worth. Then you make five calls of your own.</p>
+              <p className="rb-setup">This is a year of a fictional company&rsquo;s plan, with one
+                 thing in it the plan did not budget for: demand steps up 30% in April and stays
+                 there. Two of your five calls come before it lands. Before you run it, here is what
+                 the model does with a single choice: a support tool, the team it helps, the teams
+                 downstream of that team, the hire it makes unnecessary, and what that is worth.</p>
               {/* Above the board, not below it. At 900px the button sat under a 380px
                   animation and the only thing you could do on the page was off screen. */}
               <div className="rb-opts rb-opts-lead">
@@ -463,8 +519,18 @@ export function Run() {
                 inside their target. Worst month{' '}
                 <b>{((shown.summary.worstServiceLevel ?? 1) * 100).toFixed(0)}%</b>.
               </p>
+              {shown.summary.shedHours > 0 && (
+                <p className="rb-service">
+                  <b>{hours(shown.summary.shedHours)}</b> of work never got done at all
+                  {shown.summary.closingBacklogHours > 0
+                    ? <>, and <b>{hours(shown.summary.closingBacklogHours)}</b> was still waiting in December.</>
+                    : '.'}
+                </p>
+              )}
               <p className="rb-legend">Queues do not degrade in a line. They hold, and then they
-                 fall over, and a team half the size falls over sooner at the same load.</p>
+                 fall over, and a team half the size falls over sooner at the same load. Work
+                 nobody reaches waits, and next month starts behind; past a month of it, the
+                 team is turning work away whether or not anyone decided to.</p>
             </>
           )}
         </section>}
@@ -488,7 +554,7 @@ function Replay({ picks, trail }: { picks: (string | null)[]; trail: TriPos[] })
   const states = useMemo(() => {
     const out: ModelResult[] = [];
     for (let i = 0; i <= picks.length; i++) {
-      out.push(run(M, { interventions: picks.slice(0, i).filter((p): p is string => !!p) }));
+      out.push(runYear(picks.slice(0, i).filter((p): p is string => !!p)));
     }
     return out;
   }, [picks.join('|')]);
@@ -534,7 +600,7 @@ function Replay({ picks, trail }: { picks: (string | null)[]; trail: TriPos[] })
         <div className="rb-replay-side">
           <Triangle trail={trail.slice(0, at + 1)} size={1.1} />
           <ul className="rb-replay-kpi">
-            <li><b>{states[at].summary.teamsConstrained}</b><span>over capacity</span></li>
+            <li><b>{Math.round((states[at].summary.serviceLevelPct ?? 1) * 100)}%</b><span>answered in time</span></li>
             <li><b>{Math.round(states[at].summary.endingFte)}</b><span>people</span></li>
             <li><b>{mUsd(states[at].summary.revenueExposureUsd)}</b><span>at risk</span></li>
             <li><b>{(states[at].summary.retentionRate * 100).toFixed(1)}%</b><span>retention</span></li>
@@ -555,14 +621,18 @@ function Scorecard({ picks, result, doNothing, onReset, trail }:
   const took = picks.filter(Boolean).length;
 
   /* No win state. The run is read back as what it protected and what that cost. */
+  /* Read off service level and revenue, not the count of teams over capacity. On a spike
+     year that count is 7 whichever way you play it, so a verdict hung on it said the same
+     sentence about materially different years. */
   const riskCut = n.revenueExposureUsd - s.revenueExposureUsd;
-  const capBetter = n.teamsConstrained - s.teamsConstrained;
+  const svcUp = (s.serviceLevelPct ?? 0) - (n.serviceLevelPct ?? 0);
   const verdict =
     took === 0 ? 'You changed nothing, which is the cheapest year available and leaves every constraint exactly where it was.'
-    : capBetter > 0 && riskCut > 0 ? 'You bought capacity and revenue protection, and you paid for both.'
-    : capBetter < 0 ? 'You protected revenue by moving people, and left more teams over capacity than you started with. That is a real trade, not a mistake.'
-    : riskCut > 0 ? 'You protected revenue without fixing the capacity picture.'
-    : 'You spent money and the constraints stayed where they were.';
+    : svcUp > 0.05 && riskCut > 0 ? 'You got the work answered and protected the money behind it, and you paid for both.'
+    : svcUp > 0.05 ? 'You got the queue answered. What the portfolio was worth is roughly where it started.'
+    : svcUp < -0.05 ? 'You protected the portfolio by taking people off the queue, and the customer waited for it. That is a real trade, not a mistake.'
+    : riskCut > 0 ? 'You protected revenue without changing what the customer experienced.'
+    : 'You spent money and the year came out much as it would have anyway.';
 
   return (
     <>
@@ -575,8 +645,8 @@ function Scorecard({ picks, result, doNothing, onReset, trail }:
           <p className="rb-final-h">Every year you could have had</p>
           <p className="rb-setup">Each faint mark is one of the {reachable().length} ways these five
              decisions could have gone. Yours is the filled one, and the line is how it got there.
-             Nothing sits in the middle of all three corners, because nothing protects
-             budget, scope and schedule at once.</p>
+             Leaving the plan alone sits dead centre, because it gives up none of the three.
+             Every mark away from the centre is one of them traded for another.</p>
         </div>
       </div>
       <table className="rb-score">
@@ -591,6 +661,9 @@ function Scorecard({ picks, result, doNothing, onReset, trail }:
             <tr><td>Requests picked up in time</td>
               <td>{(n.serviceLevelPct! * 100).toFixed(1)}%</td>
               <td>{(s.serviceLevelPct * 100).toFixed(1)}%</td></tr>
+          )}
+          {(n.shedHours > 0 || s.shedHours > 0) && (
+            <tr><td>Work never done</td><td>{hours(n.shedHours)}</td><td>{hours(s.shedHours)}</td></tr>
           )}
           <tr><td>Spent on changes</td><td>{mUsd(0)}</td><td>{mUsd(spent)}</td></tr>
         </tbody>
