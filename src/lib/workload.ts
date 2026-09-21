@@ -73,18 +73,31 @@ export function workloadOf(result: ModelResult, teamId: string, month: number): 
   for (const s of sources) s.share = given > 0 ? s.hours / given : 0;
   sources.sort((a, b) => b.hours - a.hours);
 
-  /* One unit or the other: a team fed by referrals and imaging requests at once is
-     counted in whichever of them is most of its month, because "items" is not a word
-     anybody uses about their own work. */
+  /* One unit or the other: a team fed by referrals and imaging requests at once is counted
+     in whichever of them is most of its month, because "items" is not a word anybody uses
+     about their own work.
+
+     The rate must then be built from THAT unit alone. A first cut summed units across every
+     inbound stream and divided by the hours of all of them, which quietly added four
+     projects to six hundred cases and reported the total in projects: a team taking four
+     projects a month was said to have three hundred of them waiting. */
   let unit: string | null = null;
-  let units = 0, unitHours = 0, best = 0;
+  let best = 0;
   for (const f of into) {
     const h = f.hoursByMonth[month] ?? 0;
-    const u = f.unitsByMonth[month] ?? 0;
-    if (h <= 0 || u <= 0) continue;
-    units += u;
+    if (h > best && (f.unitsByMonth[month] ?? 0) > 0) { best = h; unit = f.unit; }
+  }
+  /* Count only the reported unit, but divide by ALL the hours that arrived. Dividing by
+     just its own hours over-reports whenever a second unit is also feeding the team: the
+     count then exceeds what that unit actually brought, which is a number that cannot be
+     true. This way "N cases" means the work here comes to N cases' worth, and it can never
+     claim more cases than arrived. */
+  let units = 0, unitHours = 0;
+  for (const f of into) {
+    const h = f.hoursByMonth[month] ?? 0;
+    if (h <= 0) continue;
     unitHours += h;
-    if (h > best) { best = h; unit = f.unit; }
+    if (f.unit === unit) units += f.unitsByMonth[month] ?? 0;
   }
 
   return {

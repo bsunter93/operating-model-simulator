@@ -111,3 +111,44 @@ describe('the shape of the year', () => {
     expect(worst(after)).toBeGreaterThan(worst(before));
   });
 });
+
+describe('mixed units', () => {
+  /* Data Platform takes a handful of projects a month and a stream of escalated cases.
+     Summing both and labelling the total in projects said it had three hundred projects
+     waiting, which is not a sentence about anything. */
+  it('builds the rate from the unit it reports, not from every unit it is fed', () => {
+    for (const m of models) {
+      const r = run(m);
+      for (const t of r.teams) {
+        for (let i = 0; i < t.months.length; i++) {
+          const w = workloadOf(r, t.teamId, i)!;
+          if (!w.unit || w.perHour <= 0) continue;
+          const into = r.flow.filter((f) => f.toTeamId === t.teamId);
+          const u = into.filter((f) => f.unit === w.unit)
+            .reduce((a, f) => a + (f.unitsByMonth[i] ?? 0), 0);
+          const h = into.reduce((a, f) => a + (f.hoursByMonth[i] ?? 0), 0);
+          if (h <= 0) continue;
+          expect(w.perHour).toBeCloseTo(u / h, 9);
+        }
+      }
+    }
+  });
+
+  it('never reports more arriving work than the stream that names the unit carries', () => {
+    const m = models[0];
+    const r = run(m);
+    for (const t of r.teams) {
+      const w = workloadOf(r, t.teamId, 0)!;
+      if (!w.unit || w.perHour <= 0) continue;
+      const arriving = r.flow
+        .filter((f) => f.toTeamId === t.teamId && f.unit === w.unit)
+        .reduce((a, f) => a + (f.unitsByMonth[0] ?? 0), 0);
+      const reported = asUnits(w, w.sources
+        .filter((s) => s.kind === 'arrival' || s.kind === 'route')
+        .reduce((a, s) => a + s.hours, 0))!;
+      /* Arrivals in another unit inflate the hours, never the count, so the reported
+         figure can only come in at or under what that unit actually brought. */
+      expect(reported).toBeLessThanOrEqual(arriving * 1.0001);
+    }
+  });
+});

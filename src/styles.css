@@ -1242,39 +1242,29 @@ details.tuck p{font-size:12.5px;color:var(--muted);margin:8px 0 6px}
    what makes overflow-x:auto scroll instead of overflow. */
 .sandbox{display:grid;grid-template-columns:minmax(0,1fr);align-content:start;
   max-width:1140px;min-width:0;margin:0 auto;padding:0 clamp(16px,3vw,32px) 64px}
-.sb-top{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:clamp(16px,3vw,32px);
-  align-items:end;padding:26px 0 18px;border-bottom:1px solid var(--line)}
-.sb-top h1{margin:6px 0 8px;font:600 clamp(26px,3.4vw,38px)/1.1 var(--display);color:var(--ink);
-  text-wrap:balance}
-.sb-lede{margin:0;font:400 14px/1.6 var(--sans);color:var(--body);max-width:60ch}
-.sb-verdict{font:400 14px/1.55 var(--sans);color:var(--body);padding:12px 14px;
-  border-left:2px solid var(--warm);background:var(--warm-soft);border-radius:0 6px 6px 0}
-.sb-verdict b{color:var(--ink);font-weight:600}
+/* masthead: a name and a wall of four facts, and nothing else */
+.sb-top{padding:24px 0 12px;border-bottom:1px solid var(--line)}
+.sb-top h1{margin:0;font:600 clamp(22px,2.6vw,30px)/1.1 var(--display);color:var(--ink)}
+.sb-wall{display:flex;flex-wrap:wrap;gap:4px 20px;margin:7px 0 0;
+  font:500 12px/1.4 var(--mono);color:var(--muted)}
+.sb-wall b{color:var(--warm);font-weight:600}
 
-/* what a person running this would want on the wall */
-.sb-facts{display:flex;flex-wrap:wrap;gap:8px 26px;margin:0;justify-content:flex-end}
-.sb-facts div{min-width:0}
-.sb-facts dt{font:500 9px/1 var(--mono);letter-spacing:.11em;text-transform:uppercase;
-  color:var(--muted);margin-bottom:5px}
-.sb-facts dd{margin:0;font:600 17px/1.1 var(--display);color:var(--ink);white-space:nowrap}
-.sb-facts-w dd{color:var(--warm);font-size:15px;max-width:14ch;white-space:normal;line-height:1.2}
-
-/* ── the year, always on ───────────────────────────────────────────────── */
+/* ── the year, running underneath the organisation ─────────────────────── */
 .ys{display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 12px;align-items:end;
-  margin:18px 0 10px}
+  margin:14px 0 4px}
 .ys-title{grid-column:1 / -1;margin:0 0 2px;font:600 9px/1 var(--mono);letter-spacing:.11em;
   text-transform:uppercase;color:var(--muted)}
 .ys-play{width:34px;height:34px;border:1px solid var(--line);border-radius:999px;
   background:var(--surface);font:400 11px/1 var(--sans);color:var(--body);
   display:flex;align-items:center;justify-content:center}
 .ys-play:hover{border-color:var(--accent);color:var(--accent)}
-/* A baseline under the whole row is what makes these read as bars rather than tiles:
-   without it every column is a filled block and a quiet month looks the same as a loud one. */
+/* A baseline under the row is what makes these read as bars rather than tiles: without it
+   every column is a filled block and a quiet month looks the same as a loud one. */
 .ys-track{grid-column:2;display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:3px;
   border-bottom:1px solid var(--line);padding-bottom:3px}
 .ys-m{display:grid;gap:4px;padding:0;background:none;border:0}
-.ys-bars{position:relative;display:block;height:46px;background:var(--hair);border-radius:2px 2px 0 0;
-  opacity:.55}
+.ys-bars{position:relative;display:block;height:40px;background:var(--hair);
+  border-radius:2px 2px 0 0;opacity:.55}
 .ys-m:hover .ys-bars,.ys-m.on .ys-bars{opacity:1}
 .ys-bars i{position:absolute;left:0;right:0;bottom:0;border-radius:2px}
 .ys-now.ok{background:var(--line)}
@@ -1312,9 +1302,8 @@ details.tuck p{font-size:12.5px;color:var(--muted);margin:8px 0 6px}
 .fc-head em.bad{color:var(--alert)}
 
 /* canvas */
-.fc-scroll{overflow-x:auto;overflow-y:hidden;padding:2px 0 6px;
-  border-top:1px solid var(--hair);border-bottom:1px solid var(--hair)}
-.fc{position:relative;margin:14px 0}
+.fc-scroll{overflow-x:auto;overflow-y:hidden;padding:2px 0 6px}
+.fc{position:relative;margin:14px auto}
 .fc-wires{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible}
 .fc-edge .fc-wire{fill:none;stroke:var(--muted);opacity:.32;stroke-linecap:round}
 .fc-edge .fc-pulse{fill:none;stroke:var(--accent);stroke-linecap:round;opacity:.5;
@@ -1326,59 +1315,55 @@ details.tuck p{font-size:12.5px;color:var(--muted);margin:8px 0 6px}
 .fc-shed path{fill:none;stroke:var(--alert);stroke-width:1.4;opacity:.75;stroke-linecap:round}
 
 /* arriving work */
-.fc-src{position:absolute;display:flex;flex-direction:column;justify-content:center;gap:3px;
-  text-align:left;padding:8px 11px;border:1px dashed var(--line);border-radius:7px;
-  background:var(--surface);transition:border-color .12s,opacity .12s}
-.fc-src:hover{border-color:var(--accent)}
-.fc-src.on{border-style:solid;border-color:var(--accent);background:var(--accent-soft)}
-.fc-src.dim{opacity:.6}
-.fc-src-none{border-style:dotted;background:none;cursor:default}
-.fc-src-none .fc-src-n{color:var(--muted);font-weight:400}
-.fc-src-n{font:500 12px/1.3 var(--sans);color:var(--ink);
-  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.fc-src-v{font:500 10.5px/1 var(--mono);color:var(--muted)}
+/* a source of work: a name, and its count when you ask for it */
+.fc-src{position:absolute;display:flex;flex-direction:column;justify-content:center;gap:1px;
+  text-align:left;padding:0 9px;overflow:hidden;
+  border:1px dashed var(--line);border-radius:6px;background:var(--surface);
+  transition:border-color .12s,opacity .12s}
+.fc-src b{font:600 11px/1.1 var(--mono);color:var(--body)}
+.fc-src span{font:400 9px/1.1 var(--mono);color:var(--muted);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fc-src.on b{color:var(--ink)}
+.fc-src:hover{border-color:var(--accent);color:var(--ink)}
+.fc-src.on{border-style:solid;border-color:var(--accent);background:var(--accent-soft);color:var(--ink)}
+.fc-src.dim{opacity:.5}
+.fc-inhouse{position:absolute;font:500 9px/1 var(--mono);color:var(--muted);opacity:.65;
+  white-space:nowrap;pointer-events:none}
+.fc-inhouse.dim{opacity:.3}
 
-/* a team */
-.fc-node{position:absolute;display:flex;flex-direction:column;justify-content:center;gap:6px;
-  text-align:left;padding:10px 12px;border:1px solid var(--line);border-radius:9px;
+/* a team: a name and a gauge. Everything else is one hover or one click away. */
+.fc-node{position:absolute;display:flex;flex-direction:column;justify-content:center;gap:7px;
+  text-align:left;padding:0 11px;border:1px solid var(--line);border-radius:8px;
   background:var(--surface);transition:border-color .12s,box-shadow .12s,opacity .12s}
 .fc-node:hover{border-color:var(--accent)}
 .fc-node.on{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
-.fc-node.dim{opacity:.6}
-.fc-node-h{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
-.fc-node-h b{font:600 13px/1.2 var(--sans);color:var(--ink);white-space:nowrap;
+.fc-node.dim{opacity:.5}
+.fc-node-n{font:600 12px/1.2 var(--sans);color:var(--ink);white-space:nowrap;
   overflow:hidden;text-overflow:ellipsis}
-.fc-node-h em{font:500 12px/1 var(--mono);color:var(--muted);font-style:normal;flex:none}
-.fc-node-h em::after{content:" ppl";font-size:9px;letter-spacing:.04em}
-.fc-bar{position:relative;display:block;height:9px;border-radius:3px;background:var(--hair);overflow:hidden}
+.fc-bar{position:relative;display:block;height:7px;border-radius:2px;background:var(--hair);overflow:hidden}
 .fc-bar i{display:block;height:100%;background:var(--accent);transition:width .18s}
-.fc-bar u{position:absolute;top:-2px;bottom:-2px;width:2px;background:var(--ink);opacity:.45;text-decoration:none}
-.fc-node-f{display:flex;gap:9px;flex-wrap:wrap;font:500 10.5px/1.3 var(--mono);color:var(--muted)}
-.fc-node-f b{font-weight:600}
-.p-holding{color:var(--ok)}
-.p-tight{color:var(--warm)}
-.p-over{color:var(--warm)}
-.p-buried{color:var(--alert)}
-.fc-warn{color:var(--warm)}
-.fc-q-n{position:absolute;right:100%;top:calc(50% + 24px);transform:translateY(-50%);
-  margin-right:6px;font:500 9px/1 var(--mono);color:var(--warm);white-space:nowrap}
+.fc-bar u{position:absolute;top:-2px;bottom:-2px;width:2px;background:var(--ink);opacity:.45;
+  text-decoration:none}
 .fc-node.s-watch .fc-bar i{background:var(--warm)}
-.fc-node.s-watch{border-color:var(--warm-soft)}
 .fc-node.s-constrained .fc-bar i,.fc-node.s-severe .fc-bar i{background:var(--alert)}
+.fc-node.s-watch{border-color:var(--warm-soft)}
 .fc-node.s-constrained,.fc-node.s-severe{border-color:var(--alert-soft)}
-.fc-node.s-severe .fc-node-f{color:var(--alert)}
 
-/* the queue in front of the block */
-.fc-q{position:absolute;right:100%;top:50%;transform:translateY(-50%);margin-right:7px;
-  display:flex;flex-direction:column-reverse;gap:2px}
-.fc-q i{display:block;width:10px;height:5px;border-radius:1px;background:var(--warm);opacity:.85}
+/* the queue, which is the whole point: work waiting, drawn as work, growing back towards
+   whatever is feeding it. A team two months behind has a line you can see from across the
+   room, and no percentage can do that. */
+.fc-q{position:absolute;right:100%;top:50%;transform:translateY(-50%);margin-right:6px;
+  display:flex;flex-direction:row-reverse;gap:2px;align-items:center}
+.fc-q > span{display:flex;flex-direction:column-reverse;gap:2px}
+.fc-q i{display:block;width:4px;height:4px;border-radius:1px;background:var(--warm)}
+/* work leaving the system, falling out of the bottom of the block that could not take it */
+.fc-shed{position:absolute;top:100%;left:12px;margin-top:4px;display:flex;gap:2px}
+.fc-shed i{display:block;width:4px;height:4px;border-radius:1px;background:var(--alert);opacity:.85}
 
-.fc-lbl{position:absolute;padding:2px 6px;border-radius:4px;background:var(--paper);
-  font:500 10px/1.3 var(--mono);color:var(--muted);white-space:nowrap;pointer-events:none}
+.fc-lbl{position:absolute;padding:1px 5px;border-radius:4px;background:var(--paper);
+  font:500 9.5px/1.3 var(--mono);color:var(--muted);white-space:nowrap;pointer-events:none}
 .fc-lbl.on{color:var(--ink)}
 .fc-lbl.dim{opacity:.4}
-.fc-shed-l{position:absolute;font:500 9.5px/1 var(--mono);color:var(--alert);
-  white-space:nowrap;pointer-events:none}
 
 /* transport */
 .fc-transport{margin-top:16px}
@@ -1412,8 +1397,8 @@ details.tuck p{font-size:12.5px;color:var(--muted);margin:8px 0 6px}
 .fc-rcpt-vs{color:var(--muted)}
 
 /* inspector */
-.fc-insp{margin-top:18px;padding:16px 18px;border:1px solid var(--line);border-radius:10px;
-  background:var(--tint);min-height:132px}
+.fc-insp{margin-top:16px;padding:14px 16px;border:1px solid var(--line);border-radius:10px;
+  background:var(--tint)}
 .fi-id{margin-bottom:14px}
 .fi-kind{display:block;font:600 9px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;
   color:var(--muted);margin-bottom:5px}
@@ -1467,15 +1452,8 @@ details.tuck p{font-size:12.5px;color:var(--muted);margin:8px 0 6px}
 .why-end{margin:0;font:400 12.5px/1.6 var(--sans);color:var(--muted);max-width:76ch}
 .why-end b{color:var(--ink);font-weight:600}
 
-.fi-legend-h{margin:0 0 10px;font:500 13px/1 var(--sans);color:var(--ink)}
-.fi-legend ul{list-style:none;margin:0;padding:0;display:flex;gap:26px;flex-wrap:wrap}
-.fi-legend li{display:flex;align-items:center;gap:8px;font:400 12px/1.4 var(--sans);color:var(--muted)}
-.fi-legend i{flex:none;display:block}
-.lg-src{width:18px;height:12px;border:1px dashed var(--line);border-radius:3px;background:var(--surface)}
-.lg-node{width:18px;height:12px;border:1px solid var(--line);border-radius:3px;background:var(--surface)}
-.lg-q{width:8px;height:12px;background:
-  linear-gradient(var(--warm) 0 5px,transparent 5px 7px,var(--warm) 7px 12px);opacity:.75;border-radius:1px}
-.lg-shed{width:10px;height:12px;border-left:1.4px solid var(--alert);margin-left:4px}
+.fi-idle{margin:0;font:400 13px/1.6 var(--sans);color:var(--muted);max-width:78ch}
+.fi-idle b{color:var(--ink);font-weight:600}
 
 .sb-bind{border-top:1px solid var(--hair);margin-top:16px}
 .sb-go{margin-top:28px;max-width:none;grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}

@@ -162,7 +162,6 @@ export function Sandbox() {
   const baseShape = useMemo(() => (touched(edits) ? yearShape(baseResult) : null), [edits, baseResult]);
 
   const rows = result.teams.map((t) => ({ team: t.teamId, m: t.months[month] as TeamMonth }));
-  const overNow = rows.filter((r) => r.m.utilization > r.m.targetUtilization).length;
   const queues = rows.filter((r) => r.m.serviceLevel !== null);
   const worstQueue = queues.length
     ? queues.reduce((a, b) => (b.m.serviceLevel! < a.m.serviceLevel! ? b : a))
@@ -268,52 +267,42 @@ export function Sandbox() {
       );
     }
     return (
-      <div className="fi-legend">
-        <p className="fi-legend-h">Click anything on the canvas to change it.</p>
-        <ul>
-          <li><i className="lg-src" /> Work arriving, with how much lands this month</li>
-          <li><i className="lg-node" /> A team: how full it is against the line it plans to run at</li>
-          <li><i className="lg-q" /> Work waiting in front of it, one mark to the week</li>
-          <li><i className="lg-shed" /> Work turned away, which never comes back</li>
-        </ul>
-      </div>
+      <p className="fi-idle">
+        Click a team or a source of work to change it.
+        {broke && <> Nothing holds past <b>{MONTHS[broke.index] ?? broke.month}</b>, when {name(broke.teamId)} goes over.</>}
+        {worstQueue && worstQueue.m.serviceLevel! < 0.99 && (
+          <> This month {name(worstQueue.team)} answers <b>{Math.round(worstQueue.m.serviceLevel! * 100)}%</b> of its work in time.</>
+        )}
+        {shedNow > 0 && <> <b>{fmt.hours(shedNow)}</b> of work is turned away.</>}
+      </p>
     );
   };
 
   return (
     <main className="sandbox">
+      {/* One line. The version this replaces spent nine bands of chrome before the reader
+          reached the thing they came to look at. */}
       <header className="sb-top">
-        <div>
-          <span className="rb-when">The sandbox</span>
-          <h1>{isFixture ? model.name : 'Your model'}, {result.months[0]?.slice(0, 4)}</h1>
-          <p className="sb-lede">
-            Change anything and the year recomputes. Same engine the run uses, answering in
-            about a third of a millisecond.
-          </p>
-        </div>
-        {/* What a person running this would want on the wall: what they have, how long they
-            have, and where it is currently binding. All measured, none authored. */}
-        <dl className="sb-facts">
-          <div><dt>Budget</dt><dd>{fmt.money(result.financials.annualBudget)}</dd></div>
-          <div><dt>People</dt><dd>{Math.round(result.summary.startingFte)}</dd></div>
-          <div><dt>Months</dt><dd>{months}</dd></div>
-          <div className="sb-facts-w">
-            <dt>The constraint</dt>
-            <dd>{binding.service ? name(binding.service.teamId)
-              : binding.portfolio ? name(binding.portfolio.teamId)
-                : 'nowhere this year'}</dd>
-          </div>
-        </dl>
+        <h1>{isFixture ? model.name : 'Your model'}, {result.months[0]?.slice(0, 4)}</h1>
+        <p className="sb-wall">
+          <span>{fmt.money(result.financials.annualBudget)}</span>
+          <span>{Math.round(result.summary.startingFte)} people</span>
+          <span>{months} months</span>
+          <b>Constraint: {binding.service ? name(binding.service.teamId)
+            : binding.portfolio ? name(binding.portfolio.teamId) : 'nowhere this year'}</b>
+        </p>
       </header>
 
       <div className="fc-tools">
         <label className="fc-pick">
           <span>Year</span>
-          <select value={scenarioId} onChange={(e) => setScenarioId(e.target.value)}>
-            {model.scenarios.map((sc) => <option key={sc.id} value={sc.id}>{sc.name}</option>)}
+          <select value={scenarioId} title={scenario.description}
+                  onChange={(e) => setScenarioId(e.target.value)}>
+            {model.scenarios.map((sc) => (
+              <option key={sc.id} value={sc.id} title={sc.description}>{sc.name}</option>
+            ))}
           </select>
         </label>
-        <p className="fc-pick-note">{scenario.description}</p>
         {touched(edits) > 0 && (
           <button type="button" className="fc-reset" onClick={() => setEdits(NONE)}>
             Undo my changes ({touched(edits)})
@@ -321,27 +310,13 @@ export function Sandbox() {
         )}
       </div>
 
-      <YearSpine shape={shape} base={baseShape} month={month} labels={MONTHS} playing={playing}
-                 onPick={(m) => { setPlaying(false); setTouchedScrub(true); setAt(m); }}
-                 onPlay={() => { setTouchedScrub(true); setPlaying((x) => !x); }} />
-
-      <div className="fc-head">
-        {broke && (
-          <em className={overNow > 0 ? 'mid' : ''}>
-            first past what it can hold: {name(broke.teamId)} in {MONTHS[broke.index] ?? broke.month}
-          </em>
-        )}
-        {worstQueue && (
-          <em className={worstQueue.m.serviceLevel! < 0.5 ? 'bad' : worstQueue.m.serviceLevel! < 0.85 ? 'mid' : ''}>
-            {Math.round(worstQueue.m.serviceLevel! * 100)}% answered on {name(worstQueue.team)}, its worst queue
-          </em>
-        )}
-        {shedNow > 0 && <em className="bad">{fmt.hours(shedNow)} turned away this month</em>}
-      </div>
-
       <FlowCanvas model={tuned} result={result} month={month} selected={sel} onSelect={setSel}
                   compact={(n) => fmt.count(n)} />
       <p className="fc-hint">The canvas is wider than this screen. Drag it sideways to follow the work.</p>
+
+      <YearSpine shape={shape} base={baseShape} month={month} labels={MONTHS} playing={playing}
+                 onPick={(m) => { setPlaying(false); setTouchedScrub(true); setAt(m); }}
+                 onPlay={() => { setTouchedScrub(true); setPlaying((x) => !x); }} />
 
       {touched(edits) > 0 && (
         <section className="fc-rcpt" aria-live="polite">
