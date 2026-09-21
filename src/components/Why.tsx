@@ -1,0 +1,68 @@
+import type { Fmt } from '../lib/format';
+import { asUnits, PRESSURE_WORD, pressureOf, type Workload } from '../lib/workload';
+
+/**
+ * Why this team is where it is, this month.
+ *
+ * One bar for everything the team was handed, cut into the things that handed it: the
+ * streams by name, the escalations off another team, the change work, and last month's
+ * queue. A marker sits where its capacity runs out. Anything past the marker is the
+ * month's arithmetic made visible, and it needs no sentence explaining it.
+ *
+ * Nothing here is a second calculation. Every segment is a field the engine produced.
+ */
+
+const KIND_ORDER = { waiting: 0, arrival: 1, route: 2, change: 3 } as const;
+
+export function Why({ w, team, month, answered, fmt }:
+  { w: Workload; team: string; month: string; answered: number | null; fmt: Fmt }) {
+  const press = pressureOf(w);
+  const total = Math.max(w.given, w.capacityHours, 1);
+  const capAt = (w.capacityHours / total) * 100;
+  const segs = [...w.sources].sort((a, b) => KIND_ORDER[a.kind] - KIND_ORDER[b.kind]);
+  const count = (hours: number) => {
+    const u = asUnits(w, hours);
+    return u !== null && u >= 1 ? `${fmt.count(Math.round(u))} ${w.unit}` : fmt.hours(hours);
+  };
+
+  return (
+    <div className="why">
+      <p className="why-q">
+        Why is {team} <b className={'p-' + press}>{PRESSURE_WORD[press].toLowerCase()}</b> in {month}?
+        {' '}It was handed <b>{count(w.given)}</b> and can do <b>{count(w.capacityHours)}</b>.
+      </p>
+
+      <div className="why-bar" role="img"
+           aria-label={`${Math.round(w.utilization * 100)} percent of capacity`}>
+        {segs.map((s) => (
+          <i key={s.key} className={'k-' + s.kind} style={{ width: `${(s.hours / total) * 100}%` }}
+             title={`${s.label}: ${fmt.hours(s.hours)}`} />
+        ))}
+        <u style={{ left: `${capAt}%` }}><span>can do</span></u>
+      </div>
+
+      <ul className="why-key">
+        {segs.map((s) => (
+          <li key={s.key}>
+            <i className={'k-' + s.kind} />
+            <span className="why-k-l">{s.label}</span>
+            <b>{fmt.hours(s.hours)}</b>
+            <em>{Math.round(s.share * 100)}%</em>
+          </li>
+        ))}
+      </ul>
+
+      <p className="why-end">
+        {Math.round(w.people)} people, {Math.round(w.hoursEach)} productive hours each.
+        {' '}It gets through <b>{count(w.gotTo)}</b>.
+        {w.waits > 0 && <> <b>{count(w.waits)}</b> left waiting for next month.</>}
+        {w.lost > 0 && <> <b className="p-buried">{count(w.lost)}</b> turned away for good.</>}
+        {w.waits <= 0 && w.lost <= 0 && <> Nothing is left over.</>}
+        {answered !== null && (
+          <> Of what arrived, <b className={answered < 0.5 ? 'p-buried' : answered < 0.85 ? 'p-over' : 'p-holding'}>
+            {Math.round(answered * 100)}%</b> was picked up inside its target.</>
+        )}
+      </p>
+    </div>
+  );
+}

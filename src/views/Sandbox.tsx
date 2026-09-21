@@ -7,6 +7,9 @@ import { bindingConstraints } from '../lib/constraint';
 import { receipt, type ReceiptLine } from '../lib/receipt';
 import { pct, pp, signed } from '../lib/format';
 import { FlowCanvas, shareLabel, type Sel } from '../components/FlowCanvas';
+import { YearSpine } from '../components/YearSpine';
+import { Why } from '../components/Why';
+import { workloadOf, yearShape } from '../lib/workload';
 import { MONTHS } from './Run';
 
 /**
@@ -155,6 +158,9 @@ export function Sandbox() {
     return () => { if (timer.current) window.clearInterval(timer.current); };
   }, [playing, months]);
 
+  const shape = useMemo(() => yearShape(result), [result]);
+  const baseShape = useMemo(() => (touched(edits) ? yearShape(baseResult) : null), [edits, baseResult]);
+
   const rows = result.teams.map((t) => ({ team: t.teamId, m: t.months[month] as TeamMonth }));
   const overNow = rows.filter((r) => r.m.utilization > r.m.targetUtilization).length;
   const queues = rows.filter((r) => r.m.serviceLevel !== null);
@@ -210,6 +216,7 @@ export function Sandbox() {
       const pending = edits.people[sel.id];
       const askedAt = pending ? result.months.indexOf(pending.month) : -1;
       const landing = { asked: askedAt, lands: askedAt + leadTimeFor(model, sel.id) };
+      const w = workloadOf(result, sel.id, month);
       const feeds = result.flow.filter((f) => f.kind === 'route' && f.sourceId === sel.id);
       const fedBy = result.flow.filter((f) => f.toTeamId === sel.id);
       return (
@@ -232,13 +239,7 @@ export function Sandbox() {
             {step('Plans to run at', `${Math.round(t.targetUtilization * 100)}%`, () => setTarget(t.id, -0.05), () => setTarget(t.id, 0.05),
                   'of the hours it has')}
           </div>
-          <dl className="fi-facts">
-            <div><dt>Work this month</dt><dd>{fmt.hours(m.workloadHours)}</dd></div>
-            <div><dt>Hours it has</dt><dd>{fmt.hours(m.availableProductiveHours)}</dd></div>
-            <div><dt>Waiting from last month</dt><dd>{m.carriedInHours > 0 ? fmt.hours(m.carriedInHours) : 'none'}</dd></div>
-            <div><dt>Turned away</dt><dd className={m.shedHours > 0 ? 'bad' : ''}>{m.shedHours > 0 ? fmt.hours(m.shedHours) : 'none'}</dd></div>
-            {m.serviceLevel !== null && <div><dt>Answered in time</dt><dd>{Math.round(m.serviceLevel * 100)}%</dd></div>}
-          </dl>
+          {w && <Why w={w} team={t.name} month={MONTHS[month]} answered={m.serviceLevel} fmt={fmt} />}
         </>
       );
     }
@@ -284,17 +285,25 @@ export function Sandbox() {
       <header className="sb-top">
         <div>
           <span className="rb-when">The sandbox</span>
-          <h1>Watch the work move.</h1>
+          <h1>{isFixture ? model.name : 'Your model'}, {result.months[0]?.slice(0, 4)}</h1>
           <p className="sb-lede">
-            {isFixture ? model.name : 'Your model'}, {months} months of it, recomputed on every
-            change. Same engine the run uses, answering in about a third of a millisecond.
+            Change anything and the year recomputes. Same engine the run uses, answering in
+            about a third of a millisecond.
           </p>
         </div>
-        <div className="sb-verdict">
-          {broke
-            ? <><b>{name(broke.teamId)}</b> goes past what it can hold in <b>{MONTHS[broke.index] ?? broke.month}</b>.</>
-            : <>Nothing goes past what it can hold this year.</>}
-        </div>
+        {/* What a person running this would want on the wall: what they have, how long they
+            have, and where it is currently binding. All measured, none authored. */}
+        <dl className="sb-facts">
+          <div><dt>Budget</dt><dd>{fmt.money(result.financials.annualBudget)}</dd></div>
+          <div><dt>People</dt><dd>{Math.round(result.summary.startingFte)}</dd></div>
+          <div><dt>Months</dt><dd>{months}</dd></div>
+          <div className="sb-facts-w">
+            <dt>The constraint</dt>
+            <dd>{binding.service ? name(binding.service.teamId)
+              : binding.portfolio ? name(binding.portfolio.teamId)
+                : 'nowhere this year'}</dd>
+          </div>
+        </dl>
       </header>
 
       <div className="fc-tools">
@@ -312,36 +321,27 @@ export function Sandbox() {
         )}
       </div>
 
+      <YearSpine shape={shape} base={baseShape} month={month} labels={MONTHS} playing={playing}
+                 onPick={(m) => { setPlaying(false); setTouchedScrub(true); setAt(m); }}
+                 onPlay={() => { setTouchedScrub(true); setPlaying((x) => !x); }} />
+
       <div className="fc-head">
-        <span className="fc-month">{MONTHS[month]}</span>
-        <em className={overNow > 0 ? 'mid' : ''}>
-          {overNow === 0 ? 'every team inside its limit' : `${overNow} of ${rows.length} past their limit`}
-        </em>
+        {broke && (
+          <em className={overNow > 0 ? 'mid' : ''}>
+            first past what it can hold: {name(broke.teamId)} in {MONTHS[broke.index] ?? broke.month}
+          </em>
+        )}
         {worstQueue && (
           <em className={worstQueue.m.serviceLevel! < 0.5 ? 'bad' : worstQueue.m.serviceLevel! < 0.85 ? 'mid' : ''}>
             {Math.round(worstQueue.m.serviceLevel! * 100)}% answered on {name(worstQueue.team)}, its worst queue
           </em>
         )}
-        {shedNow > 0 && <em className="bad">{fmt.hours(shedNow)} turned away</em>}
+        {shedNow > 0 && <em className="bad">{fmt.hours(shedNow)} turned away this month</em>}
       </div>
 
       <FlowCanvas model={tuned} result={result} month={month} selected={sel} onSelect={setSel}
                   compact={(n) => fmt.count(n)} />
       <p className="fc-hint">The canvas is wider than this screen. Drag it sideways to follow the work.</p>
-
-      <div className="sb-scrub fc-transport">
-        <button className="sb-play" onClick={() => setPlaying((p) => !p)}>
-          {playing ? 'Pause' : 'Play the year'}
-        </button>
-        <input type="range" min={0} max={months - 1} step={1} value={month}
-               aria-label="Month"
-               onChange={(e) => { setPlaying(false); setTouchedScrub(true); setAt(Number(e.target.value)); }} />
-        <ol className="sb-months">
-          {Array.from({ length: months }, (_, i) => (
-            <li key={i} className={i === month ? 'on' : ''}>{MONTHS[i]?.[0]}</li>
-          ))}
-        </ol>
-      </div>
 
       {touched(edits) > 0 && (
         <section className="fc-rcpt" aria-live="polite">

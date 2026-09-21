@@ -1251,6 +1251,46 @@ details.tuck p{font-size:12.5px;color:var(--muted);margin:8px 0 6px}
   border-left:2px solid var(--warm);background:var(--warm-soft);border-radius:0 6px 6px 0}
 .sb-verdict b{color:var(--ink);font-weight:600}
 
+/* what a person running this would want on the wall */
+.sb-facts{display:flex;flex-wrap:wrap;gap:8px 26px;margin:0;justify-content:flex-end}
+.sb-facts div{min-width:0}
+.sb-facts dt{font:500 9px/1 var(--mono);letter-spacing:.11em;text-transform:uppercase;
+  color:var(--muted);margin-bottom:5px}
+.sb-facts dd{margin:0;font:600 17px/1.1 var(--display);color:var(--ink);white-space:nowrap}
+.sb-facts-w dd{color:var(--warm);font-size:15px;max-width:14ch;white-space:normal;line-height:1.2}
+
+/* ── the year, always on ───────────────────────────────────────────────── */
+.ys{display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 12px;align-items:end;
+  margin:18px 0 10px}
+.ys-title{grid-column:1 / -1;margin:0 0 2px;font:600 9px/1 var(--mono);letter-spacing:.11em;
+  text-transform:uppercase;color:var(--muted)}
+.ys-play{width:34px;height:34px;border:1px solid var(--line);border-radius:999px;
+  background:var(--surface);font:400 11px/1 var(--sans);color:var(--body);
+  display:flex;align-items:center;justify-content:center}
+.ys-play:hover{border-color:var(--accent);color:var(--accent)}
+/* A baseline under the whole row is what makes these read as bars rather than tiles:
+   without it every column is a filled block and a quiet month looks the same as a loud one. */
+.ys-track{grid-column:2;display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:3px;
+  border-bottom:1px solid var(--line);padding-bottom:3px}
+.ys-m{display:grid;gap:4px;padding:0;background:none;border:0}
+.ys-bars{position:relative;display:block;height:46px;background:var(--hair);border-radius:2px 2px 0 0;
+  opacity:.55}
+.ys-m:hover .ys-bars,.ys-m.on .ys-bars{opacity:1}
+.ys-bars i{position:absolute;left:0;right:0;bottom:0;border-radius:2px}
+.ys-now.ok{background:var(--line)}
+.ys-now.mid{background:var(--warm)}
+.ys-now.bad{background:var(--alert)}
+/* the plan as written, behind: a change reads as a difference in shape */
+.ys-was{border:1px dashed var(--muted);background:none;opacity:.7}
+.ys-l{font:500 9px/1 var(--mono);color:var(--muted);text-align:center}
+.ys-m:hover .ys-bars{box-shadow:inset 0 0 0 1px var(--accent)}
+.ys-m.on .ys-bars{box-shadow:inset 0 0 0 2px var(--accent)}
+.ys-m.on .ys-l{color:var(--ink);font-weight:700}
+.ys-cap{grid-column:2;margin:2px 0 0;font:400 12px/1.4 var(--sans);color:var(--muted)}
+.ys-cap b{color:var(--ink);font-weight:600}
+.ys-key{color:var(--muted)}
+.ys-key::before{content:"·";margin:0 7px;color:var(--line)}
+
 /* toolbar */
 .fc-tools{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:16px 0 12px}
 .fc-pick{display:flex;align-items:center;gap:8px}
@@ -1263,9 +1303,11 @@ details.tuck p{font-size:12.5px;color:var(--muted);margin:8px 0 6px}
   font:500 12px/1 var(--sans);color:var(--body)}
 .fc-reset:hover{border-color:var(--accent);color:var(--ink)}
 
-.fc-head{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;padding-bottom:10px}
-.fc-month{font:600 21px/1 var(--display);color:var(--ink)}
-.fc-head em{font:500 12px/1 var(--mono);color:var(--muted);font-style:normal}
+.fc-head{display:flex;align-items:baseline;gap:8px 18px;flex-wrap:wrap;padding-bottom:6px}
+.fc-head em{font:500 11.5px/1.3 var(--mono);color:var(--muted);font-style:normal}
+@media (min-width:861px){
+  .fc-head em + em::before{content:"·";margin-right:18px;color:var(--line)}
+}
 .fc-head em.mid{color:var(--warm)}
 .fc-head em.bad{color:var(--alert)}
 
@@ -1311,8 +1353,15 @@ details.tuck p{font-size:12.5px;color:var(--muted);margin:8px 0 6px}
 .fc-bar{position:relative;display:block;height:9px;border-radius:3px;background:var(--hair);overflow:hidden}
 .fc-bar i{display:block;height:100%;background:var(--accent);transition:width .18s}
 .fc-bar u{position:absolute;top:-2px;bottom:-2px;width:2px;background:var(--ink);opacity:.45;text-decoration:none}
-.fc-node-f{display:flex;gap:10px;font:500 10.5px/1 var(--mono);color:var(--muted)}
+.fc-node-f{display:flex;gap:9px;flex-wrap:wrap;font:500 10.5px/1.3 var(--mono);color:var(--muted)}
+.fc-node-f b{font-weight:600}
+.p-holding{color:var(--ok)}
+.p-tight{color:var(--warm)}
+.p-over{color:var(--warm)}
+.p-buried{color:var(--alert)}
 .fc-warn{color:var(--warm)}
+.fc-q-n{position:absolute;right:100%;top:calc(50% + 24px);transform:translateY(-50%);
+  margin-right:6px;font:500 9px/1 var(--mono);color:var(--warm);white-space:nowrap}
 .fc-node.s-watch .fc-bar i{background:var(--warm)}
 .fc-node.s-watch{border-color:var(--warm-soft)}
 .fc-node.s-constrained .fc-bar i,.fc-node.s-severe .fc-bar i{background:var(--alert)}
@@ -1385,6 +1434,36 @@ details.tuck p{font-size:12.5px;color:var(--muted);margin:8px 0 6px}
 .fi-facts dt{font:500 10px/1 var(--mono);letter-spacing:.04em;color:var(--muted);margin-bottom:4px}
 .fi-facts dd{margin:0;font:500 13px/1 var(--sans);color:var(--ink)}
 .fi-facts dd.bad{color:var(--alert)}
+/* why this team is where it is */
+.why{margin:16px 0 4px;padding-top:14px;border-top:1px solid var(--hair)}
+.why-q{margin:0 0 10px;font:400 13.5px/1.55 var(--sans);color:var(--body);max-width:72ch}
+.why-q b{color:var(--ink);font-weight:600}
+.why-bar{position:relative;display:flex;height:22px;border-radius:3px;overflow:visible;
+  background:var(--hair);margin-bottom:26px}
+.why-bar i{display:block;height:100%}
+.why-bar i:first-child{border-radius:3px 0 0 3px}
+.why-bar i:last-of-type{border-radius:0 3px 3px 0}
+.why-bar .k-arrival{background:var(--accent)}
+.why-bar .k-route{background:var(--steel)}
+.why-bar .k-change{background:var(--plum)}
+.why-bar .k-waiting{background:var(--warm)}
+.why-bar u{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--ink);
+  text-decoration:none}
+.why-bar u span{position:absolute;top:100%;left:0;transform:translateX(-50%);margin-top:4px;
+  font:500 9px/1 var(--mono);letter-spacing:.04em;color:var(--ink);white-space:nowrap}
+.why-key{list-style:none;margin:0 0 10px;padding:0;display:flex;flex-wrap:wrap;gap:6px 20px}
+.why-key li{display:flex;align-items:center;gap:7px;font:400 11.5px/1 var(--sans);color:var(--muted)}
+.why-key i{flex:none;width:9px;height:9px;border-radius:2px}
+.why-key .k-arrival{background:var(--accent)}
+.why-key .k-route{background:var(--steel)}
+.why-key .k-change{background:var(--plum)}
+.why-key .k-waiting{background:var(--warm)}
+.why-k-l{color:var(--body)}
+.why-key b{font:500 11.5px/1 var(--mono);color:var(--ink)}
+.why-key em{font:400 11px/1 var(--mono);font-style:normal;color:var(--muted)}
+.why-end{margin:0;font:400 12.5px/1.6 var(--sans);color:var(--muted);max-width:76ch}
+.why-end b{color:var(--ink);font-weight:600}
+
 .fi-legend-h{margin:0 0 10px;font:500 13px/1 var(--sans);color:var(--ink)}
 .fi-legend ul{list-style:none;margin:0;padding:0;display:flex;gap:26px;flex-wrap:wrap}
 .fi-legend li{display:flex;align-items:center;gap:8px;font:400 12px/1.4 var(--sans);color:var(--muted)}
@@ -1402,7 +1481,13 @@ details.tuck p{font-size:12.5px;color:var(--muted);margin:8px 0 6px}
 
 @media (max-width:860px){
   .sb-top{grid-template-columns:1fr;align-items:start}
+  .sb-facts{justify-content:flex-start;gap:8px 20px}
+  .sb-facts dd{font-size:15px}
   .fc-hint{display:block}
+  .ys-bars{height:34px}
+  .fc-head{flex-direction:column;gap:4px}
+  .ys-key{display:block}
+  .ys-key::before{content:none}
   .fi-steps{gap:18px}
   .fi-facts{gap:16px}
   .fi-legend ul{gap:12px}

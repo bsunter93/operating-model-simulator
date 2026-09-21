@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
-import type { ModelResult, TeamMonth } from '../models/results';
+import type { ModelResult } from '../models/results';
+import { asUnits, pressureOf, PRESSURE_WORD, workloadOf } from '../lib/workload';
 import type { OperatingModel } from '../models/types';
 
 /**
@@ -21,7 +22,21 @@ export type Sel = { kind: 'team' | 'stream'; id: string } | null;
 const SRC_W = 176, SRC_H = 64;
 /* Wide enough for the longest team name in the four fixtures. "Community Health Workers"
    and "Fundraising and Partnerships" were both losing their last word to an ellipsis. */
-const TEAM_W = 252, TEAM_H = 84;
+const TEAM_W = 252;
+/* A team occupies space in proportion to the people in it. Uniform boxes hid the thing a
+   reader most wants to see at a glance: that the team drowning is small and the team with
+   nothing to do is large. Sized from the model rather than the month, so scrubbing the
+   year moves the numbers and never the furniture. */
+const TEAM_H_MIN = 74, TEAM_H_MAX = 122;
+function teamHeights(model: OperatingModel): Map<string, number> {
+  const fte = model.teams.map((t) => t.currentFte);
+  const lo = Math.min(...fte), hi = Math.max(...fte);
+  const span = hi - lo;
+  return new Map(model.teams.map((t) => [
+    t.id,
+    Math.round(span > 0 ? TEAM_H_MIN + (TEAM_H_MAX - TEAM_H_MIN) * ((t.currentFte - lo) / span) : (TEAM_H_MIN + TEAM_H_MAX) / 2),
+  ]));
+}
 /* Wide enough that a split's label fits in the gap it belongs to. At 104 the label for a
    six percent escalation landed on the block it was escalating to. */
 const COL_GAP = 150, ROW_GAP = 26;
@@ -59,23 +74,27 @@ export function layout(model: OperatingModel, result: ModelResult): Layout {
     const r = rank.get(t.id)! - 1;
     (cols[r] ??= []).push(t.id);
   }
+  const th = teamHeights(model);
   const teams = new Map<string, Placed>();
   const colX = (c: number) => PAD_X + SRC_W + COL_GAP + c * (TEAM_W + COL_GAP);
   cols.forEach((ids, c) => {
-    ids.forEach((id, i) => {
-      teams.set(id, { x: colX(c), y: PAD_Y + i * (TEAM_H + ROW_GAP), w: TEAM_W, h: TEAM_H });
-    });
+    let y = PAD_Y;
+    for (const id of ids) {
+      const h = th.get(id)!;
+      teams.set(id, { x: colX(c), y, w: TEAM_W, h });
+      y += h + ROW_GAP;
+    }
   });
 
   /* Everything after the first column is placed opposite whatever feeds it, then swept
      downwards so nothing lands on anything else. A first cut nudged each box once and let
      it collide with the next one, which stacked three sources in the same 60 pixels. */
-  const sweep = <T extends { y: number }>(items: T[], h: number, gap: number) => {
+  const sweep = <T extends { y: number; h: number }>(items: T[], gap: number) => {
     items.sort((a, b) => a.y - b.y);
     let cursor = PAD_Y;
     for (const it of items) {
       it.y = Math.max(cursor, it.y);
-      cursor = it.y + h + gap;
+      cursor = it.y + it.h + gap;
     }
     return items;
   };
@@ -84,10 +103,10 @@ export function layout(model: OperatingModel, result: ModelResult): Layout {
     const boxes = cols[c].map((id) => {
       const ups = routes.filter((r) => r.toTeamId === id).map((r) => teams.get(r.sourceId)).filter(Boolean) as Placed[];
       const box = teams.get(id)!;
-      if (ups.length) box.y = ups.reduce((a, u) => a + u.y + u.h / 2, 0) / ups.length - TEAM_H / 2;
+      if (ups.length) box.y = ups.reduce((a, u) => a + u.y + u.h / 2, 0) / ups.length - box.h / 2;
       return box;
     });
-    sweep(boxes, TEAM_H, ROW_GAP);
+    sweep(boxes, ROW_GAP);
   }
 
   const sources = new Map<string, Placed>();
@@ -110,7 +129,7 @@ export function layout(model: OperatingModel, result: ModelResult): Layout {
       want.push({ id, x: PAD_X, y: mid - span / 2 - SRC_H / 2 + i * (SRC_H + 12), w: SRC_W, h: SRC_H });
     });
   }
-  for (const s of sweep(want, SRC_H, 12)) sources.set(s.id, { x: s.x, y: s.y, w: s.w, h: s.h });
+  for (const s of sweep(want, 12)) sources.set(s.id, { x: s.x, y: s.y, w: s.w, h: s.h });
 
   const all = [...sources.values(), ...teams.values()];
   return {
@@ -143,8 +162,7 @@ interface Props {
 export function FlowCanvas({ model, result, month, selected, onSelect, compact }: Props) {
   const geo = useMemo(() => layout(model, result), [model, result]);
   const teamName = (id: string) => model.teams.find((t) => t.id === id)?.name ?? id;
-  const rowOf = (id: string) =>
-    result.teams.find((t) => t.teamId === id)?.months[month] as TeamMonth | undefined;
+  const rowOf = (id: string) => result.teams.find((t) => t.teamId === id)?.months[month];
 
   const edges = result.flow.map((f) => ({ f, units: f.unitsByMonth[month] ?? 0 }));
   const peak = Math.max(1, ...edges.map((e) => e.units));
@@ -235,13 +253,16 @@ export function FlowCanvas({ model, result, month, selected, onSelect, compact }
         {model.teams.map((t) => {
           const p = geo.teams.get(t.id)!;
           const m = rowOf(t.id);
-          if (!m) return null;
+          const w = workloadOf(result, t.id, month);
+          if (!m || !w) return null;
           const util = Math.max(0, m.utilization);
-          const over = util > m.targetUtilization;
           /* The queue is drawn, not described. Tokens are the month's waiting work as a
-             share of what the team can do in a month, so four tokens means four weeks. */
+             share of what the team can do in a month, so four tokens means four weeks,
+             and the count beside them is in the thing the team actually handles. */
           const waiting = m.availableProductiveHours > 0 ? m.carriedInHours / m.availableProductiveHours : 0;
           const tokens = Math.min(7, Math.ceil(waiting * 4));
+          const queued = asUnits(w, m.carriedInHours);
+          const press = pressureOf(w);
           return (
             <button key={t.id} type="button"
                     className={`fc-node s-${m.status}` + (isOn('team', t.id) ? ' on' : near(t.id) ? '' : ' dim')}
@@ -253,6 +274,9 @@ export function FlowCanvas({ model, result, month, selected, onSelect, compact }
               <span className="fc-q" aria-hidden="true">
                 {Array.from({ length: tokens }, (_, i) => <i key={i} />)}
               </span>
+              {queued !== null && queued >= 1 && (
+                <span className="fc-q-n" aria-hidden="true">{compact(Math.round(queued))}</span>
+              )}
               <span className="fc-node-h">
                 <b>{t.name}</b>
                 <em>{Math.round(m.availableFte)}</em>
@@ -261,11 +285,12 @@ export function FlowCanvas({ model, result, month, selected, onSelect, compact }
                 <i style={{ width: Math.min(100, util * 100) + '%' }} />
                 <u style={{ left: Math.min(100, m.targetUtilization * 100) + '%' }} />
               </span>
+              {/* The words first. "112% of capacity" is a number a reader converts before
+                  it means anything; "past what it can do" is the thing it means. */}
               <span className="fc-node-f">
+                <b className={'p-' + press}>{PRESSURE_WORD[press]}</b>
                 <span>{Math.round(util * 100)}% of capacity</span>
-                {m.serviceLevel !== null
-                  ? <span>{Math.round(m.serviceLevel * 100)}% answered</span>
-                  : <span className={over ? 'fc-warn' : ''}>plans for {Math.round(m.targetUtilization * 100)}%</span>}
+                {m.serviceLevel !== null && <span>{Math.round(m.serviceLevel * 100)}% answered</span>}
               </span>
             </button>
           );
@@ -289,11 +314,15 @@ export function FlowCanvas({ model, result, month, selected, onSelect, compact }
           const m = t.months[month];
           if (!m || m.shedHours <= 0) return null;
           const box = geo.teams.get(t.teamId)!;
+          const w = workloadOf(result, t.teamId, month);
+          const lost = w ? asUnits(w, m.shedHours) : null;
           return (
             <span key={t.teamId} className="fc-shed-l"
                   style={{ left: box.x + box.w * 0.5 + 8, top: box.y + box.h + 4 }}
                   title={`${teamName(t.teamId)}: work turned away this month`}>
-              {compact(Math.round(m.shedHours))} hrs lost
+              {lost !== null && lost >= 1
+                ? <>{compact(Math.round(lost))} {w!.unit} turned away</>
+                : <>{compact(Math.round(m.shedHours))} hrs turned away</>}
             </span>
           );
         })}
