@@ -19,6 +19,12 @@ export function Why({ w, team, month, answered, fmt }:
   const press = pressureOf(w);
   const total = Math.max(w.given, w.capacityHours, 1);
   const capAt = (w.capacityHours / total) * 100;
+  /* Two lines, not one. "Over capacity" here means past the line the team planned to run
+     at, which is deliberately not the same as past everything it could physically do: a
+     team handed less than its ceiling can still be over the plan it was staffed against.
+     Showing only the ceiling made the sentence contradict the word above it. */
+  const planned = w.capacityHours * w.targetUtilization;
+  const planAt = (planned / total) * 100;
   const segs = [...w.sources].sort((a, b) => KIND_ORDER[a.kind] - KIND_ORDER[b.kind]);
   const count = (hours: number) => {
     const u = asUnits(w, hours);
@@ -29,7 +35,8 @@ export function Why({ w, team, month, answered, fmt }:
     <div className="why">
       <p className="why-q">
         Why is {team} <b className={'p-' + press}>{PRESSURE_WORD[press].toLowerCase()}</b> in {month}?
-        {' '}It was handed <b>{count(w.given)}</b> and can do <b>{count(w.capacityHours)}</b>.
+        {' '}It was handed <b>{count(w.given)}</b>. It planned for <b>{count(planned)}</b> and
+        {' '}could do at most <b>{count(w.capacityHours)}</b>.
       </p>
 
       <div className="why-bar" role="img"
@@ -38,7 +45,8 @@ export function Why({ w, team, month, answered, fmt }:
           <i key={s.key} className={'k-' + s.kind} style={{ width: `${(s.hours / total) * 100}%` }}
              title={`${s.label}: ${fmt.hours(s.hours)}`} />
         ))}
-        <u style={{ left: `${capAt}%` }}><span>can do</span></u>
+        <u className="why-plan" style={{ left: `${planAt}%` }}><span>planned for</span></u>
+        <u className="why-cap" style={{ left: `${capAt}%` }}><span>could do</span></u>
       </div>
 
       <ul className="why-key">

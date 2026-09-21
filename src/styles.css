@@ -1447,10 +1447,13 @@ details.tuck p{font-size:12.5px;color:var(--muted);margin:8px 0 6px}
 .why-bar .k-route{background:var(--steel)}
 .why-bar .k-change{background:var(--plum)}
 .why-bar .k-waiting{background:var(--warm)}
-.why-bar u{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--ink);
-  text-decoration:none}
+.why-bar u{position:absolute;top:-4px;bottom:-4px;width:2px;text-decoration:none}
 .why-bar u span{position:absolute;top:100%;left:0;transform:translateX(-50%);margin-top:4px;
-  font:500 9px/1 var(--mono);letter-spacing:.04em;color:var(--ink);white-space:nowrap}
+  font:500 9px/1 var(--mono);letter-spacing:.04em;white-space:nowrap}
+.why-plan{background:var(--muted)}
+.why-plan span{color:var(--muted)}
+.why-cap{background:var(--ink)}
+.why-cap span{color:var(--ink)}
 .why-key{list-style:none;margin:0 0 10px;padding:0;display:flex;flex-wrap:wrap;gap:6px 20px}
 .why-key li{display:flex;align-items:center;gap:7px;font:400 11.5px/1 var(--sans);color:var(--muted)}
 .why-key i{flex:none;width:9px;height:9px;border-radius:2px}
