@@ -21,9 +21,11 @@ interface Props {
   playing: boolean;
   onPick: (m: number) => void;
   onPlay: () => void;
+  /** Money committed to the end of each month, against the year's budget. */
+  cash: { spentToDate: number; budget: number; pace: number; fmt: (n: number) => string };
 }
 
-export function YearSpine({ shape, base, month, labels, playing, onPick, onPlay }: Props) {
+export function YearSpine({ shape, base, month, labels, playing, onPick, onPlay, cash }: Props) {
   const teams = shape[0]?.teams || 1;
   const h = (p: YearPoint) => (p.over / teams) * 100;
   const tone = (p: YearPoint) => (p.over === 0 ? 'ok' : p.over / teams > 0.5 ? 'bad' : 'mid');
@@ -56,6 +58,21 @@ export function YearSpine({ shape, base, month, labels, playing, onPick, onPlay 
           );
         })}
       </div>
+      {/* Money on the same spine as time, because it is spent by the month and a year that
+          holds its service level by outspending its budget has not held anything. */}
+      <div className="ys-cash">
+        <span className="ys-cash-b" role="img"
+              aria-label={`${cash.fmt(cash.spentToDate)} of ${cash.fmt(cash.budget)} committed`}>
+          <i className={cash.spentToDate > cash.pace ? 'over' : ''}
+             style={{ width: `${Math.min(100, (cash.spentToDate / Math.max(cash.budget, 1)) * 100)}%` }} />
+          <u style={{ left: `${Math.min(100, (cash.pace / Math.max(cash.budget, 1)) * 100)}%` }} />
+        </span>
+        <span className="ys-cash-l">
+          <b>{cash.fmt(cash.spentToDate)}</b> of {cash.fmt(cash.budget)} committed
+          {cash.spentToDate > cash.pace && <em> · ahead of pace</em>}
+        </span>
+      </div>
+
       <p className="ys-cap">
         <b>{labels[month]}</b>
         {' · '}

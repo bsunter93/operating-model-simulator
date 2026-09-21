@@ -9,6 +9,7 @@
   --plum:#733F83; --plum-soft:#733F8314; --steel:#2C5A7A;
   --alert:#A6392C; --alert-soft:#A6392C14; --severe:#6E1F17;
   --ok:#3F6B4A;
+  --person:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 6 12'><circle cx='3' cy='2.4' r='2.1'/><path d='M3 5.2c1.9 0 2.7 1.3 2.7 3.2V12H.3V8.4C.3 6.5 1.1 5.2 3 5.2z'/></svg>");
   --display:'Fraunces',Georgia,'Times New Roman',serif;
   --sans:'IBM Plex Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;
   --mono:'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
@@ -1242,12 +1243,21 @@ details.tuck p{font-size:12.5px;color:var(--muted);margin:8px 0 6px}
    what makes overflow-x:auto scroll instead of overflow. */
 .sandbox{display:grid;grid-template-columns:minmax(0,1fr);align-content:start;
   max-width:1140px;min-width:0;margin:0 auto;padding:0 clamp(16px,3vw,32px) 64px}
-/* masthead: a name and a wall of four facts, and nothing else */
-.sb-top{padding:24px 0 12px;border-bottom:1px solid var(--line)}
-.sb-top h1{margin:0;font:600 clamp(22px,2.6vw,30px)/1.1 var(--display);color:var(--ink)}
-.sb-wall{display:flex;flex-wrap:wrap;gap:4px 20px;margin:7px 0 0;
-  font:500 12px/1.4 var(--mono);color:var(--muted)}
-.sb-wall b{color:var(--warm);font-weight:600}
+/* masthead: who you are running, what month it is, and how it is going */
+.om-top{display:flex;align-items:baseline;gap:10px 26px;flex-wrap:wrap;
+  padding:22px 0 12px;border-bottom:1px solid var(--line)}
+.om-top h1{margin:0;font:600 clamp(21px,2.5vw,28px)/1.05 var(--display);color:var(--ink)}
+.om-sub{margin:2px 0 0;font:500 9px/1 var(--mono);letter-spacing:.12em;
+  text-transform:uppercase;color:var(--muted)}
+.om-clock{display:flex;align-items:baseline;gap:8px;margin:0 0 0 auto}
+.om-clock b{font:600 22px/1 var(--display);color:var(--ink)}
+.om-clock span{font:500 10px/1 var(--mono);color:var(--muted)}
+.om-state{margin:0;padding:4px 10px;border-radius:999px;font:600 10px/1.4 var(--mono);
+  letter-spacing:.06em;text-transform:uppercase}
+.om-state.s-good{background:var(--accent-soft);color:var(--ok)}
+.om-state.s-warn{background:var(--warm-soft);color:var(--warm)}
+.om-state.s-bad{background:var(--alert-soft);color:var(--alert)}
+.om-wall{display:flex;gap:16px;margin:0;font:500 11px/1.4 var(--mono);color:var(--muted)}
 
 /* ── the year, running underneath the organisation ─────────────────────── */
 .ys{display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 12px;align-items:end;
@@ -1258,8 +1268,7 @@ details.tuck p{font-size:12.5px;color:var(--muted);margin:8px 0 6px}
   background:var(--surface);font:400 11px/1 var(--sans);color:var(--body);
   display:flex;align-items:center;justify-content:center}
 .ys-play:hover{border-color:var(--accent);color:var(--accent)}
-/* A baseline under the row is what makes these read as bars rather than tiles: without it
-   every column is a filled block and a quiet month looks the same as a loud one. */
+/* A baseline under the row is what makes these read as bars rather than tiles. */
 .ys-track{grid-column:2;display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:3px;
   border-bottom:1px solid var(--line);padding-bottom:3px}
 .ys-m{display:grid;gap:4px;padding:0;background:none;border:0}
@@ -1270,7 +1279,6 @@ details.tuck p{font-size:12.5px;color:var(--muted);margin:8px 0 6px}
 .ys-now.ok{background:var(--line)}
 .ys-now.mid{background:var(--warm)}
 .ys-now.bad{background:var(--alert)}
-/* the plan as written, behind: a change reads as a difference in shape */
 .ys-was{border:1px dashed var(--muted);background:none;opacity:.7}
 .ys-l{font:500 9px/1 var(--mono);color:var(--muted);text-align:center}
 .ys-m:hover .ys-bars{box-shadow:inset 0 0 0 1px var(--accent)}
@@ -1279,7 +1287,19 @@ details.tuck p{font-size:12.5px;color:var(--muted);margin:8px 0 6px}
 .ys-cap{grid-column:2;margin:2px 0 0;font:400 12px/1.4 var(--sans);color:var(--muted)}
 .ys-cap b{color:var(--ink);font-weight:600}
 .ys-key{color:var(--muted)}
-.ys-key::before{content:"·";margin:0 7px;color:var(--line)}
+.ys-key::before{content:"\00b7";margin:0 7px;color:var(--line)}
+
+/* the money, on the same spine as the time, because it is spent by the month */
+.ys-cash{grid-column:2;display:grid;grid-template-columns:minmax(0,1fr) auto;
+  align-items:center;gap:10px;margin-top:9px}
+.ys-cash-b{position:relative;height:8px;border-radius:2px;background:var(--hair);overflow:hidden}
+.ys-cash-b i{display:block;height:100%;background:var(--accent);opacity:.75}
+.ys-cash-b i.over{background:var(--alert);opacity:.9}
+.ys-cash-b u{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--ink);
+  opacity:.4;text-decoration:none}
+.ys-cash-l{font:500 10.5px/1 var(--mono);color:var(--muted);white-space:nowrap}
+.ys-cash-l b{color:var(--ink);font-weight:600}
+.ys-cash-l em{font-style:normal;color:var(--alert)}
 
 /* toolbar */
 .fc-tools{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:16px 0 12px}
@@ -1303,11 +1323,15 @@ details.tuck p{font-size:12.5px;color:var(--muted);margin:8px 0 6px}
 
 /* canvas */
 .fc-scroll{overflow-x:auto;overflow-y:hidden;padding:2px 0 6px}
-.fc{position:relative;margin:14px auto}
+.fc{position:relative;margin:14px auto;
+  background-image:radial-gradient(circle at 1px 1px,var(--hair) 1px,transparent 0);
+  background-size:22px 22px;background-position:-1px -1px;border-radius:12px}
 .fc-wires{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible}
-.fc-edge .fc-wire{fill:none;stroke:var(--muted);opacity:.32;stroke-linecap:round}
-.fc-edge .fc-pulse{fill:none;stroke:var(--accent);stroke-linecap:round;opacity:.5;
-  stroke-dasharray:1 13;animation:fc-run linear infinite}
+.fc-edge .fc-lane{fill:none;stroke:var(--hair);stroke-linecap:round;opacity:.9}
+.fc-edge .fc-wire{fill:none;stroke:var(--line);stroke-linecap:round}
+.fc-edge .fc-pulse{fill:none;stroke:var(--accent);stroke-linecap:round;opacity:.65;
+  stroke-dasharray:2 12;animation:fc-run linear infinite}
+.fc-edge.on .fc-lane{stroke:var(--accent-soft)}
 @keyframes fc-run{to{stroke-dashoffset:-56}}
 .fc-edge.dim{opacity:.4}
 .fc-edge.on .fc-wire{stroke:var(--accent);opacity:.5}
@@ -1332,14 +1356,44 @@ details.tuck p{font-size:12.5px;color:var(--muted);margin:8px 0 6px}
 .fc-inhouse.dim{opacity:.3}
 
 /* a team: a name and a gauge. Everything else is one hover or one click away. */
-.fc-node{position:absolute;display:flex;flex-direction:column;justify-content:center;gap:7px;
+.fc-node{position:absolute;display:flex;flex-direction:column;justify-content:center;gap:6px;
   text-align:left;padding:0 11px;border:1px solid var(--line);border-radius:8px;
-  background:var(--surface);transition:border-color .12s,box-shadow .12s,opacity .12s}
+  background:var(--surface);overflow:hidden;
+  box-shadow:0 1px 2px rgb(0 0 0 / .05);
+  transition:border-color .12s,box-shadow .12s,opacity .12s}
+/* a roofline: the one place status is stated before you read anything */
+.fc-node::before{content:"";position:absolute;inset:0 0 auto 0;height:3px;background:var(--accent);opacity:.75}
+/* A facade rather than a card: windows at the threshold of visible, so it reads as a
+   building at a glance and as a clean block when you actually look at it. */
+.fc-node::after{content:"";position:absolute;inset:3px 0 0 0;pointer-events:none;opacity:.5;
+  background-image:linear-gradient(90deg,var(--hair) 1px,transparent 1px),
+                   linear-gradient(var(--hair) 1px,transparent 1px);
+  background-size:13px 11px}
+.fc-node > *{position:relative;z-index:1}
+.fc-node.s-watch::before{background:var(--warm)}
+.fc-node.s-constrained::before,.fc-node.s-severe::before{background:var(--alert)}
+.fc-spark{display:block;width:100%;height:16px;overflow:visible}
+.fc-spark-a{fill:var(--accent);opacity:.12}
+.fc-spark-l{fill:none;stroke:var(--accent);stroke-width:1.2;opacity:.75;
+  vector-effect:non-scaling-stroke;stroke-linejoin:round}
+.fc-spark-t{stroke:var(--ink);stroke-width:1;opacity:.28;stroke-dasharray:2 3;
+  vector-effect:non-scaling-stroke}
+.fc-spark-d{fill:var(--ink)}
+.fc-node.s-watch .fc-spark-a{fill:var(--warm)}
+.fc-node.s-watch .fc-spark-l{stroke:var(--warm)}
+.fc-node.s-constrained .fc-spark-a,.fc-node.s-severe .fc-spark-a{fill:var(--alert)}
+.fc-node.s-constrained .fc-spark-l,.fc-node.s-severe .fc-spark-l{stroke:var(--alert)}
 .fc-node:hover{border-color:var(--accent)}
 .fc-node.on{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
 .fc-node.dim{opacity:.5}
+.fc-node-h{display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0}
 .fc-node-n{font:600 12px/1.2 var(--sans);color:var(--ink);white-space:nowrap;
   overflow:hidden;text-overflow:ellipsis}
+.fc-ppl{display:flex;gap:1.5px;flex:none;color:var(--muted);opacity:.85}
+.fc-ppl i{display:block;width:4.5px;height:9px;background:currentColor;
+  -webkit-mask:var(--person) center/contain no-repeat;mask:var(--person) center/contain no-repeat}
+.fc-node.s-watch .fc-ppl{color:var(--warm)}
+.fc-node.s-constrained .fc-ppl,.fc-node.s-severe .fc-ppl{color:var(--alert)}
 .fc-bar{position:relative;display:block;height:7px;border-radius:2px;background:var(--hair);overflow:hidden}
 .fc-bar i{display:block;height:100%;background:var(--accent);transition:width .18s}
 .fc-bar u{position:absolute;top:-2px;bottom:-2px;width:2px;background:var(--ink);opacity:.45;
@@ -1349,13 +1403,21 @@ details.tuck p{font-size:12.5px;color:var(--muted);margin:8px 0 6px}
 .fc-node.s-watch{border-color:var(--warm-soft)}
 .fc-node.s-constrained,.fc-node.s-severe{border-color:var(--alert-soft)}
 
+/* people asked for, on their way in */
+.fc-pipe{position:absolute;left:100%;top:50%;transform:translateY(-50%);margin-left:7px;
+  display:flex;align-items:center;gap:2px;white-space:nowrap}
+.fc-pipe i{display:block;width:5px;height:5px;border-radius:50%;
+  border:1px solid var(--accent);opacity:.8}
+.fc-pipe em{margin-left:3px;font:500 8.5px/1 var(--mono);font-style:normal;color:var(--accent);opacity:.9}
+
 /* the queue, which is the whole point: work waiting, drawn as work, growing back towards
    whatever is feeding it. A team two months behind has a line you can see from across the
    room, and no percentage can do that. */
 .fc-q{position:absolute;right:100%;top:50%;transform:translateY(-50%);margin-right:6px;
   display:flex;flex-direction:row-reverse;gap:2px;align-items:center}
 .fc-q > span{display:flex;flex-direction:column-reverse;gap:2px}
-.fc-q i{display:block;width:4px;height:4px;border-radius:1px;background:var(--warm)}
+.fc-q i{display:block;width:5px;height:5px;border-radius:1px;background:var(--warm);
+  box-shadow:inset 0 1px 0 rgb(255 255 255 / .25)}
 /* work leaving the system, falling out of the bottom of the block that could not take it */
 .fc-shed{position:absolute;top:100%;left:12px;margin-top:4px;display:flex;gap:2px}
 .fc-shed i{display:block;width:4px;height:4px;border-radius:1px;background:var(--alert);opacity:.85}
@@ -1377,81 +1439,83 @@ details.tuck p{font-size:12.5px;color:var(--muted);margin:8px 0 6px}
 .sb-months li{font:500 9px/1 var(--mono);color:var(--muted)}
 .sb-months li.on{color:var(--ink);font-weight:700}
 
-/* the receipt: what a change bought, and what it cost */
-.fc-rcpt{margin-top:18px;padding:16px 18px;border:1px solid var(--accent);border-radius:10px;
-  background:var(--accent-soft)}
-.fc-rcpt h2{margin:0 0 12px;font:600 10px/1 var(--mono);letter-spacing:.11em;
+/* what is happening now, and the three things you can do about it */
+.om-sit{margin-top:14px;padding:14px 16px;border-radius:10px;border:1px solid var(--line);
+  background:var(--tint)}
+.om-sit.s-warn{border-color:var(--warm);background:var(--warm-soft)}
+.om-sit.s-bad{border-color:var(--alert);background:var(--alert-soft)}
+.om-sit-h{margin:0 0 12px;font:400 14.5px/1.5 var(--sans);color:var(--body);max-width:74ch}
+.om-sit-h b{color:var(--ink);font-weight:600}
+.om-acts{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.om-acts button{padding:8px 14px;border:1px solid var(--line);border-radius:999px;
+  background:var(--surface);font:500 12.5px/1 var(--sans);color:var(--body)}
+.om-acts button:hover:not(:disabled){border-color:var(--accent);color:var(--ink)}
+.om-acts button.on{border-color:var(--accent);background:var(--accent-soft);color:var(--ink)}
+.om-acts button:disabled{opacity:.4;cursor:default}
+.om-adv{margin-left:auto;background:var(--accent)!important;border-color:var(--accent)!important;
+  color:var(--paper)!important;font-weight:600!important}
+.om-adv:hover:not(:disabled){filter:brightness(1.08)}
+.om-adv:disabled{background:var(--surface)!important;color:var(--muted)!important;
+  border-color:var(--line)!important}
+.om-back{font-size:11.5px!important;color:var(--muted)!important}
+
+/* the panel: why, decide, or what you have done */
+.om-panel{margin-top:14px;padding:0 16px 16px;border:1px solid var(--line);border-radius:10px;
+  background:var(--surface)}
+.om-tabs{display:flex;gap:2px;margin:0 -16px 14px;padding:0 10px;border-bottom:1px solid var(--line)}
+.om-tabs button{padding:11px 12px;font:500 12.5px/1 var(--sans);color:var(--muted);
+  border-bottom:2px solid transparent;margin-bottom:-1px}
+.om-tabs button:hover{color:var(--ink)}
+.om-tabs button.on{color:var(--ink);border-bottom-color:var(--accent);font-weight:600}
+.om-q{margin:0 0 12px;font:600 15px/1.3 var(--display);color:var(--ink)}
+.om-onward{margin:12px 0 0;font:400 12.5px/1.55 var(--sans);color:var(--muted)}
+.om-note{margin:12px 0 0;font:400 11.5px/1.5 var(--sans);color:var(--muted)}
+
+.om-moves{list-style:none;margin:0;padding:0;display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px}
+.om-moves button{display:grid;gap:4px;width:100%;text-align:left;padding:12px 14px;
+  border:1px solid var(--line);border-radius:9px;background:var(--paper)}
+.om-moves button:hover{border-color:var(--accent);background:var(--accent-soft)}
+.om-moves b{font:600 13.5px/1.25 var(--sans);color:var(--ink)}
+.om-move-w{font:500 10px/1 var(--mono);letter-spacing:.03em;color:var(--muted)}
+.om-move-i{font:400 12px/1.45 var(--sans);color:var(--body)}
+
+.om-log{list-style:none;margin:0 0 18px;padding:0;display:grid;gap:7px}
+.om-log li{display:flex;gap:12px;align-items:baseline;padding-bottom:7px;
+  border-bottom:1px solid var(--hair)}
+.om-log-m{flex:none;width:34px;font:500 10px/1.5 var(--mono);letter-spacing:.06em;
+  text-transform:uppercase;color:var(--muted)}
+.om-log b{font:500 13px/1.45 var(--sans);color:var(--ink)}
+.om-vs h3{margin:0 0 12px;font:600 10px/1 var(--mono);letter-spacing:.11em;
   text-transform:uppercase;color:var(--accent)}
 .fc-rcpt-l{list-style:none;margin:0;padding:0;display:grid;
-  grid-template-columns:repeat(auto-fit,minmax(178px,1fr));gap:14px 22px}
+  grid-template-columns:repeat(auto-fit,minmax(172px,1fr));gap:14px 22px}
 .fc-rcpt-l li{display:grid;gap:3px;min-width:0}
 .rc-k{font:500 10.5px/1 var(--mono);letter-spacing:.03em;color:var(--muted)}
 .rc-d{font:600 17px/1.1 var(--sans);color:var(--ink)}
 .fc-rcpt-l li.up .rc-d{color:var(--ok)}
 .fc-rcpt-l li.down .rc-d{color:var(--alert)}
 .rc-v{font:400 11px/1.3 var(--sans);color:var(--muted)}
-.fc-rcpt-none{margin:0;font:400 13px/1.55 var(--sans);color:var(--body);max-width:60ch}
+.fc-rcpt-none{margin:0;font:400 13px/1.55 var(--sans);color:var(--body)}
 .fc-rcpt-f{margin:14px 0 0;padding-top:12px;border-top:1px solid var(--hair);
   font:400 13px/1.55 var(--sans);color:var(--body)}
 .fc-rcpt-f b{color:var(--ink);font-weight:600}
-.fc-rcpt-vs{color:var(--muted)}
 
-/* inspector */
-.fc-insp{margin-top:16px;padding:14px 16px;border:1px solid var(--line);border-radius:10px;
-  background:var(--tint)}
-.fi-id{margin-bottom:14px}
-.fi-kind{display:block;font:600 9px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;
-  color:var(--muted);margin-bottom:5px}
-.fi-id b{font:600 17px/1.2 var(--display);color:var(--ink)}
-.fi-sub{display:block;margin-top:3px;font:400 12px/1.5 var(--sans);color:var(--muted)}
-.fi-steps{display:flex;gap:28px;flex-wrap:wrap;margin-bottom:14px}
-.fi-step-l{display:block;font:500 11px/1 var(--sans);color:var(--muted);margin-bottom:6px}
-.fi-step-c{display:flex;align-items:center;gap:2px}
-.fi-step-c button{width:28px;height:28px;border:1px solid var(--line);background:var(--surface);
-  font:500 15px/1 var(--sans);color:var(--body)}
-.fi-step-c button:first-of-type{border-radius:6px 0 0 6px}
-.fi-step-c button:last-of-type{border-radius:0 6px 6px 0}
-.fi-step-c button:hover{border-color:var(--accent);color:var(--ink)}
-.fi-step-c b{min-width:62px;text-align:center;font:600 15px/28px var(--mono);color:var(--ink);
-  border-block:1px solid var(--line);background:var(--surface);align-self:stretch}
-.fi-step-s{display:block;margin-top:5px;font:400 11px/1 var(--sans);color:var(--muted)}
-.fi-facts{display:flex;gap:24px;flex-wrap:wrap;margin:0;padding-top:12px;border-top:1px solid var(--hair)}
-.fi-facts dt{font:500 10px/1 var(--mono);letter-spacing:.04em;color:var(--muted);margin-bottom:4px}
-.fi-facts dd{margin:0;font:500 13px/1 var(--sans);color:var(--ink)}
-.fi-facts dd.bad{color:var(--alert)}
-/* why this team is where it is */
-.why{margin:16px 0 4px;padding-top:14px;border-top:1px solid var(--hair)}
-.why-q{margin:0 0 10px;font:400 13.5px/1.55 var(--sans);color:var(--body);max-width:72ch}
-.why-q b{color:var(--ink);font-weight:600}
-.why-bar{position:relative;display:flex;height:22px;border-radius:3px;overflow:visible;
-  background:var(--hair);margin-bottom:26px}
-.why-bar i{display:block;height:100%}
-.why-bar i:first-child{border-radius:3px 0 0 3px}
-.why-bar i:last-of-type{border-radius:0 3px 3px 0}
-.why-bar .k-arrival{background:var(--accent)}
-.why-bar .k-route{background:var(--steel)}
-.why-bar .k-change{background:var(--plum)}
-.why-bar .k-waiting{background:var(--warm)}
-.why-bar u{position:absolute;top:-4px;bottom:-4px;width:2px;text-decoration:none}
-.why-bar u span{position:absolute;top:100%;left:0;transform:translateX(-50%);margin-top:4px;
-  font:500 9px/1 var(--mono);letter-spacing:.04em;white-space:nowrap}
-.why-plan{background:var(--muted)}
-.why-plan span{color:var(--muted)}
-.why-cap{background:var(--ink)}
-.why-cap span{color:var(--ink)}
-.why-key{list-style:none;margin:0 0 10px;padding:0;display:flex;flex-wrap:wrap;gap:6px 20px}
-.why-key li{display:flex;align-items:center;gap:7px;font:400 11.5px/1 var(--sans);color:var(--muted)}
-.why-key i{flex:none;width:9px;height:9px;border-radius:2px}
-.why-key .k-arrival{background:var(--accent)}
-.why-key .k-route{background:var(--steel)}
-.why-key .k-change{background:var(--plum)}
-.why-key .k-waiting{background:var(--warm)}
-.why-k-l{color:var(--body)}
-.why-key b{font:500 11.5px/1 var(--mono);color:var(--ink)}
-.why-key em{font:400 11px/1 var(--mono);font-style:normal;color:var(--muted)}
-.why-end{margin:0;font:400 12.5px/1.6 var(--sans);color:var(--muted);max-width:76ch}
-.why-end b{color:var(--ink);font-weight:600}
+/* the year as it happens */
+.om-feed{margin-top:14px;padding:14px 16px;border:1px solid var(--line);border-radius:10px}
+.om-feed h2{margin:0 0 10px;font:600 9px/1 var(--mono);letter-spacing:.12em;
+  text-transform:uppercase;color:var(--muted)}
+.om-feed ol{list-style:none;margin:0;padding:0;display:grid;gap:5px}
+.om-feed li{display:flex;gap:12px;font:400 12px/1.5 var(--sans);color:var(--body)}
+.om-feed li span{flex:none;width:30px;font:500 9.5px/1.5 var(--mono);letter-spacing:.06em;
+  text-transform:uppercase;color:var(--muted)}
+.om-feed li.t-bad{color:var(--alert)}
+.om-feed li.t-warn{color:var(--warm)}
+.om-feed li.t-good{color:var(--ok)}
+.om-feed-none{margin:0;font:400 12px/1.5 var(--sans);color:var(--muted)}
 
+.fi-sub{display:block;font:400 13px/1.6 var(--sans);color:var(--body);margin:0}
+.fi-sub b{color:var(--ink);font-weight:600}
 .fi-idle{margin:0;font:400 13px/1.6 var(--sans);color:var(--muted);max-width:78ch}
 .fi-idle b{color:var(--ink);font-weight:600}
 
@@ -1469,7 +1533,5 @@ details.tuck p{font-size:12.5px;color:var(--muted);margin:8px 0 6px}
   .fc-head{flex-direction:column;gap:4px}
   .ys-key{display:block}
   .ys-key::before{content:none}
-  .fi-steps{gap:18px}
-  .fi-facts{gap:16px}
-  .fi-legend ul{gap:12px}
+      .fi-legend ul{gap:12px}
 }

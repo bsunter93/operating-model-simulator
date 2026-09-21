@@ -22,9 +22,10 @@ export type Sel = { kind: 'team' | 'stream'; id: string } | null;
 
 const PAD_X = 8, PAD_Y = 10;
 const SRC_W = 108, SRC_H = 36, SRC_GAP = 9;
-const TEAM_W = 190;
-/* Small enough that eight teams are one screen rather than one and a half. */
-const TEAM_H_MIN = 44, TEAM_H_MAX = 68;
+const TEAM_W = 214;
+/* Small enough that eight teams are one screen rather than one and a half, tall enough
+   to carry the team's whole year under its gauge. */
+const TEAM_H_MIN = 58, TEAM_H_MAX = 86;
 const ROW_GAP = 15;
 /* Room for a queue to grow into before it reaches whatever is feeding it. */
 const QUEUE_W = 68, WIRE_W = 52;
@@ -43,6 +44,13 @@ export interface Layout {
   height: number;
   sources: Map<string, Placed>;
   teams: Map<string, Placed>;
+}
+
+/** How many people one figure stands for, chosen so the largest team shows about eight of
+    them. A fixed scale would draw forty figures for one team and one for another. */
+function peopleScale(model: OperatingModel): number {
+  const hi = Math.max(...model.teams.map((t) => t.currentFte));
+  return Math.max(1, Math.round(hi / 8));
 }
 
 /** A team occupies space in proportion to the people in it, from the model rather than the
@@ -142,6 +150,16 @@ export function layout(model: OperatingModel, result: ModelResult): Layout {
 export const shareLabel = (v: number) =>
   (v < 0.02 ? (v * 100).toFixed(1) : String(Math.round(v * 100))) + '%';
 
+/* The trace is clipped at 140% of capacity: past that the shape stops telling you
+   anything new and starts flattening everything below it. */
+const SPARK_TOP = 1.4;
+const sparkY = (u: number) => 16 - Math.max(0, Math.min(1, u / SPARK_TOP)) * 15;
+const sparkPts = (s: number[]) =>
+  s.map((u, i) => `${s.length > 1 ? (i / (s.length - 1)) * 100 : 50},${sparkY(u)}`);
+const sparkLine = (s: number[]) => (s.length ? 'M' + sparkPts(s).join(' L') : '');
+const sparkArea = (s: number[], _m: number) =>
+  s.length ? `M0,16 L${sparkPts(s).join(' L')} L100,16 Z` : '';
+
 const curve = (x1: number, y1: number, x2: number, y2: number) => {
   const dx = Math.max(34, (x2 - x1) / 2.1);
   return `M${x1},${y1} C${x1 + dx},${y1} ${x2 - dx},${y2} ${x2},${y2}`;
@@ -154,10 +172,14 @@ interface Props {
   selected: Sel;
   onSelect: (s: Sel) => void;
   compact: (n: number) => string;
+  /** People asked for who are not in their seats yet. Null when none are pending. */
+  pipeline: (teamId: string) => { headcount: number; landsAt: number } | null;
+  monthLabels: string[];
 }
 
-export function FlowCanvas({ model, result, month, selected, onSelect, compact }: Props) {
+export function FlowCanvas({ model, result, month, selected, onSelect, compact, pipeline, monthLabels }: Props) {
   const geo = useMemo(() => layout(model, result), [model, result]);
+  const per = useMemo(() => peopleScale(model), [model]);
   const edges = result.flow.map((f) => ({ f, units: f.unitsByMonth[month] ?? 0 }));
   const peak = Math.max(1, ...edges.map((e) => e.units));
   const isOn = (kind: 'team' | 'stream', id: string) => selected?.kind === kind && selected.id === id;
@@ -190,9 +212,12 @@ export function FlowCanvas({ model, result, month, selected, onSelect, compact }
             const on = lit(f.toTeamId, f.sourceId, f.viaStreamId);
             return (
               <g key={f.id} className={'fc-edge' + (on ? ' on' : selected ? ' dim' : '')}>
-                <path className="fc-wire" d={d} style={{ strokeWidth: 1 + 3 * Math.sqrt(rel) }} />
+                {/* Three strokes make a channel rather than an arrow: a surface the work
+                    travels on, its centre line, and the work itself moving down it. */}
+                <path className="fc-lane" d={d} style={{ strokeWidth: 7 + 5 * Math.sqrt(rel) }} />
+                <path className="fc-wire" d={d} style={{ strokeWidth: 1 + 2 * Math.sqrt(rel) }} />
                 <path className="fc-pulse" d={d}
-                      style={{ strokeWidth: 1 + 3 * Math.sqrt(rel),
+                      style={{ strokeWidth: 2 + 3 * Math.sqrt(rel),
                                animationDuration: `${(2.9 - 2 * rel).toFixed(2)}s` }} />
               </g>
             );
@@ -242,6 +267,8 @@ export function FlowCanvas({ model, result, month, selected, onSelect, compact }
           const shed = m.shedHours > 0
             ? Math.min(14, Math.ceil((m.shedHours / Math.max(1, m.availableProductiveHours)) / MARK_UNIT))
             : 0;
+          const series = result.teams.find((x) => x.teamId === t.id)!.months.map((x) => x.utilization);
+          const pending = pipeline(t.id);
           const queued = asUnits(w, m.carriedInHours);
           const lost = asUnits(w, m.shedHours);
           /* Everything a card used to print, moved to the one moment somebody asks. */
@@ -249,6 +276,7 @@ export function FlowCanvas({ model, result, month, selected, onSelect, compact }
             `${t.name}: ${PRESSURE_WORD[press].toLowerCase()}, ${Math.round(util * 100)}% of capacity`,
             `${Math.round(m.availableFte)} people`,
             m.serviceLevel !== null ? `${Math.round(m.serviceLevel * 100)}% answered in time` : null,
+            pending ? `${pending.headcount} arriving ${monthLabels[pending.landsAt] ?? 'after this year'}` : null,
             queued !== null && queued >= 1 ? `${compact(Math.round(queued))} ${w.unit} waiting` : null,
             lost !== null && lost >= 1 ? `${compact(Math.round(lost))} ${w.unit} turned away` : null,
           ].filter(Boolean).join(' · ');
@@ -267,11 +295,39 @@ export function FlowCanvas({ model, result, month, selected, onSelect, compact }
                   ))}
                 </span>
               )}
-              <b className="fc-node-n">{t.name}</b>
+              <span className="fc-node-h">
+                <b className="fc-node-n">{t.name}</b>
+                {/* The people, countable. One figure to a few of them, so a big team looks
+                    like a big team rather than like a bigger number. */}
+                <span className="fc-ppl" aria-hidden="true"
+                      title={`${Math.round(m.availableFte)} people, one figure to ${per}`}>
+                  {Array.from({ length: Math.max(1, Math.min(9, Math.round(m.availableFte / per))) },
+                    (_, i) => <i key={i} />)}
+                </span>
+              </span>
               <span className="fc-bar">
                 <i style={{ width: Math.min(100, util * 100) + '%' }} />
                 <u style={{ left: Math.min(100, m.targetUtilization * 100) + '%' }} />
               </span>
+              {/* People asked for, on their way. Hollow until they are in their seats, so a
+                  reader watches capacity arrive rather than reading that it will. */}
+              {/* The team's own twelve months, under its gauge. A block that shows only
+                  today makes a reader scrub to learn the shape; this carries it. */}
+              <svg className="fc-spark" viewBox="0 0 100 16" preserveAspectRatio="none" aria-hidden="true">
+                <path className="fc-spark-a" d={sparkArea(series, month)} />
+                <path className="fc-spark-l" d={sparkLine(series)} />
+                <line className="fc-spark-t" x1="0" x2="100"
+                      y1={sparkY(m.targetUtilization)} y2={sparkY(m.targetUtilization)} />
+                <circle className="fc-spark-d" r="1.9"
+                        cx={series.length > 1 ? (month / (series.length - 1)) * 100 : 50}
+                        cy={sparkY(util)} />
+              </svg>
+              {pending && (
+                <span className="fc-pipe" title={`${pending.headcount} people arriving ${monthLabels[pending.landsAt] ?? 'after this year'}`}>
+                  {Array.from({ length: Math.min(10, pending.headcount) }, (_, i) => <i key={i} />)}
+                  <em>{monthLabels[pending.landsAt] ?? 'next year'}</em>
+                </span>
+              )}
               {shed > 0 && (
                 <span className="fc-shed" aria-hidden="true">
                   {Array.from({ length: shed }, (_, i) => <i key={i} />)}
