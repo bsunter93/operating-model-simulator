@@ -528,45 +528,59 @@ function RunFor({ model, spec }: { model: OperatingModel; spec: RunSpec }) {
               {/* Two questions, on one screen, both answerable by anybody about their own
                   work. Not a wizard: everything has a default, so a reader who does not
                   care can press Start and get exactly what they got before. */}
-              <div className="rb-pick">
-                <p className="rb-pick-q">Which of these is closest to what you run?</p>
-                <div className="rb-worlds">
-                  {RUN_WORLDS.map((w) => (
-                    <button key={w.id} className={'rb-world' + (model.id === w.id ? ' on' : '')}
-                            onClick={() => dispatch({ type: 'model', model: w.build() })}>
-                      <b>{w.name}</b><span>{w.shapeLine}</span>
-                    </button>
-                  ))}
-                </div>
-                <p className="rb-pick-q">And what are you protecting this year?</p>
-                <div className="rb-objs">
-                  {OBJECTIVES.map((o) => (
-                    <button key={o.id} title={o.who}
-                            className={'rb-obj' + (o.id === objId ? ' on' : '')}
-                            onClick={() => setObjId(o.id)}>{o.label(model)}</button>
-                  ))}
-                </div>
-                <p className="rb-legend">Neither answer changes the arithmetic. The first picks
-                   whose year you are running, the second decides what the scoreboard at the end
-                   is measured against.</p>
-              </div>
+              {/* Numbered, because two questions and three buttons in a stack read as five
+                  equal things and a reader has to work out the order for themselves. The
+                  second step is filled rather than bare: a row of pills under a heading is
+                  the easiest thing on a page to skim past, and it decides the scoreboard. */}
+              <ol className="rb-stages">
+                <li className="rb-stage">
+                  <span className="rb-stage-n">1</span>
+                  <div className="rb-stage-body">
+                    <p className="rb-pick-q">Which of these is closest to what you run?</p>
+                    <div className="rb-worlds">
+                      {RUN_WORLDS.map((w) => (
+                        <button key={w.id} className={'rb-world' + (model.id === w.id ? ' on' : '')}
+                                onClick={() => dispatch({ type: 'model', model: w.build() })}>
+                          <b>{w.name}</b><span>{w.shapeLine}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </li>
 
-              {/* Above the board, not below it. At 900px the button sat under a 380px
-                  animation and the only thing you could do on the page was off screen. */}
-              <div className="rb-opts rb-opts-lead">
-                <button className="rb-opt rb-go" onClick={() => setStarted(true)}>
-                  <b>Start the year &rarr;</b>
-                  <span>{Word(decisions.length)} decisions, {months[0]} to {months[months.length - 1]}. Nothing to configure, and no way to lose.</span>
-                </button>
-                <a className="rb-opt" href="#/sandbox">
-                  <b>Or just turn the dials</b>
-                  <span>Three controls and a year you can scrub through. Find the month it breaks.</span>
-                </a>
-                <a className="rb-opt" href="#/answer">
-                  <b>Or skip to the answer</b>
-                  <span>Tell it what you are protecting and it will tell you which calls get you there.</span>
-                </a>
-              </div>
+                <li className="rb-stage lit">
+                  <span className="rb-stage-n">2</span>
+                  <div className="rb-stage-body">
+                    <p className="rb-pick-q">And what are you protecting this year?</p>
+                    <div className="rb-objs">
+                      {OBJECTIVES.map((o) => (
+                        <button key={o.id} title={o.who}
+                                className={'rb-obj' + (o.id === objId ? ' on' : '')}
+                                onClick={() => setObjId(o.id)}>{o.label(model)}</button>
+                      ))}
+                    </div>
+                    <p className="rb-legend">Neither answer changes the arithmetic. The first picks
+                       whose year you are running, this one decides what the scoreboard at the end
+                       is measured against.</p>
+                  </div>
+                </li>
+
+                <li className="rb-stage">
+                  <span className="rb-stage-n">3</span>
+                  <div className="rb-stage-body">
+                    {/* Above the board, not below it. At 900px the button sat under a 380px
+                        animation and the only thing you could do on the page was off screen. */}
+                    <button className="rb-start" onClick={() => setStarted(true)}>
+                      Start the year &rarr;
+                      <span>{Word(decisions.length)} decisions, {months[0]} to {months[months.length - 1]}. Nothing to configure, and no way to lose.</span>
+                    </button>
+                    <p className="rb-alts">
+                      Not what you came for? <a href="#/sandbox">Turn the dials instead</a>
+                      {' '}or <a href="#/answer">skip to the answer</a>.
+                    </p>
+                  </div>
+                </li>
+              </ol>
               {spec.introEmbedUrl && (
                 <>
                   <p className="rb-intro-h">First, what the model does with one decision</p>
