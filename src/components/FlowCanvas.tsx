@@ -19,7 +19,9 @@ import type { OperatingModel } from '../models/types';
 export type Sel = { kind: 'team' | 'stream'; id: string } | null;
 
 const SRC_W = 176, SRC_H = 64;
-const TEAM_W = 238, TEAM_H = 84;
+/* Wide enough for the longest team name in the four fixtures. "Community Health Workers"
+   and "Fundraising and Partnerships" were both losing their last word to an ellipsis. */
+const TEAM_W = 252, TEAM_H = 84;
 /* Wide enough that a split's label fits in the gap it belongs to. At 104 the label for a
    six percent escalation landed on the block it was escalating to. */
 const COL_GAP = 150, ROW_GAP = 26;
@@ -246,6 +248,7 @@ export function FlowCanvas({ model, result, month, selected, onSelect, compact }
                     style={{ left: p.x, top: p.y, width: p.w, height: p.h }}
                     aria-pressed={isOn('team', t.id)}
                     aria-label={`${t.name}, ${Math.round(util * 100)} percent of capacity, ${Math.round(m.availableFte)} people`}
+                    title={t.name}
                     onClick={() => onSelect(isOn('team', t.id) ? null : { kind: 'team', id: t.id })}>
               <span className="fc-q" aria-hidden="true">
                 {Array.from({ length: tokens }, (_, i) => <i key={i} />)}
