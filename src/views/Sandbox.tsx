@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { run } from '../engine';
 import { useStore } from '../state/store';
 import type { ModelResult, TeamMonth } from '../models/results';
@@ -8,8 +8,9 @@ import { applyDecisions, pipelineAt, type Decision } from '../lib/edits';
 import { movesFor, type Move } from '../lib/options';
 import { feedFor } from '../lib/feed';
 import { pressureOf, PRESSURE_WORD, workloadOf, yearShape, asUnits } from '../lib/workload';
+import { chainFor } from '../lib/chain';
 import { pct, pp, signed } from '../lib/format';
-import { FlowCanvas, shareLabel, type Sel } from '../components/FlowCanvas';
+import { FlowCanvas, type Sel } from '../components/FlowCanvas';
 import { YearSpine } from '../components/YearSpine';
 import { Why } from '../components/Why';
 import { MONTHS } from './Run';
@@ -50,7 +51,9 @@ export function Sandbox() {
   const { model, fmt, isFixture } = useStore();
   const [decisions, setDecisions] = useState<Decision[]>([]);
   const [sel, setSel] = useState<Sel>(null);
-  const [panel, setPanel] = useState<'why' | 'decide' | 'log'>('log');
+  /* One panel, not three tabs. Why something is happening and what you can do about it
+     are one thought, and a tab bar between them is a filing cabinet. */
+  const [started, setStarted] = useState(false);
   const baseId = model.scenarios.find((x) => x.type === 'base')?.id ?? model.scenarios[0].id;
   const [scenarioId, setScenarioId] = useState(baseId);
   const scenario = model.scenarios.find((x) => x.id === scenarioId) ?? model.scenarios[0];
@@ -92,18 +95,17 @@ export function Sandbox() {
      whatever is loudest this month, so the buttons always do something. */
   const focus = sel?.kind === 'team' ? sel.id : sit.teamId;
   const moves = useMemo(
-    () => (panel === 'decide' && focus
+    () => (focus && started
       ? movesFor(model, decisions, scenarioId, result, focus, month, result.months, MONTHS)
       : []),
-    [panel, focus, model, decisions, scenarioId, result, month],
+    [focus, started, model, decisions, scenarioId, result, month],
+  );
+  const chain = useMemo(
+    () => (focus ? chainFor(model, result, focus, month, fmt) : []),
+    [focus, model, result, month, fmt],
   );
 
-  useEffect(() => { if (sel?.kind === 'team' && panel === 'log') setPanel('why'); }, [sel]);
-
-  const take = (d: Decision) => {
-    setDecisions((xs) => [...xs, { ...d, month: result.months[month] }]);
-    setPanel('log');
-  };
+  const take = (d: Decision) => setDecisions((xs) => [...xs, { ...d, month: result.months[month] }]);
   const undo = () => setDecisions((xs) => xs.slice(0, -1));
   const advance = () => setAt((m) => Math.min(m + 1, months - 1));
 
@@ -129,6 +131,59 @@ export function Sandbox() {
     return bits.length ? bits.join(' · ') : 'nothing measurable this year';
   };
 
+  if (!started) {
+    const first = situationOf(model, result, 0);
+    const w0 = first.teamId ? workloadOf(result, first.teamId, 0) : null;
+    const q0 = w0 && first.row ? asUnits(w0, first.row.carriedInHours) : null;
+    return (
+      <main className="sandbox">
+        <section className="om-gate">
+          <h1>{isFixture ? model.name : 'Your model'}</h1>
+          <p className="om-gate-sub">{result.months[0]?.slice(0, 4)} operating model</p>
+          <p className="om-gate-facts">
+            <span>{Math.round(result.summary.startingFte)} people</span>
+            <span>{fmt.money(result.financials.annualBudget)} budget</span>
+            <span>{months} months</span>
+          </p>
+
+          <p className="om-gate-k">Your objective</p>
+          <p className="om-gate-obj">
+            Get through the year without going past what your teams can do, and without
+            going past the budget.
+          </p>
+
+          <p className="om-gate-k">Where it stands in {MONTHS[0]}</p>
+          <p className="om-gate-now">
+            {first.row && first.name ? (
+              <>
+                <b>{first.name}</b> is already {PRESSURE_WORD[pressureOf(first.row)].toLowerCase()},
+                at <b>{Math.round(first.row.utilization * 100)}%</b> of what it can do
+                {q0 !== null && q0 >= 1 && <>, with <b>{fmt.count(Math.round(q0))} {w0!.unit}</b> waiting</>}.
+              </>
+            ) : (
+              <>Every team is inside the line it plans to run at. It does not stay that way.</>
+            )}
+          </p>
+
+          <label className="om-gate-pick">
+            <span>The year you are running</span>
+            <select value={scenarioId} title={scenario.description}
+                    onChange={(e) => setScenarioId(e.target.value)}>
+              {model.scenarios.map((sc) => (
+                <option key={sc.id} value={sc.id} title={sc.description}>{sc.name}</option>
+              ))}
+            </select>
+            <em>{scenario.description}</em>
+          </label>
+
+          <button type="button" className="om-gate-go" onClick={() => setStarted(true)}>
+            Start the year &rarr;
+          </button>
+        </section>
+      </main>
+    );
+  }
+
   return (
     <main className="sandbox">
       <header className="om-top">
@@ -149,21 +204,6 @@ export function Sandbox() {
           <span>{Math.round(result.summary.startingFte)} people</span>
         </p>
       </header>
-
-      <div className="fc-tools">
-        <label className="fc-pick">
-          <span>Year</span>
-          <select value={scenarioId} title={scenario.description}
-                  onChange={(e) => { setScenarioId(e.target.value); setAt(0); }}>
-            {model.scenarios.map((sc) => (
-              <option key={sc.id} value={sc.id} title={sc.description}>{sc.name}</option>
-            ))}
-          </select>
-        </label>
-        {decisions.length > 0 && (
-          <button type="button" className="fc-reset" onClick={undo}>Undo the last decision</button>
-        )}
-      </div>
 
       <FlowCanvas model={tuned} result={result} month={month} selected={sel} onSelect={setSel}
                   compact={(n) => fmt.count(n)}
@@ -195,136 +235,103 @@ export function Sandbox() {
           ) : <>Every team is inside the line it plans to run at.</>}
         </p>
         <div className="om-acts">
-          <button type="button" className={panel === 'why' ? 'on' : ''}
-                  disabled={!focus}
-                  onClick={() => { if (focus) { setSel({ kind: 'team', id: focus }); setPanel('why'); } }}>
-            Investigate
-          </button>
-          <button type="button" className={panel === 'decide' ? 'on' : ''}
-                  disabled={!focus}
-                  onClick={() => { if (focus) { setSel({ kind: 'team', id: focus }); setPanel('decide'); } }}>
-            Make a decision
-          </button>
           <button type="button" className="om-adv" onClick={advance} disabled={month >= months - 1}>
             {month >= months - 1 ? 'The year is over' : `Advance to ${MONTHS[month + 1]}`}
           </button>
           {month > 0 && (
             <button type="button" className="om-back" onClick={() => setAt(0)}>Back to {MONTHS[0]}</button>
           )}
+          {decisions.length > 0 && (
+            <button type="button" className="om-back" onClick={undo}>Undo the last decision</button>
+          )}
         </div>
       </section>
 
+      {/* One panel. Why it is happening and what you can do about it are one thought, and
+          a tab bar between them files them in different drawers. */}
       <section className="om-panel">
-        <nav className="om-tabs">
-          <button type="button" className={panel === 'why' ? 'on' : ''} onClick={() => setPanel('why')}>Why</button>
-          <button type="button" className={panel === 'decide' ? 'on' : ''} onClick={() => setPanel('decide')}>Decide</button>
-          <button type="button" className={panel === 'log' ? 'on' : ''} onClick={() => setPanel('log')}>
-            Your year{decisions.length ? ` (${decisions.length})` : ''}
-          </button>
-        </nav>
-
-        {panel === 'why' && (() => {
-          if (sel?.kind === 'stream') {
-            const s = tuned.demandStreams.find((x) => x.id === sel.id)!;
-            const f = result.flow.find((x) => x.sourceId === sel.id && x.kind === 'arrival')!;
-            return (
-              <div className="om-why">
-                <p className="fi-sub"><b>{s.name}</b> lands on {name(s.teamId)}, {s.handlingMinutesPerUnit} minutes each.
-                  {' '}{fmt.count(f.unitsByMonth[month])} {s.unit} this month, {fmt.count(s.annualVolume)} across the year.</p>
-              </div>
-            );
-          }
-          const id = focus;
-          const w = id ? workloadOf(result, id, month) : null;
-          const m = id ? result.teams.find((t) => t.teamId === id)?.months[month] : null;
-          if (!id || !w || !m) return <p className="fi-idle">Pick a team on the canvas.</p>;
-          const feeds = result.flow.filter((f) => f.kind === 'route' && f.sourceId === id);
+        {sel?.kind === 'stream' ? (() => {
+          const st = tuned.demandStreams.find((x) => x.id === sel.id)!;
+          const f = result.flow.find((x) => x.sourceId === sel.id && x.kind === 'arrival')!;
           return (
-            <>
-              <Why w={w} team={name(id)} month={MONTHS[month]} answered={m.serviceLevel} fmt={fmt} />
-              {feeds.length > 0 && (
-                <p className="om-onward">
-                  What it cannot hold moves on: {feeds.map((f) =>
-                    `${shareLabel(f.share)} of its work goes to ${name(f.toTeamId)}`).join(', ')}.
-                </p>
-              )}
-            </>
+            <p className="fi-sub">
+              <b>{st.name}</b> lands on {name(st.teamId)}, {st.handlingMinutesPerUnit} minutes each.
+              {' '}{fmt.count(f.unitsByMonth[month])} {st.unit} this month,
+              {' '}{fmt.count(st.annualVolume)} across the year.
+            </p>
           );
-        })()}
-
-        {panel === 'decide' && (
-          !focus ? <p className="fi-idle">Pick a team on the canvas.</p> : (
-            <>
-              <p className="om-q">What can you do about {name(focus)}?</p>
-              <ul className="om-moves">
-                {moves.map((mv) => (
-                  <li key={mv.decision.id}>
-                    <button type="button" onClick={() => take(mv.decision)}>
-                      <b>{mv.title}</b>
-                      <span className="om-move-w">{mv.when}</span>
-                      <span className="om-move-i">{moveLine(mv)}</span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-              <p className="om-note">
-                Every number above came from running the year with that move in it. Nothing is
-                a rule of thumb.
-              </p>
-            </>
-          )
-        )}
-
-        {panel === 'log' && (
+        })() : !focus ? (
+          <p className="fi-idle">Click a building to look inside it.</p>
+        ) : (
           <>
-            {decisions.length === 0 ? (
-              <p className="fi-idle">
-                Nothing decided yet. Advance the months and watch where it goes wrong, or click a
-                team and make a call.
-              </p>
-            ) : (
-              <>
-                <ol className="om-log">
-                  {decisions.map((d, i) => (
-                    <li key={d.id + i}>
-                      <span className="om-log-m">{MONTHS[result.months.indexOf(d.month)] ?? d.month}</span>
-                      <b>{d.label}</b>
-                    </li>
-                  ))}
-                </ol>
-                <div className="om-vs">
-                  <h3>Your year against the plan as written</h3>
-                  {rec.lines.length === 0 ? (
-                    <p className="fc-rcpt-none">Nothing measurable moved.</p>
-                  ) : (
-                    <ul className="fc-rcpt-l">
-                      {rec.lines.map((l) => (
-                        <li key={l.key} className={l.good ? 'up' : 'down'}>
-                          <span className="rc-k">{l.label}</span>
-                          <b className="rc-d">{asDelta(l)}</b>
-                          <span className="rc-v">{asValue(l.from, l.unit)} &rarr; {asValue(l.to, l.unit)}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                  <p className="fc-rcpt-f">
-                    {rec.firstMonth !== null
-                      ? <>It first shows up in <b>{MONTHS[rec.firstMonth]}</b>.</>
-                      : <>It changes nothing in any month of this year.</>}
-                    {' '}
-                    {rec.moved
-                      ? rec.moved.to
-                        ? <>The {rec.moved.metric === 'queue' ? 'queue' : 'money'} now turns on{' '}
-                            <b>{name(rec.moved.to)}</b>{rec.moved.from ? <> instead of {name(rec.moved.from)}</> : null}.</>
-                        : <>Nothing binds the {rec.moved.metric === 'queue' ? 'queue' : 'money'} any more.</>
-                      : <>The constraint has not moved.</>}
-                  </p>
-                </div>
-              </>
-            )}
+            <h2 className="om-q">Why is {name(focus)} where it is in {MONTHS[month]}?</h2>
+            <ol className="om-chain">
+              {chain.map((l, i) => <li key={i} className={'t-' + l.tone}>{l.text}</li>)}
+            </ol>
+            {(() => {
+              const w = workloadOf(result, focus, month);
+              const m = result.teams.find((t) => t.teamId === focus)?.months[month];
+              return w && m
+                ? <Why w={w} team={name(focus)} month={MONTHS[month]} answered={m.serviceLevel} fmt={fmt} />
+                : null;
+            })()}
+            <h2 className="om-q om-q2">What can you do about it?</h2>
+            <ul className="om-moves">
+              {moves.map((mv) => (
+                <li key={mv.decision.id}>
+                  <button type="button" onClick={() => take(mv.decision)}>
+                    <b>{mv.title}</b>
+                    <span className="om-move-w">{mv.when}</span>
+                    <span className="om-move-i">{moveLine(mv)}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+            <p className="om-note">
+              Every number on those came from running the year with that move in it.
+            </p>
           </>
         )}
       </section>
+
+      {decisions.length > 0 && (
+        <section className="om-panel om-year">
+          <h2 className="om-q">Your year, against the plan as written</h2>
+          <ol className="om-log">
+            {decisions.map((d, i) => (
+              <li key={d.id + i}>
+                <span className="om-log-m">{MONTHS[result.months.indexOf(d.month)] ?? d.month}</span>
+                <b>{d.label}</b>
+              </li>
+            ))}
+          </ol>
+          {rec.lines.length === 0 ? (
+            <p className="fc-rcpt-none">Nothing measurable moved.</p>
+          ) : (
+            <ul className="fc-rcpt-l">
+              {rec.lines.map((l) => (
+                <li key={l.key} className={l.good ? 'up' : 'down'}>
+                  <span className="rc-k">{l.label}</span>
+                  <b className="rc-d">{asDelta(l)}</b>
+                  <span className="rc-v">{asValue(l.from, l.unit)} &rarr; {asValue(l.to, l.unit)}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+          <p className="fc-rcpt-f">
+            {rec.firstMonth !== null
+              ? <>It first shows up in <b>{MONTHS[rec.firstMonth]}</b>.</>
+              : <>It changes nothing in any month of this year.</>}
+            {' '}
+            {rec.moved
+              ? rec.moved.to
+                ? <>The {rec.moved.metric === 'queue' ? 'queue' : 'money'} now turns on{' '}
+                    <b>{name(rec.moved.to)}</b>{rec.moved.from ? <> instead of {name(rec.moved.from)}</> : null}.</>
+                : <>Nothing binds the {rec.moved.metric === 'queue' ? 'queue' : 'money'} any more.</>
+              : <>The constraint has not moved.</>}
+          </p>
+        </section>
+      )}
 
       <section className="om-feed">
         <h2>Operations feed</h2>

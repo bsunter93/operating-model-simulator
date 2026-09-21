@@ -22,10 +22,12 @@ export type Sel = { kind: 'team' | 'stream'; id: string } | null;
 
 const PAD_X = 8, PAD_Y = 10;
 const SRC_W = 108, SRC_H = 36, SRC_GAP = 9;
-const TEAM_W = 214;
-/* Small enough that eight teams are one screen rather than one and a half, tall enough
-   to carry the team's whole year under its gauge. */
-const TEAM_H_MIN = 58, TEAM_H_MAX = 86;
+const TEAM_W = 236;
+/* Room for a readout: the number large, the bar beside it, the queue count after it, and
+   the year underneath. The last pass stripped the numbers off entirely, which fixed the
+   noise and took the instrument with it. Density is not the problem; density with no
+   hierarchy is. */
+const TEAM_H_MIN = 84, TEAM_H_MAX = 108;
 const ROW_GAP = 15;
 /* Room for a queue to grow into before it reaches whatever is feeding it. */
 const QUEUE_W = 68, WIRE_W = 52;
@@ -212,13 +214,24 @@ export function FlowCanvas({ model, result, month, selected, onSelect, compact, 
             const on = lit(f.toTeamId, f.sourceId, f.viaStreamId);
             return (
               <g key={f.id} className={'fc-edge' + (on ? ' on' : selected ? ' dim' : '')}>
-                {/* Three strokes make a channel rather than an arrow: a surface the work
-                    travels on, its centre line, and the work itself moving down it. */}
-                <path className="fc-lane" d={d} style={{ strokeWidth: 7 + 5 * Math.sqrt(rel) }} />
+                {/* A channel rather than an arrow: a surface the work travels on, its
+                    centre line, and then the work itself, as things with a location.
+                    How many are riding it is how much of the month's work it carries. */}
+                <path id={`lane-${f.id}`} className="fc-lane" d={d}
+                      style={{ strokeWidth: 7 + 5 * Math.sqrt(rel) }} />
                 <path className="fc-wire" d={d} style={{ strokeWidth: 1 + 2 * Math.sqrt(rel) }} />
-                <path className="fc-pulse" d={d}
-                      style={{ strokeWidth: 2 + 3 * Math.sqrt(rel),
-                               animationDuration: `${(2.9 - 2 * rel).toFixed(2)}s` }} />
+                {(() => {
+                  const count = Math.max(1, Math.round(1 + 5 * Math.sqrt(rel)));
+                  const dur = 5.4 - 3 * rel;
+                  return Array.from({ length: count }, (_, i) => (
+                    <circle key={i} className="fc-tok" r={1.6 + 1.4 * Math.sqrt(rel)}>
+                      <animateMotion dur={`${dur.toFixed(2)}s`} repeatCount="indefinite"
+                                     begin={`${((i * dur) / count).toFixed(2)}s`}>
+                        <mpath href={`#lane-${f.id}`} />
+                      </animateMotion>
+                    </circle>
+                  ));
+                })()}
               </g>
             );
           })}
@@ -270,7 +283,7 @@ export function FlowCanvas({ model, result, month, selected, onSelect, compact, 
           const series = result.teams.find((x) => x.teamId === t.id)!.months.map((x) => x.utilization);
           const pending = pipeline(t.id);
           const queued = asUnits(w, m.carriedInHours);
-          const lost = asUnits(w, m.shedHours);
+          const lost = m.shedHours > 0 ? asUnits(w, m.shedHours) : null;
           /* Everything a card used to print, moved to the one moment somebody asks. */
           const tip = [
             `${t.name}: ${PRESSURE_WORD[press].toLowerCase()}, ${Math.round(util * 100)}% of capacity`,
@@ -305,14 +318,30 @@ export function FlowCanvas({ model, result, month, selected, onSelect, compact, 
                     (_, i) => <i key={i} />)}
                 </span>
               </span>
-              <span className="fc-bar">
-                <i style={{ width: Math.min(100, util * 100) + '%' }} />
-                <u style={{ left: Math.min(100, m.targetUtilization * 100) + '%' }} />
+              <span className="fc-read">
+                <b className="fc-pc">{Math.round(util * 100)}<em>%</em></b>
+                <span className="fc-bar">
+                  <i style={{ width: Math.min(100, util * 100) + '%' }} />
+                  <u style={{ left: Math.min(100, m.targetUtilization * 100) + '%' }} />
+                </span>
+              </span>
+              <span className="fc-line">
+                {queued !== null && queued >= 1
+                  ? <><b>{compact(Math.round(queued))}</b> {w.unit} waiting</>
+                  : m.serviceLevel !== null
+                    ? <><b>{Math.round(m.serviceLevel * 100)}%</b> picked up in time</>
+                    : <>{PRESSURE_WORD[press].toLowerCase()}</>}
+                {lost !== null && lost >= 1 && (
+                  <em className="fc-lost" title={`${compact(Math.round(lost))} ${w.unit} turned away for good`}>
+                    &minus;{compact(Math.round(lost))}
+                  </em>
+                )}
               </span>
               {/* People asked for, on their way. Hollow until they are in their seats, so a
                   reader watches capacity arrive rather than reading that it will. */}
-              {/* The team's own twelve months, under its gauge. A block that shows only
-                  today makes a reader scrub to learn the shape; this carries it. */}
+              {/* The team's own twelve months, behind everything else. A block that shows
+                  only today makes a reader scrub to learn the shape; this carries it, and
+                  as a ground rather than a row it costs no height and reads as texture. */}
               <svg className="fc-spark" viewBox="0 0 100 16" preserveAspectRatio="none" aria-hidden="true">
                 <path className="fc-spark-a" d={sparkArea(series, month)} />
                 <path className="fc-spark-l" d={sparkLine(series)} />
