@@ -64,6 +64,30 @@ export interface TeamResult {
   endingFte: number;
 }
 
+/**
+ * One arrow in the work network: where a month's work comes from and which team it lands
+ * on. The engine already computed this to get its hours; it used to throw the shape away
+ * and keep only the total, which is why the app could draw a bar per team and nothing else.
+ *
+ * `units` is what a person would count (cases, referrals, visits). `hours` is what the
+ * team has to find for them, after automation and productivity.
+ */
+export interface FlowEdge {
+  id: string;
+  kind: 'arrival' | 'route';
+  /** Demand stream id for an arrival; the upstream team's id for a route. */
+  sourceId: string;
+  /** Present on a route: the stream the routed work came off. */
+  viaStreamId?: string;
+  toTeamId: string;
+  label: string;
+  unit: string;
+  /** Fraction of upstream units taken by this route. 1 for an arrival. */
+  share: number;
+  unitsByMonth: number[];
+  hoursByMonth: number[];
+}
+
 export type InitiativeStatus = 'planned' | 'deferred' | 'cancelled';
 
 export interface InitiativeSchedule {
@@ -215,6 +239,8 @@ export interface ModelResult {
   interventionIds: string[];
   months: MonthKey[];
   teams: TeamResult[];
+  /** The arrows between sources and teams, month by month. */
+  flow: FlowEdge[];
   initiatives: InitiativeSchedule[];
   constraints: Constraint[];
   financials: Financials;

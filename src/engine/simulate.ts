@@ -11,7 +11,7 @@ import type {
 } from '../models/types';
 import type {
   BudgetLever, FundResult, Constraint, Exposure, ExposureItem, FinancialMonth, Financials,
-  InitiativeSchedule, ModelResult, Summary, TeamMonth, TeamResult, TeamStatus,
+  FlowEdge, InitiativeSchedule, ModelResult, Summary, TeamMonth, TeamResult, TeamStatus,
 } from '../models/results';
 import { fmtFor } from '../lib/format';
 import { addMonths, annualToMonthlyRate, calendarMonth, expandMonths, monthIndex } from './calendar';
@@ -234,16 +234,28 @@ export function run(input: OperatingModel, opts: RunOptions = {}): ModelResult {
 
   // 2. Run workload hours per team-month (demand streams).
   const runHours = new Map<string, number[]>(model.teams.map((t) => [t.id, new Array(n).fill(0)]));
+  /* The same numbers, kept rather than summed away. Every arrow the app can draw is a
+     by-product of arithmetic this loop was doing anyway. */
+  const flow: FlowEdge[] = [];
   for (const s of model.demandStreams) {
     const shares = seasonShares(model, s, months);
     const arr = runHours.get(s.teamId)!;
     const auto = eff.automationMult.get(s.teamId)!;
     const dm = eff.demandMult.get(s.id)!;
     const prod = eff.productivityMult.get(s.teamId)!;
+    const units = new Array(n).fill(0);
+    const hrs = new Array(n).fill(0);
     for (let m = 0; m < n; m++) {
       const volume = s.annualVolume * shares[m] * dm[m];
-      arr[m] += (volume * s.handlingMinutesPerUnit * s.complexityFactor / 60) * auto[m] / prod;
+      const h = (volume * s.handlingMinutesPerUnit * s.complexityFactor / 60) * auto[m] / prod;
+      arr[m] += h;
+      units[m] = volume;
+      hrs[m] = h;
     }
+    flow.push({
+      id: `arrival:${s.id}`, kind: 'arrival', sourceId: s.id, toTeamId: s.teamId,
+      label: s.name, unit: s.unit, share: 1, unitsByMonth: units, hoursByMonth: hrs,
+    });
   }
 
   // 2b. Routed work: hours one team creates for another by escalating or handing off.
@@ -260,11 +272,21 @@ export function run(input: OperatingModel, opts: RunOptions = {}): ModelResult {
     const auto = eff.automationMult.get(up.teamId)!;
     const dm = eff.demandMult.get(up.id)!;
     const toProd = eff.productivityMult.get(r.toTeamId)!;
+    const routed = new Array(n).fill(0);
+    const hrs = new Array(n).fill(0);
     for (let m = 0; m < n; m++) {
       const upstreamUnits = up.annualVolume * shares[m] * dm[m] * auto[m];
       const units = upstreamUnits * r.share;
-      arr[m] += (units * r.handlingMinutesPerUnit * (r.complexityFactor ?? 1) / 60) / toProd;
+      const h = (units * r.handlingMinutesPerUnit * (r.complexityFactor ?? 1) / 60) / toProd;
+      arr[m] += h;
+      routed[m] = units;
+      hrs[m] = h;
     }
+    flow.push({
+      id: `route:${r.id}`, kind: 'route', sourceId: up.teamId, viaStreamId: up.id,
+      toTeamId: r.toTeamId, label: r.name, unit: up.unit, share: r.share,
+      unitsByMonth: routed, hoursByMonth: hrs,
+    });
   }
 
   // 3. Portfolio hours per team-month: assigned FTE × that team's productive hours.
@@ -605,7 +627,7 @@ export function run(input: OperatingModel, opts: RunOptions = {}): ModelResult {
 
   return {
     modelId: model.id, scenarioId: scenario.id, interventionIds: interventions.map((i) => i.id),
-    months, teams: teamResults, initiatives: schedule, constraints, financials, exposure, summary,
+    months, teams: teamResults, flow, initiatives: schedule, constraints, financials, exposure, summary,
   };
 }
 

@@ -4,230 +4,290 @@ import { useStore } from '../state/store';
 import type { ModelResult, TeamMonth } from '../models/results';
 import type { OperatingModel } from '../models/types';
 import { bindingConstraints } from '../lib/constraint';
+import { FlowCanvas, shareLabel, type Sel } from '../components/FlowCanvas';
 import { MONTHS } from './Run';
 
 /**
- * The sandbox: three dials and a year you can scrub through.
+ * The sandbox: the work network, running.
  *
- * The run makes an argument. This does the other job, which the run cannot: it lets
- * somebody feel the shape of the thing in a few seconds. Move a dial, watch the year
- * change under it, find the month it breaks.
+ * It was a rail of sliders next to a stack of bars, which showed one number per team and
+ * hid everything that makes an operating model interesting: where work comes from, what
+ * one team's handling creates for another, what waits, and what is quietly turned away.
+ * All four were already in the engine's arithmetic. Now they are on the canvas.
  *
- * It exists because the engine already knew something the app was throwing away. Every
- * team's utilisation and answer rate is computed for all twelve months and the whole
- * interface showed one number per team: the peak. Consumer Support's answer rate goes
- * 100, 70, 18, 0 across four months of a demand shock. That collapse is Kingman's cliff
- * in real data and it is the most teachable thing here, and it was invisible.
+ * Editing happens on the thing being edited. Click the block, change its people; click
+ * the source, change what arrives. A global dial could never say "this team" or "this
+ * stream", and those are the only edits an operating model is ever actually given.
  */
 
 const clamp = (v: number, lo: number, hi: number) => (v < lo ? lo : v > hi ? hi : v);
 
-type Dials = { demand: number; target: number; people: number };
-const NEUTRAL: Dials = { demand: 1, target: 1, people: 1 };
+export interface Edits {
+  /** teamId -> absolute FTE. */
+  fte: Record<string, number>;
+  /** teamId -> absolute planned utilisation. */
+  target: Record<string, number>;
+  /** streamId -> multiplier on annual volume. */
+  vol: Record<string, number>;
+}
+const NONE: Edits = { fte: {}, target: {}, vol: {} };
+const touched = (e: Edits) => Object.keys(e.fte).length + Object.keys(e.target).length + Object.keys(e.vol).length;
 
-/** The dials are applied to the model itself, not through a scenario, so the response is
-    immediate and there is no vocabulary between the hand and the number. */
-function withDials(model: OperatingModel, d: Dials): OperatingModel {
+function withEdits(model: OperatingModel, e: Edits): OperatingModel {
+  if (!touched(e)) return model;
   return {
     ...model,
     teams: model.teams.map((t) => ({
       ...t,
-      currentFte: Math.max(1, Math.round(t.currentFte * d.people)),
-      targetUtilization: clamp(t.targetUtilization * d.target, 0.4, 0.99),
+      currentFte: e.fte[t.id] ?? t.currentFte,
+      targetUtilization: e.target[t.id] ?? t.targetUtilization,
     })),
     demandStreams: model.demandStreams.map((s) => ({
       ...s,
-      annualVolume: Math.max(0, Math.round(s.annualVolume * d.demand)),
+      annualVolume: Math.max(0, Math.round(s.annualVolume * (e.vol[s.id] ?? 1))),
     })),
   };
 }
 
 /** The first month anything goes past what it can hold, which is the question people ask. */
-function breaksAt(r: ModelResult): { month: string; teamId: string } | null {
+function breaksAt(r: ModelResult): { month: string; teamId: string; index: number } | null {
   for (let m = 0; m < (r.teams[0]?.months.length ?? 0); m++) {
     for (const t of r.teams) {
       const row = t.months[m];
-      if (row.utilization > row.targetUtilization) return { month: row.month, teamId: t.teamId };
+      if (row.utilization > row.targetUtilization) return { month: row.month, teamId: t.teamId, index: m };
     }
   }
   return null;
 }
 
-/*
- * Chosen by running them. A tenth more work takes the worst month from 97% answered to
- * 32%, and a seventh takes it to nothing: that is the whole of Kingman's law and it needs
- * no explaining once somebody has seen it happen.
- *
- * The last one is the opposite lesson and the more useful one for an executive. Raising
- * every target changes nothing about the work; it moves the line you measure against, so
- * five teams stop being "over capacity" and not one thing improves.
- */
-const PRESETS: { id: string; label: string; note: string; dials: Dials }[] = [
-  { id: 'calm', label: 'The plan as written', note: 'Every dial where the model left it.', dials: NEUTRAL },
-  { id: 'more', label: 'A tenth more work', note: 'Not a crisis. A normal year that went slightly better than forecast.', dials: { demand: 1.1, target: 1, people: 1 } },
-  { id: 'fewer', label: 'A tenth fewer people', note: 'A hiring freeze, or a bad quarter for attrition. Same work.', dials: { demand: 1, target: 1, people: 0.9 } },
-  { id: 'sweat', label: 'Raise every target instead', note: 'Change nothing real and ask everyone to run at 95%. Watch what happens to the dashboard, and to the work.', dials: { demand: 1, target: 1.2, people: 1 } },
-];
-
 export function Sandbox() {
   const { model, fmt, isFixture } = useStore();
-  const [dials, setDials] = useState<Dials>(NEUTRAL);
+  const [edits, setEdits] = useState<Edits>(NONE);
+  const [sel, setSel] = useState<Sel>(null);
+  const baseId = model.scenarios.find((x) => x.type === 'base')?.id ?? model.scenarios[0].id;
+  const [scenarioId, setScenarioId] = useState(baseId);
+  const scenario = model.scenarios.find((x) => x.id === scenarioId) ?? model.scenarios[0];
   const [at, setAt] = useState(0);
+  const [touchedScrub, setTouchedScrub] = useState(false);
   const [playing, setPlaying] = useState(false);
   const timer = useRef<number | null>(null);
 
-  const tuned = useMemo(() => withDials(model, dials), [model, dials]);
-  const result = useMemo(() => run(tuned), [tuned]);
+  const tuned = useMemo(() => withEdits(model, edits), [model, edits]);
+  const result = useMemo(() => run(tuned, { scenario: scenarioId }), [tuned, scenarioId]);
   const months = result.teams[0]?.months.length ?? 12;
   const month = Math.min(at, months - 1);
 
-  /* No scenario: the dials are the scenario here. Passing the run's year would probe
-     against a different world from the one on screen and report nonsense with a straight
-     face, which it did, right up until a screenshot showed a queue at 32% next to a line
-     saying nothing would move it. */
+  /* No decisions: the edits are the scenario here. Probing against the run's year would
+     measure a different world from the one on screen and report it with a straight face. */
   const binding = useMemo(
-    () => bindingConstraints(tuned, { decisions: [] }, [], result),
-    [tuned, result],
+    () => bindingConstraints(tuned, { decisions: [], scenarioId }, [], result),
+    [tuned, scenarioId, result],
   );
   const broke = useMemo(() => breaksAt(result), [result]);
   const name = (id: string) => model.teams.find((t) => t.id === id)?.name ?? id;
 
+  /* Open on the month with something in it. January on a flat plan is eight teams inside
+     their limits and a diagram with nothing to notice, which teaches a reader that there
+     is nothing to notice. Their own scrubbing wins from then on. */
+  useEffect(() => {
+    if (touchedScrub) return;
+    let worst = 0, score = -1;
+    for (let i = 0; i < months; i++) {
+      const at = result.teams.map((t) => t.months[i]);
+      const over = at.filter((m) => m.utilization > m.targetUtilization).length;
+      const answered = at.reduce((a, m) => Math.min(a, m.serviceLevel ?? 1), 1);
+      const s = over * 2 + (1 - answered);
+      if (s > score) { score = s; worst = i; }
+    }
+    setAt(worst);
+  }, [result, months, touchedScrub]);
+
   useEffect(() => {
     if (!playing) return;
-    timer.current = window.setInterval(() => setAt((m) => (m + 1) % months), 650);
+    timer.current = window.setInterval(() => setAt((m) => (m + 1) % months), 700);
     return () => { if (timer.current) window.clearInterval(timer.current); };
   }, [playing, months]);
 
-  /* Read at the month on the playhead rather than at the peak. The peak is one number for
-     a year; this is the year. */
   const rows = result.teams.map((t) => ({ team: t.teamId, m: t.months[month] as TeamMonth }));
   const overNow = rows.filter((r) => r.m.utilization > r.m.targetUtilization).length;
-  /* The worst queue, not the average of them. A tenth more work takes one team to 32%
-     answered while the mean across the queues reads 78%, and the mean is the number that
-     lets a plan through a review. Averages are where this kind of collapse hides. */
   const queues = rows.filter((r) => r.m.serviceLevel !== null);
   const worstQueue = queues.length
     ? queues.reduce((a, b) => (b.m.serviceLevel! < a.m.serviceLevel! ? b : a))
     : null;
+  const shedNow = rows.reduce((a, r) => a + r.m.shedHours, 0);
 
-  const dial = (k: keyof Dials, label: string, lo: number, hi: number, fmtV: (v: number) => string) => (
-    <label className="sb-dial" key={k}>
-      <span className="sb-dial-h">{label}<b>{fmtV(dials[k])}</b></span>
-      <input type="range" min={lo} max={hi} step={0.01} value={dials[k]}
-             onChange={(e) => setDials({ ...dials, [k]: Number(e.target.value) })} />
-    </label>
+  const setFte = (id: string, v: number) => {
+    const t = tuned.teams.find((x) => x.id === id)!;
+    setEdits((e) => ({ ...e, fte: { ...e.fte, [id]: clamp(Math.round(t.currentFte + v), 1, 5000) } }));
+  };
+  const setTarget = (id: string, v: number) => {
+    const t = tuned.teams.find((x) => x.id === id)!;
+    setEdits((e) => ({ ...e, target: { ...e.target, [id]: clamp(Number((t.targetUtilization + v).toFixed(2)), 0.4, 0.99) } }));
+  };
+  const setVol = (id: string, mult: number) =>
+    setEdits((e) => ({ ...e, vol: { ...e.vol, [id]: clamp((e.vol[id] ?? 1) * mult, 0.3, 3) } }));
+
+  const step = (label: string, value: string, onDown: () => void, onUp: () => void, sub?: string) => (
+    <div className="fi-step">
+      <span className="fi-step-l">{label}</span>
+      <span className="fi-step-c">
+        <button type="button" onClick={onDown} aria-label={`${label}: less`}>&minus;</button>
+        <b>{value}</b>
+        <button type="button" onClick={onUp} aria-label={`${label}: more`}>+</button>
+      </span>
+      {sub && <span className="fi-step-s">{sub}</span>}
+    </div>
   );
+
+  const inspector = () => {
+    if (sel?.kind === 'team') {
+      const t = tuned.teams.find((x) => x.id === sel.id)!;
+      const m = rows.find((r) => r.team === sel.id)!.m;
+      const feeds = result.flow.filter((f) => f.kind === 'route' && f.sourceId === sel.id);
+      const fedBy = result.flow.filter((f) => f.toTeamId === sel.id);
+      return (
+        <>
+          <div className="fi-id">
+            <span className="fi-kind">Team</span>
+            <b>{t.name}</b>
+            <span className="fi-sub">
+              {fedBy.length ? `fed by ${fedBy.map((f) => f.label).join(', ')}` : 'change work only'}
+              {feeds.length > 0 && `; ${feeds.map((f) => `${shareLabel(f.share)} goes on to ${name(f.toTeamId)}`).join(', ')}`}
+            </span>
+          </div>
+          <div className="fi-steps">
+            {step('People', String(Math.round(m.availableFte)), () => setFte(t.id, -1), () => setFte(t.id, 1),
+                  `${fmt.money(t.monthlyFteCost)} each a month`)}
+            {step('Plans to run at', `${Math.round(t.targetUtilization * 100)}%`, () => setTarget(t.id, -0.05), () => setTarget(t.id, 0.05),
+                  'of the hours it has')}
+          </div>
+          <dl className="fi-facts">
+            <div><dt>Work this month</dt><dd>{fmt.hours(m.workloadHours)}</dd></div>
+            <div><dt>Hours it has</dt><dd>{fmt.hours(m.availableProductiveHours)}</dd></div>
+            <div><dt>Waiting from last month</dt><dd>{m.carriedInHours > 0 ? fmt.hours(m.carriedInHours) : 'none'}</dd></div>
+            <div><dt>Turned away</dt><dd className={m.shedHours > 0 ? 'bad' : ''}>{m.shedHours > 0 ? fmt.hours(m.shedHours) : 'none'}</dd></div>
+            {m.serviceLevel !== null && <div><dt>Answered in time</dt><dd>{Math.round(m.serviceLevel * 100)}%</dd></div>}
+          </dl>
+        </>
+      );
+    }
+    if (sel?.kind === 'stream') {
+      const s = tuned.demandStreams.find((x) => x.id === sel.id)!;
+      const f = result.flow.find((x) => x.sourceId === sel.id && x.kind === 'arrival')!;
+      const mult = edits.vol[sel.id] ?? 1;
+      return (
+        <>
+          <div className="fi-id">
+            <span className="fi-kind">Arriving work</span>
+            <b>{s.name}</b>
+            <span className="fi-sub">lands on {name(s.teamId)}, {s.handlingMinutesPerUnit} minutes each</span>
+          </div>
+          <div className="fi-steps">
+            {step('Work arriving', `${Math.round(mult * 100)}%`, () => setVol(s.id, 1 / 1.1), () => setVol(s.id, 1.1),
+                  'of the plan')}
+          </div>
+          <dl className="fi-facts">
+            <div><dt>This month</dt><dd>{fmt.count(f.unitsByMonth[month])} {s.unit}</dd></div>
+            <div><dt>Across the year</dt><dd>{fmt.count(s.annualVolume)} {s.unit}</dd></div>
+            <div><dt>Hours it makes</dt><dd>{fmt.hours(f.hoursByMonth[month])}</dd></div>
+            {s.answerWithinSeconds && <div><dt>Meant to be picked up in</dt><dd>{s.answerWithinSeconds}s</dd></div>}
+          </dl>
+        </>
+      );
+    }
+    return (
+      <div className="fi-legend">
+        <p className="fi-legend-h">Click anything on the canvas to change it.</p>
+        <ul>
+          <li><i className="lg-src" /> Work arriving, with how much lands this month</li>
+          <li><i className="lg-node" /> A team: how full it is against the line it plans to run at</li>
+          <li><i className="lg-q" /> Work waiting in front of it, one mark to the week</li>
+          <li><i className="lg-shed" /> Work turned away, which never comes back</li>
+        </ul>
+      </div>
+    );
+  };
 
   return (
     <main className="sandbox">
       <header className="sb-top">
         <div>
           <span className="rb-when">The sandbox</span>
-          <h1>Move something. Watch the year.</h1>
+          <h1>Watch the work move.</h1>
           <p className="sb-lede">
-            {isFixture ? model.name : 'Your model'}, {months} months, recomputed on every drag.
-            Nothing here is a preview of the real thing; it is the same engine the run uses,
-            answering in about a third of a millisecond.
+            {isFixture ? model.name : 'Your model'}, {months} months of it, recomputed on every
+            change. Same engine the run uses, answering in about a third of a millisecond.
           </p>
         </div>
         <div className="sb-verdict">
           {broke
-            ? <><b>{name(broke.teamId)}</b> goes past what it can hold in <b>{MONTHS[result.teams[0].months.findIndex((x) => x.month === broke.month)] ?? broke.month}</b>.</>
+            ? <><b>{name(broke.teamId)}</b> goes past what it can hold in <b>{MONTHS[broke.index] ?? broke.month}</b>.</>
             : <>Nothing goes past what it can hold this year.</>}
         </div>
       </header>
 
-      <div className="sb-body">
-        <aside className="sb-rail">
-          <p className="sb-rail-h">Start from</p>
-          <div className="sb-presets">
-            {PRESETS.map((p) => (
-              <button key={p.id}
-                      className={'sb-preset' + (JSON.stringify(p.dials) === JSON.stringify(dials) ? ' on' : '')}
-                      onClick={() => setDials(p.dials)}>
-                <b>{p.label}</b><span>{p.note}</span>
-              </button>
-            ))}
-          </div>
-          <p className="sb-rail-h">Or turn these</p>
-          {dial('demand', 'Work arriving', 0.6, 1.6, (v) => `${Math.round(v * 100)}%`)}
-          {dial('people', 'People', 0.7, 1.4, (v) => `${Math.round(v * 100)}%`)}
-          {dial('target', 'How hard you run them', 0.8, 1.25, (v) => `${Math.round(v * 100)}%`)}
-          <p className="sb-note">
-            Move work or people by a tenth and watch the worst month fall from nearly everything
-            answered to almost nothing. Queues hold, and then they do not, and the distance
-            between those two is smaller than anybody plans for.
-          </p>
-          <p className="sb-note">
-            The third dial does something else. It changes no work and no people, only the line
-            you are measured against, so teams stop counting as over capacity while doing exactly
-            what they were doing before.
-          </p>
-        </aside>
-
-        <section className="sb-canvas">
-          {/* Two readings, because on a calm plan the answer rate is flat all year and a
-              header that only shows a constant teaches the reader to ignore it. The count
-              of teams past their limit moves from the first month. */}
-          <div className="sb-canvas-h">
-            <span>{MONTHS[month]}</span>
-            <em className={overNow > 0 ? 'mid' : ''}>
-              {overNow === 0 ? 'every team inside its limit' : `${overNow} of ${rows.length} past their limit`}
-            </em>
-            {worstQueue && (
-              <em className={worstQueue.m.serviceLevel! < 0.5 ? 'bad' : worstQueue.m.serviceLevel! < 0.85 ? 'mid' : ''}>
-                {Math.round(worstQueue.m.serviceLevel! * 100)}% answered on {name(worstQueue.team)}, its worst queue
-              </em>
-            )}
-          </div>
-
-          <ul className="sb-teams">
-            {rows.map(({ team, m }) => {
-              const over = m.utilization > m.targetUtilization;
-              const hard = m.utilization > 1;
-              return (
-                <li key={team} className={hard ? 'hard' : over ? 'over' : ''}>
-                  <span className="sb-name">{name(team)}</span>
-                  <span className="sb-track">
-                    <i style={{ width: Math.min(100, m.utilization * 100) + '%' }} />
-                    <b style={{ left: Math.min(100, m.targetUtilization * 100) + '%' }} />
-                  </span>
-                  <span className="sb-pct">{Math.round(m.utilization * 100)}%</span>
-                </li>
-              );
-            })}
-          </ul>
-
-          <div className="sb-scrub">
-            <button className="sb-play" onClick={() => setPlaying((p) => !p)}>
-              {playing ? 'Pause' : 'Play the year'}
-            </button>
-            <input type="range" min={0} max={months - 1} step={1} value={month}
-                   aria-label="Month"
-                   onChange={(e) => { setPlaying(false); setAt(Number(e.target.value)); }} />
-            <ol className="sb-months">
-              {Array.from({ length: months }, (_, i) => (
-                <li key={i} className={i === month ? 'on' : ''}>{MONTHS[i]?.[0]}</li>
-              ))}
-            </ol>
-          </div>
-
-          <p className="rb-bind sb-bind">
-            <span className="rb-bind-k">Five more people:</span>
-            {binding.service || binding.portfolio ? (
-              <>
-                {' '}{[
-                  binding.service ? `${name(binding.service.teamId)} answers ${Math.round(binding.service.gain * 100)} points more` : '',
-                  binding.portfolio ? `${name(binding.portfolio.teamId)} puts ${fmt.money(binding.portfolio.gain, { precise: true })} less at risk` : '',
-                ].filter(Boolean).join(', or ')}.
-              </>
-            ) : <> nowhere would that move this year.</>}
-            {binding.idle.length > 0 && (
-              <span className="rb-bind-idle"> On {binding.idle.length} of the {model.teams.length} teams, nothing at all.</span>
-            )}
-          </p>
-        </section>
+      <div className="fc-tools">
+        <label className="fc-pick">
+          <span>Year</span>
+          <select value={scenarioId} onChange={(e) => setScenarioId(e.target.value)}>
+            {model.scenarios.map((sc) => <option key={sc.id} value={sc.id}>{sc.name}</option>)}
+          </select>
+        </label>
+        <p className="fc-pick-note">{scenario.description}</p>
+        {touched(edits) > 0 && (
+          <button type="button" className="fc-reset" onClick={() => setEdits(NONE)}>
+            Undo my changes ({touched(edits)})
+          </button>
+        )}
       </div>
+
+      <div className="fc-head">
+        <span className="fc-month">{MONTHS[month]}</span>
+        <em className={overNow > 0 ? 'mid' : ''}>
+          {overNow === 0 ? 'every team inside its limit' : `${overNow} of ${rows.length} past their limit`}
+        </em>
+        {worstQueue && (
+          <em className={worstQueue.m.serviceLevel! < 0.5 ? 'bad' : worstQueue.m.serviceLevel! < 0.85 ? 'mid' : ''}>
+            {Math.round(worstQueue.m.serviceLevel! * 100)}% answered on {name(worstQueue.team)}, its worst queue
+          </em>
+        )}
+        {shedNow > 0 && <em className="bad">{fmt.hours(shedNow)} turned away</em>}
+      </div>
+
+      <FlowCanvas model={tuned} result={result} month={month} selected={sel} onSelect={setSel}
+                  compact={(n) => fmt.count(n)} />
+      <p className="fc-hint">The canvas is wider than this screen. Drag it sideways to follow the work.</p>
+
+      <div className="sb-scrub fc-transport">
+        <button className="sb-play" onClick={() => setPlaying((p) => !p)}>
+          {playing ? 'Pause' : 'Play the year'}
+        </button>
+        <input type="range" min={0} max={months - 1} step={1} value={month}
+               aria-label="Month"
+               onChange={(e) => { setPlaying(false); setTouchedScrub(true); setAt(Number(e.target.value)); }} />
+        <ol className="sb-months">
+          {Array.from({ length: months }, (_, i) => (
+            <li key={i} className={i === month ? 'on' : ''}>{MONTHS[i]?.[0]}</li>
+          ))}
+        </ol>
+      </div>
+
+      <section className="fc-insp" aria-live="polite">{inspector()}</section>
+
+      <p className="rb-bind sb-bind">
+        <span className="rb-bind-k">Five more people:</span>
+        {binding.service || binding.portfolio ? (
+          <>
+            {' '}{[
+              binding.service ? `${name(binding.service.teamId)} answers ${Math.round(binding.service.gain * 100)} points more` : '',
+              binding.portfolio ? `${name(binding.portfolio.teamId)} puts ${fmt.money(binding.portfolio.gain, { precise: true })} less at risk` : '',
+            ].filter(Boolean).join(', or ')}.
+          </>
+        ) : <> nowhere would that move this year.</>}
+        {binding.idle.length > 0 && (
+          <span className="rb-bind-idle"> On {binding.idle.length} of the {model.teams.length} teams, nothing at all.</span>
+        )}
+      </p>
 
       <div className="rb-opts sb-go">
         <a className="rb-opt rb-go" href="#/run"><b>Take the run &rarr;</b>

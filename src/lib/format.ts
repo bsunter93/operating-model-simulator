@@ -30,6 +30,8 @@ export interface MoneyOpts {
 export interface Fmt {
   money(v: number, opts?: MoneyOpts): string;
   num(v: number): string;
+  /** A count a person would read off a diagram: 35K cases, not 35,000. */
+  count(v: number): string;
   /** Hours of work, at the scale a year of them actually lands on. */
   hours(v: number): string;
   currency: string;
@@ -76,6 +78,9 @@ export function makeFmt(currency = 'USD', locale = 'en-US'): Fmt {
       return typographic(nf(opts).formatToParts(Number.isFinite(v) ? v : 0));
     },
     num: (v) => nf({ maximumFractionDigits: 0 }).format(Math.round(v)),
+    count: (v) => (Math.abs(v) >= 10000
+      ? nf({ ...short, maximumFractionDigits: 1 }).format(v)
+      : nf({ maximumFractionDigits: 0 }).format(Math.round(v))),
     hours: (v) => (v >= 1000
       ? nf({ ...short, maximumFractionDigits: 1 }).format(v)
       : nf({ maximumFractionDigits: 0 }).format(Math.round(v))) + ' hours',
