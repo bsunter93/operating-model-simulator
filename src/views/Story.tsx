@@ -267,7 +267,7 @@ export function Story() {
       if (go === 'sec-decide') setStep(5);
       qs.delete('p'); qs.delete('go'); qs.delete('team');
       const str = qs.toString();
-      history.replaceState(null, '', '#/' + (str ? '?' + str : ''));
+      history.replaceState(null, '', '#/model' + (str ? '?' + str : ''));
     };
     on();
     window.addEventListener('hashchange', on);

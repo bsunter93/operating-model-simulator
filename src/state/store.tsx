@@ -156,7 +156,15 @@ interface Ctx {
 
 const StoreContext = createContext<Ctx | null>(null);
 
-const PAGES = ['#/mine', '#/summary', '#/model', '#/answer', '#/sandbox'];
+const PAGES = ['#/mine', '#/summary', '#/model', '#/answer', '#/sandbox', '#/run'];
+
+/**
+ * Where the full board lives. Four helpers in this file built links as "#/" plus a query,
+ * which meant the model back when the model was the landing page. It has not been for some
+ * time, so "next: what it costs" inside the board was quietly throwing the reader out of
+ * the board. Named now, so the next time the front door moves this does not.
+ */
+const MODEL = '#/model';
 
 /**
  * A shared model arrives in the hash, and it has to be read before anything else touches
@@ -370,7 +378,7 @@ export function panelHref(p: Panel | null): string {
   const q = new URLSearchParams(window.location.hash.split('?')[1] ?? '');
   if (p) q.set('p', panelKey(p)); else q.delete('p');
   const s = q.toString();
-  return '#/' + (s ? '?' + s : '');
+  return MODEL + (s ? '?' + s : '');
 }
 
 export function usePanel(): Panel | null {
@@ -407,7 +415,7 @@ export function migrateLegacyHash(model: OperatingModel): void {
   else if (view === 'plan' || view === 'about') qs.set('p', view);
   else if (view === 'whatif' || view === 'options' || view === 'decide') { qs.delete('p'); setTimeout(() => scrollToSection(`sec-${view}`), 150); }
   const s = qs.toString();
-  history.replaceState(null, '', '#/' + (s ? '?' + s : ''));
+  history.replaceState(null, '', MODEL + (s ? '?' + s : ''));
 }
 
 /**
@@ -430,5 +438,5 @@ export function href(path: string): string {
     if (view === 'options' && arg) q.set('team', arg);
   }
   const s = q.toString();
-  return '#/' + (s ? '?' + s : '');
+  return MODEL + (s ? '?' + s : '');
 }

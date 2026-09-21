@@ -230,7 +230,7 @@ export function Sandbox() {
       </div>
 
       <div className="rb-opts sb-go">
-        <a className="rb-opt rb-go" href="#/"><b>Take the run &rarr;</b>
+        <a className="rb-opt rb-go" href="#/run"><b>Take the run &rarr;</b>
           <span>Five decisions on a year with real pressure in it, and a scoreboard at the end.</span></a>
         <a className="rb-opt" href="#/model"><b>Open the full model</b>
           <span>Every team, month, scenario and assumption behind this.</span></a>

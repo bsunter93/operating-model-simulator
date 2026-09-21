@@ -1185,6 +1185,14 @@ details.tuck p{font-size:12.5px;color:var(--muted);margin:8px 0 6px}
 
 /* What a person is worth, and where. Spans the dashboard rather than sitting in a column,
    because it is a sentence and sentences want width. */
+/* Empty until there is something to say, so the live region can sit in the DOM
+   permanently without leaving a box on the page. */
+.rb-result:empty{display:none;border:0;padding:0;margin:0}
+.rb-undo{margin-left:10px;padding:0;border:0;background:none;cursor:pointer;
+  font:500 9px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);
+  text-decoration:underline;text-underline-offset:3px}
+.rb-undo:hover{color:var(--accent)}
+
 .rb-bind{grid-column:1 / -1;margin:10px 0 0;padding-top:10px;border-top:1px solid var(--hair);
   font:400 13px/1.5 var(--sans);color:var(--body)}
 .rb-bind-k{font-weight:600;color:var(--ink)}

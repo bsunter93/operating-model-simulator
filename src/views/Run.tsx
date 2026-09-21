@@ -579,17 +579,32 @@ function RunFor({ model, spec }: { model: OperatingModel; spec: RunSpec }) {
             </>
           ) : !done ? (
             <>
-              <span className="rb-when">{d.when} &middot; decision {step + 1} of {decisions.length}</span>
+              <span className="rb-when">
+                {d.when} &middot; decision {step + 1} of {decisions.length}
+                {/* The page invites you to hover a choice and watch the board move before
+                    committing, and then made every commitment permanent. Misclick the
+                    second call and you played out three you did not choose. */}
+                {step > 0 && (
+                  <button className="rb-undo" onClick={() => setPicks(picks.slice(0, -1))}>
+                    &larr; change the last call
+                  </button>
+                )}
+              </span>
               <h1>{d.question}</h1>
               <p className="rb-setup">{d.setup}</p>
               {d.focusTeamId && <FocusLine model={model} result={current} teamId={d.focusTeamId} />}
 
-              {lastLines.length > 0 && (
-                <div className="rb-result">
-                  <span>What your last call did</span>
-                  {lastLines.map((l) => <p key={l}>{l}</p>)}
-                </div>
-              )}
+              {/* Announced, not just drawn. These sentences are the whole feedback loop of
+                  the run, and to anyone using a screen reader they did not exist. The
+                  container is always here so the region is registered before it changes. */}
+              <div className="rb-result" role="status" aria-live="polite">
+                {lastLines.length > 0 && (
+                  <>
+                    <span>What your last call did</span>
+                    {lastLines.map((l) => <p key={l}>{l}</p>)}
+                  </>
+                )}
+              </div>
 
               <div className="rb-opts">
                 {d.options.map((o) => {

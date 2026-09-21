@@ -17,7 +17,11 @@ function useView() {
     : /^#\/sandbox/.test(window.location.hash) ? 'sandbox'
     : /^#\/mine/.test(window.location.hash) ? 'mine'
     : /^#\/summary/.test(window.location.hash) ? 'summary'
-    : 'run');
+    : /^#\/run/.test(window.location.hash) ? 'run'
+    /* The sandbox is the front door. Three dials and a year somebody can scrub is five
+       seconds to the first real thing; the run is three minutes before it pays anything
+       back, which is the right second step and the wrong first one. */
+    : 'sandbox');
   const [view, setView] = useState(which);
   useEffect(() => {
     const on = () => setView(which());

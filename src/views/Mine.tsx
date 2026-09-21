@@ -187,7 +187,7 @@ export function Mine() {
           <Controls teamId={focus} onTeam={(id) => dispatch({ type: 'team', id })} compact />
         </div>
       </div>
-      <p className="mine-foot">Nothing leaves your browser. Every figure recomputes as you type. <a href="#/">Back to the story</a></p>
+      <p className="mine-foot">Nothing leaves your browser. Every figure recomputes as you type. <a href="#/model">Back to the story</a></p>
     </div>
   );
 }
