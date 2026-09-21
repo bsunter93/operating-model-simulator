@@ -45,8 +45,14 @@ export function Why({ w, team, month, answered, fmt }:
           <i key={s.key} className={'k-' + s.kind} style={{ width: `${(s.hours / total) * 100}%` }}
              title={`${s.label}: ${fmt.hours(s.hours)}`} />
         ))}
-        <u className="why-plan" style={{ left: `${planAt}%` }}><span>planned for</span></u>
-        <u className="why-cap" style={{ left: `${capAt}%` }}><span>could do</span></u>
+        {/* A label anchored to the right of a marker sitting at the far end of the bar
+            pushes the panel wider than the page. Near the end they flip inward. */}
+        <u className="why-plan" style={{ left: `${planAt}%` }}>
+          <span className={planAt < 14 ? 'in' : ''}>planned for</span>
+        </u>
+        <u className="why-cap" style={{ left: `${capAt}%` }}>
+          <span className={capAt > 86 ? 'in' : ''}>could do</span>
+        </u>
       </div>
 
       <ul className="why-key">

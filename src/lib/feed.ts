@@ -62,7 +62,7 @@ export function feedFor(
 
   /* Decisions belong in the feed too: the year is partly the reader's doing and the log
      should say so in the same voice as everything else. */
-  const applied = applyDecisions(model, decisions);
+  const applied = applyDecisions(model, decisions).model;
   for (const d of decisions) {
     const i = result.months.indexOf(d.month);
     if (i >= 0) out.push({ month: i, tone: 'flat', text: `You: ${d.label.toLowerCase()}` });

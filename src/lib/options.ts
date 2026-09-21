@@ -62,7 +62,7 @@ export function movesFor(
   const row = current.teams.find((t) => t.teamId === teamId)?.months[monthIndex];
   if (!team || !row) return [];
   const month = months[monthIndex];
-  const applied = applyDecisions(model, taken);
+  const applied = applyDecisions(model, taken).model;
   const live = applied.teams.find((t) => t.id === teamId)!;
 
   /* Enough people to bring this month's work inside the line the team plans to run at,
@@ -110,7 +110,8 @@ export function movesFor(
   }
 
   return candidates.map(({ d, title }) => {
-    const after = run(applyDecisions(model, [...taken, d]), { scenario: scenarioId });
+    const { model: m2, interventionIds } = applyDecisions(model, [...taken, d]);
+    const after = run(m2, { scenario: scenarioId, interventions: interventionIds });
     const lands = firstDivergence(current, after);
     return {
       decision: d,

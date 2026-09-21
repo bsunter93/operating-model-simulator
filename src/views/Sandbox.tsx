@@ -9,6 +9,9 @@ import { movesFor, type Move } from '../lib/options';
 import { feedFor } from '../lib/feed';
 import { pressureOf, PRESSURE_WORD, workloadOf, yearShape, asUnits } from '../lib/workload';
 import { chainFor } from '../lib/chain';
+import { ledgerFor } from '../lib/ledger';
+import { tracksFor, divergesAt, type Track } from '../lib/replay';
+import { Replay } from '../components/Replay';
 import { pct, pp, signed } from '../lib/format';
 import { FlowCanvas, type Sel } from '../components/FlowCanvas';
 import { YearSpine } from '../components/YearSpine';
@@ -59,16 +62,20 @@ export function Sandbox() {
   const scenario = model.scenarios.find((x) => x.id === scenarioId) ?? model.scenarios[0];
   const [at, setAt] = useState(0);
 
-  const tuned = useMemo(() => applyDecisions(model, decisions), [model, decisions]);
-  const result = useMemo(() => run(tuned, { scenario: scenarioId }), [tuned, scenarioId]);
+  const applied = useMemo(() => applyDecisions(model, decisions), [model, decisions]);
+  const tuned = applied.model;
+  const result = useMemo(
+    () => run(tuned, { scenario: scenarioId, interventions: applied.interventionIds }),
+    [tuned, scenarioId, applied.interventionIds],
+  );
   const months = result.teams[0]?.months.length ?? 12;
   const month = Math.min(at, months - 1);
   const name = (id: string) => model.teams.find((t) => t.id === id)?.name ?? id;
 
   const baseResult = useMemo(() => run(model, { scenario: scenarioId }), [model, scenarioId]);
   const binding = useMemo(
-    () => bindingConstraints(tuned, { decisions: [], scenarioId }, [], result),
-    [tuned, scenarioId, result],
+    () => bindingConstraints(tuned, { decisions: [], scenarioId }, applied.interventionIds, result),
+    [tuned, scenarioId, result, applied.interventionIds],
   );
   const baseBinding = useMemo(
     () => bindingConstraints(model, { decisions: [], scenarioId }, [], baseResult),
@@ -76,6 +83,20 @@ export function Sandbox() {
   );
   const rec = useMemo(() => receipt(baseResult, result, baseBinding, binding),
     [baseResult, result, baseBinding, binding]);
+  /* Both of these run the year several more times, so they are built only once the reader
+     has actually decided something. */
+  const ledger = useMemo(
+    () => (decisions.length ? ledgerFor(model, decisions, scenarioId) : []),
+    [model, decisions, scenarioId],
+  );
+  const tracks = useMemo(
+    () => (decisions.length ? tracksFor(baseResult, result) : []),
+    [decisions.length, baseResult, result],
+  );
+  const diverges = useMemo(() => (tracks.length ? divergesAt(tracks) : null), [tracks]);
+  const trackValue = (t: Track, v: number) =>
+    t.unit === 'money' ? fmt.money(v) : t.unit === 'pct' ? pct(v) : String(Math.round(v));
+
   const shape = useMemo(() => yearShape(result), [result]);
   const baseShape = useMemo(() => (decisions.length ? yearShape(baseResult) : null), [decisions, baseResult]);
   const feed = useMemo(() => feedFor(model, decisions, result, name).filter((f) => f.month <= month),
@@ -297,26 +318,25 @@ export function Sandbox() {
       {decisions.length > 0 && (
         <section className="om-panel om-year">
           <h2 className="om-q">Your year, against the plan as written</h2>
-          <ol className="om-log">
-            {decisions.map((d, i) => (
-              <li key={d.id + i}>
-                <span className="om-log-m">{MONTHS[result.months.indexOf(d.month)] ?? d.month}</span>
-                <b>{d.label}</b>
-              </li>
-            ))}
-          </ol>
+
           {rec.lines.length === 0 ? (
             <p className="fc-rcpt-none">Nothing measurable moved.</p>
           ) : (
-            <ul className="fc-rcpt-l">
-              {rec.lines.map((l) => (
-                <li key={l.key} className={l.good ? 'up' : 'down'}>
-                  <span className="rc-k">{l.label}</span>
-                  <b className="rc-d">{asDelta(l)}</b>
-                  <span className="rc-v">{asValue(l.from, l.unit)} &rarr; {asValue(l.to, l.unit)}</span>
-                </li>
-              ))}
-            </ul>
+            <table className="om-vs">
+              <thead>
+                <tr><th scope="col" /><th scope="col">The plan</th><th scope="col">Your year</th><th scope="col" /></tr>
+              </thead>
+              <tbody>
+                {rec.lines.map((l) => (
+                  <tr key={l.key}>
+                    <th scope="row">{l.label}</th>
+                    <td>{asValue(l.from, l.unit)}</td>
+                    <td className="om-vs-mine">{asValue(l.to, l.unit)}</td>
+                    <td className={l.good ? 'up' : 'down'}>{asDelta(l)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           )}
           <p className="fc-rcpt-f">
             {rec.firstMonth !== null
@@ -330,6 +350,44 @@ export function Sandbox() {
                 : <>Nothing binds the {rec.moved.metric === 'queue' ? 'queue' : 'money'} any more.</>
               : <>The constraint has not moved.</>}
           </p>
+
+          {tracks.length > 0 && (
+            <Replay tracks={tracks} months={months} labels={MONTHS} diverges={diverges}
+                    value={trackValue} />
+          )}
+
+          {/* Each decision against the ones before it, not against the plan, because the
+              second hire into a team you have already relieved is not worth what the
+              first one was. */}
+          <h3 className="om-q om-q2">What each call bought</h3>
+          <ol className="om-ledger">
+            {ledger.map((e, i) => (
+              <li key={e.decision.id + i}>
+                <p className="om-led-h">
+                  <span className="om-log-m">{MONTHS[result.months.indexOf(e.decision.month)] ?? e.decision.month}</span>
+                  <b>{e.decision.label}</b>
+                </p>
+                {e.effect.lines.length === 0 ? (
+                  <p className="om-led-none">Bought nothing measurable on top of what was already decided.</p>
+                ) : (
+                  <ul className="om-led-l">
+                    {e.effect.lines.map((l) => (
+                      <li key={l.key} className={l.good ? 'up' : 'down'}>
+                        <b>{asDelta(l)}</b>
+                        <span>{l.label.toLowerCase()}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                <p className="om-led-f">
+                  {e.effect.firstMonth !== null
+                    ? <>Showed up in {MONTHS[e.effect.firstMonth]}.</>
+                    : <>Never showed up this year.</>}
+                  {e.effect.moved?.to && <> Moved the constraint to {name(e.effect.moved.to)}.</>}
+                </p>
+              </li>
+            ))}
+          </ol>
         </section>
       )}
 

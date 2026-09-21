@@ -1507,7 +1507,9 @@ details.tuck p{font-size:12.5px;color:var(--muted);margin:8px 0 6px}
 /* the panel: why, decide, or what you have done */
 .om-panel{margin-top:14px;padding:0 16px 16px;border:1px solid var(--line);border-radius:10px;
   background:var(--surface)}
-.om-panel{padding:16px}
+/* clip rather than scroll: a marker label near the end of a bar used to push the whole
+   page 17px wide on a phone */
+.om-panel{padding:16px;overflow-x:clip}
 .om-q{margin:0 0 12px;font:600 16px/1.3 var(--display);color:var(--ink)}
 .om-q2{margin-top:22px;padding-top:18px;border-top:1px solid var(--hair)}
 /* the chain: what being over capacity actually cost, followed until it reaches money */
@@ -1519,6 +1521,100 @@ details.tuck p{font-size:12.5px;color:var(--muted);margin:8px 0 6px}
 .om-chain li.t-warn{color:var(--warm)}
 .om-chain li.t-bad{color:var(--alert);font-weight:600}
 .om-year{margin-top:14px}
+
+/* why this team is where it is: one bar for everything it was handed, cut into the things
+   that handed it, with markers where its plan and its ceiling fall */
+.why{margin:14px 0 4px;padding-top:14px;border-top:1px solid var(--hair)}
+.why-q{margin:0 0 12px;font:400 13.5px/1.55 var(--sans);color:var(--body);max-width:74ch}
+.why-q b{color:var(--ink);font-weight:600}
+.why-bar{position:relative;display:flex;height:22px;border-radius:3px;overflow:visible;
+  background:var(--hair);margin-bottom:28px}
+.why-bar i{display:block;height:100%}
+.why-bar i:first-child{border-radius:3px 0 0 3px}
+.why-bar i:last-of-type{border-radius:0 3px 3px 0}
+.why-bar .k-arrival{background:var(--accent)}
+.why-bar .k-route{background:var(--steel)}
+.why-bar .k-change{background:var(--plum)}
+.why-bar .k-waiting{background:var(--warm)}
+.why-bar u{position:absolute;top:-4px;bottom:-4px;width:2px;text-decoration:none}
+.why-bar u span{position:absolute;top:100%;margin-top:4px;
+  font:500 9px/1 var(--mono);letter-spacing:.04em;white-space:nowrap}
+/* The two labels grow away from each other. Centred on their markers they collided into
+   "planned forcould do" whenever a team's plan sat close to its ceiling. */
+.why-plan{background:var(--muted)}
+.why-plan span{right:4px;color:var(--muted)}
+.why-plan span.in{right:auto;left:4px}
+.why-cap{background:var(--ink)}
+.why-cap span{left:4px;color:var(--ink)}
+.why-cap span.in{left:auto;right:4px}
+.why-key{list-style:none;margin:0 0 10px;padding:0;display:flex;flex-wrap:wrap;gap:6px 20px}
+.why-key li{display:flex;align-items:center;gap:7px;font:400 11.5px/1 var(--sans);color:var(--muted)}
+.why-key i{flex:none;width:9px;height:9px;border-radius:2px}
+.why-key .k-arrival{background:var(--accent)}
+.why-key .k-route{background:var(--steel)}
+.why-key .k-change{background:var(--plum)}
+.why-key .k-waiting{background:var(--warm)}
+.why-k-l{color:var(--body)}
+.why-key b{font:500 11.5px/1 var(--mono);color:var(--ink)}
+.why-key em{font:400 11px/1 var(--mono);font-style:normal;color:var(--muted)}
+.why-end{margin:0;font:400 12.5px/1.6 var(--sans);color:var(--muted);max-width:76ch}
+.why-end b{color:var(--ink);font-weight:600}
+
+/* base against yours, as a table, because that is what a comparison is */
+.om-vs{width:100%;border-collapse:collapse;margin:0 0 14px}
+.om-vs th,.om-vs td{padding:7px 10px;text-align:right;
+  font:500 13px/1.3 var(--mono);font-variant-numeric:tabular-nums;
+  border-bottom:1px solid var(--hair)}
+.om-vs thead th{font:600 9px/1 var(--mono);letter-spacing:.11em;text-transform:uppercase;
+  color:var(--muted);border-bottom-color:var(--line)}
+.om-vs tbody th{text-align:left;font:400 12.5px/1.35 var(--sans);color:var(--body);
+  white-space:normal}
+.om-vs td{color:var(--muted)}
+.om-vs-mine{color:var(--ink)!important;font-weight:600}
+.om-vs td.up{color:var(--ok)}
+.om-vs td.down{color:var(--alert)}
+
+/* the replay: two years pulling apart, month by month */
+.rp{margin:18px 0 4px;padding:14px 0 0;border-top:1px solid var(--hair)}
+.rp-head{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+.rp-go{padding:7px 14px;border:1px solid var(--accent);border-radius:999px;
+  background:var(--accent-soft);font:600 12px/1 var(--sans);color:var(--ink)}
+.rp-go:hover{background:var(--accent);color:var(--paper)}
+.rp-at{font:600 17px/1 var(--display);color:var(--ink);min-width:2.6rem}
+.rp-div{font:400 12px/1.4 var(--sans);color:var(--muted)}
+.rp-div b{color:var(--ink);font-weight:600}
+.rp-tracks{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px}
+.rp-track svg{display:block;width:100%;height:56px;overflow:visible}
+.rp-k{margin:0 0 5px;font:500 10px/1 var(--mono);letter-spacing:.05em;color:var(--muted)}
+.rp-base{fill:none;stroke:var(--muted);stroke-width:1.2;opacity:.45;stroke-dasharray:3 3;
+  vector-effect:non-scaling-stroke;stroke-linejoin:round}
+.rp-mine{fill:none;stroke:var(--accent);stroke-width:2;
+  vector-effect:non-scaling-stroke;stroke-linejoin:round;stroke-linecap:round}
+.rp-head-l{stroke:var(--ink);stroke-width:1;opacity:.28;vector-effect:non-scaling-stroke}
+.rp-v{display:flex;align-items:baseline;gap:8px;margin:5px 0 0;flex-wrap:wrap}
+.rp-v b{font:600 15px/1 var(--mono);color:var(--ink);font-variant-numeric:tabular-nums}
+.rp-v span{font:400 10.5px/1 var(--mono);color:var(--muted)}
+.rp-v em{font:600 10px/1 var(--mono);font-style:normal;letter-spacing:.04em;text-transform:uppercase}
+.rp-v em.up{color:var(--ok)}
+.rp-v em.down{color:var(--alert)}
+.rp-axis{list-style:none;display:flex;justify-content:space-between;margin:12px 0 0;padding:0}
+.rp-axis li{font:500 9px/1 var(--mono);color:var(--line)}
+.rp-axis li.past{color:var(--muted)}
+.rp-axis li.on{color:var(--ink);font-weight:700}
+
+/* what each call bought, given the ones before it */
+.om-ledger{list-style:none;margin:0;padding:0;display:grid;gap:12px}
+.om-ledger > li{padding:12px 14px;border:1px solid var(--line);border-radius:9px;
+  background:var(--paper)}
+.om-led-h{display:flex;align-items:baseline;gap:11px;margin:0 0 8px}
+.om-led-h b{font:600 13px/1.35 var(--sans);color:var(--ink)}
+.om-led-l{list-style:none;display:flex;flex-wrap:wrap;gap:6px 20px;margin:0;padding:0}
+.om-led-l li{display:flex;align-items:baseline;gap:6px}
+.om-led-l b{font:600 13px/1 var(--mono);font-variant-numeric:tabular-nums}
+.om-led-l li.up b{color:var(--ok)}
+.om-led-l li.down b{color:var(--alert)}
+.om-led-l span{font:400 11px/1.3 var(--sans);color:var(--muted)}
+.om-led-none,.om-led-f{margin:8px 0 0;font:400 11.5px/1.5 var(--sans);color:var(--muted)}
 .om-onward{margin:12px 0 0;font:400 12.5px/1.55 var(--sans);color:var(--muted)}
 .om-note{margin:12px 0 0;font:400 11.5px/1.5 var(--sans);color:var(--muted)}
 

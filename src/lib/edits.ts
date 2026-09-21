@@ -1,5 +1,4 @@
-import type { MonthKey, OperatingModel } from '../models/types';
-import { addMonths } from '../engine/calendar';
+import type { Intervention, MonthKey, OperatingModel } from '../models/types';
 
 /**
  * What the reader has done to this company, in the order they did it.
@@ -10,7 +9,7 @@ import { addMonths } from '../engine/calendar';
  * of the third decision given the first two, the maps cannot answer.
  */
 
-export type DecisionKind = 'hire' | 'cut' | 'move' | 'defer' | 'demand' | 'target';
+export type DecisionKind = 'hire' | 'move' | 'defer' | 'demand' | 'target';
 
 export interface Decision {
   id: string;
@@ -39,36 +38,52 @@ export function leadTimeFor(model: OperatingModel, teamId: string): number {
   return from.length ? Math.max(0, Math.round(from.reduce((a, b) => a + b, 0) / from.length)) : 3;
 }
 
+export interface Applied {
+  model: OperatingModel;
+  /** Ids of the interventions this produced, to hand to run(). */
+  interventionIds: string[];
+}
+
 /**
  * People asked for are requested, not conjured: they arrive after this model's own lead
- * time. People moved or cut arrive and leave at once, because losing people is fast and
- * replacing them is slow, and that asymmetry is most of why this is hard to run.
+ * time. People moved arrive at once, because losing people is fast and replacing them is
+ * slow, and that asymmetry is most of why this is hard to run.
+ *
+ * Moving and deferring go through the engine's own interventions rather than by rewriting
+ * the model, because an intervention has a month and a rewrite does not. A move made in
+ * July used to reduce the giving team's STARTING headcount, so a decision taken in July
+ * changed January, and the receipt dutifully reported that it showed up in January. The
+ * engine already knew how to do this properly; the shortcut did not.
  */
-export function applyDecisions(model: OperatingModel, decisions: Decision[]): OperatingModel {
-  if (!decisions.length) return model;
+export function applyDecisions(model: OperatingModel, decisions: Decision[]): Applied {
+  if (!decisions.length) return { model, interventionIds: [] };
   const fte = new Map(model.teams.map((t) => [t.id, t.currentFte]));
   const target = new Map(model.teams.map((t) => [t.id, t.targetUtilization]));
   const vol = new Map(model.demandStreams.map((s) => [s.id, 1]));
-  const shift = new Map<string, number>();
   const hires = [...model.hiringPlan];
+  const extra: Intervention[] = [];
 
   decisions.forEach((d, i) => {
+    const id = `sandbox-${d.id}-${i}`;
     switch (d.kind) {
       case 'hire':
         hires.push({
-          id: `sandbox-${d.id}-${i}`, teamId: d.teamId!, requestMonth: d.month,
+          id, teamId: d.teamId!, requestMonth: d.month,
           headcount: d.amount, leadTimeMonths: leadTimeFor(model, d.teamId!),
         });
         break;
-      case 'cut':
-        fte.set(d.teamId!, Math.max(1, fte.get(d.teamId!)! - d.amount));
-        break;
       case 'move':
-        fte.set(d.fromTeamId!, Math.max(1, fte.get(d.fromTeamId!)! - d.amount));
-        fte.set(d.teamId!, fte.get(d.teamId!)! + d.amount);
+        extra.push({
+          id, name: d.label, type: 'reallocation', startMonth: d.month,
+          fromTeamId: d.fromTeamId!, toTeamId: d.teamId!, headcount: d.amount,
+          timeToImpactMonths: 0, implementationCost: 0,
+        });
         break;
       case 'defer':
-        shift.set(d.initiativeId!, (shift.get(d.initiativeId!) ?? 0) + d.amount);
+        extra.push({
+          id, name: d.label, type: 'defer', startMonth: d.month,
+          initiativeId: d.initiativeId!, months: d.amount,
+        });
         break;
       case 'demand':
         vol.set(d.streamId!, clamp(vol.get(d.streamId!)! * d.amount, 0.3, 3));
@@ -80,21 +95,21 @@ export function applyDecisions(model: OperatingModel, decisions: Decision[]): Op
   });
 
   return {
-    ...model,
-    teams: model.teams.map((t) => ({
-      ...t,
-      currentFte: Math.round(fte.get(t.id)!),
-      targetUtilization: target.get(t.id)!,
-    })),
-    demandStreams: model.demandStreams.map((s) => ({
-      ...s,
-      annualVolume: Math.max(0, Math.round(s.annualVolume * vol.get(s.id)!)),
-    })),
-    hiringPlan: hires,
-    initiatives: model.initiatives.map((x) => {
-      const by = shift.get(x.id);
-      return by ? { ...x, startMonth: addMonths(x.startMonth, by) } : x;
-    }),
+    model: {
+      ...model,
+      teams: model.teams.map((t) => ({
+        ...t,
+        currentFte: Math.round(fte.get(t.id)!),
+        targetUtilization: target.get(t.id)!,
+      })),
+      demandStreams: model.demandStreams.map((s) => ({
+        ...s,
+        annualVolume: Math.max(0, Math.round(s.annualVolume * vol.get(s.id)!)),
+      })),
+      hiringPlan: hires,
+      interventions: [...model.interventions, ...extra],
+    },
+    interventionIds: extra.map((x) => x.id),
   };
 }
 
@@ -102,7 +117,7 @@ export function applyDecisions(model: OperatingModel, decisions: Decision[]): Op
 export function pipelineAt(
   model: OperatingModel, decisions: Decision[], teamId: string, monthIndex: number, months: MonthKey[],
 ): { headcount: number; landsAt: number } | null {
-  const applied = applyDecisions(model, decisions);
+  const applied = applyDecisions(model, decisions).model;
   let headcount = 0, landsAt = Infinity;
   for (const h of applied.hiringPlan) {
     if (h.teamId !== teamId) continue;
