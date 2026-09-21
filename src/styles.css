@@ -1278,7 +1278,7 @@ details.tuck p{font-size:12.5px;color:var(--muted);margin:8px 0 6px}
 .fc-edge .fc-pulse{fill:none;stroke:var(--accent);stroke-linecap:round;opacity:.5;
   stroke-dasharray:1 13;animation:fc-run linear infinite}
 @keyframes fc-run{to{stroke-dashoffset:-56}}
-.fc-edge.dim{opacity:.28}
+.fc-edge.dim{opacity:.4}
 .fc-edge.on .fc-wire{stroke:var(--accent);opacity:.5}
 .fc-edge.on .fc-pulse{opacity:1;stroke-dasharray:2 9}
 .fc-shed path{fill:none;stroke:var(--alert);stroke-width:1.4;opacity:.75;stroke-linecap:round}
@@ -1289,7 +1289,7 @@ details.tuck p{font-size:12.5px;color:var(--muted);margin:8px 0 6px}
   background:var(--surface);transition:border-color .12s,opacity .12s}
 .fc-src:hover{border-color:var(--accent)}
 .fc-src.on{border-style:solid;border-color:var(--accent);background:var(--accent-soft)}
-.fc-src.dim{opacity:.45}
+.fc-src.dim{opacity:.6}
 .fc-src-none{border-style:dotted;background:none;cursor:default}
 .fc-src-none .fc-src-n{color:var(--muted);font-weight:400}
 .fc-src-n{font:500 12px/1.3 var(--sans);color:var(--ink);
@@ -1302,7 +1302,7 @@ details.tuck p{font-size:12.5px;color:var(--muted);margin:8px 0 6px}
   background:var(--surface);transition:border-color .12s,box-shadow .12s,opacity .12s}
 .fc-node:hover{border-color:var(--accent)}
 .fc-node.on{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
-.fc-node.dim{opacity:.45}
+.fc-node.dim{opacity:.6}
 .fc-node-h{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
 .fc-node-h b{font:600 13px/1.2 var(--sans);color:var(--ink);white-space:nowrap;
   overflow:hidden;text-overflow:ellipsis}
@@ -1342,6 +1342,25 @@ details.tuck p{font-size:12.5px;color:var(--muted);margin:8px 0 6px}
 .sb-months{grid-column:2;display:flex;list-style:none;margin:0;padding:0;justify-content:space-between}
 .sb-months li{font:500 9px/1 var(--mono);color:var(--muted)}
 .sb-months li.on{color:var(--ink);font-weight:700}
+
+/* the receipt: what a change bought, and what it cost */
+.fc-rcpt{margin-top:18px;padding:16px 18px;border:1px solid var(--accent);border-radius:10px;
+  background:var(--accent-soft)}
+.fc-rcpt h2{margin:0 0 12px;font:600 10px/1 var(--mono);letter-spacing:.11em;
+  text-transform:uppercase;color:var(--accent)}
+.fc-rcpt-l{list-style:none;margin:0;padding:0;display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(178px,1fr));gap:14px 22px}
+.fc-rcpt-l li{display:grid;gap:3px;min-width:0}
+.rc-k{font:500 10.5px/1 var(--mono);letter-spacing:.03em;color:var(--muted)}
+.rc-d{font:600 17px/1.1 var(--sans);color:var(--ink)}
+.fc-rcpt-l li.up .rc-d{color:var(--ok)}
+.fc-rcpt-l li.down .rc-d{color:var(--alert)}
+.rc-v{font:400 11px/1.3 var(--sans);color:var(--muted)}
+.fc-rcpt-none{margin:0;font:400 13px/1.55 var(--sans);color:var(--body);max-width:60ch}
+.fc-rcpt-f{margin:14px 0 0;padding-top:12px;border-top:1px solid var(--hair);
+  font:400 13px/1.55 var(--sans);color:var(--body)}
+.fc-rcpt-f b{color:var(--ink);font-weight:600}
+.fc-rcpt-vs{color:var(--muted)}
 
 /* inspector */
 .fc-insp{margin-top:18px;padding:16px 18px;border:1px solid var(--line);border-radius:10px;

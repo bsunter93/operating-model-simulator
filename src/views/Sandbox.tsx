@@ -2,8 +2,10 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { run } from '../engine';
 import { useStore } from '../state/store';
 import type { ModelResult, TeamMonth } from '../models/results';
-import type { OperatingModel } from '../models/types';
+import type { MonthKey, OperatingModel } from '../models/types';
 import { bindingConstraints } from '../lib/constraint';
+import { receipt, type ReceiptLine } from '../lib/receipt';
+import { pct, pp, signed } from '../lib/format';
 import { FlowCanvas, shareLabel, type Sel } from '../components/FlowCanvas';
 import { MONTHS } from './Run';
 
@@ -23,25 +25,58 @@ import { MONTHS } from './Run';
 const clamp = (v: number, lo: number, hi: number) => (v < lo ? lo : v > hi ? hi : v);
 
 export interface Edits {
-  /** teamId -> absolute FTE. */
-  fte: Record<string, number>;
+  /** teamId -> people added or cut, and the month it was asked for. */
+  people: Record<string, { add: number; month: MonthKey }>;
   /** teamId -> absolute planned utilisation. */
   target: Record<string, number>;
   /** streamId -> multiplier on annual volume. */
   vol: Record<string, number>;
 }
-const NONE: Edits = { fte: {}, target: {}, vol: {} };
-const touched = (e: Edits) => Object.keys(e.fte).length + Object.keys(e.target).length + Object.keys(e.vol).length;
+const NONE: Edits = { people: {}, target: {}, vol: {} };
+const touched = (e: Edits) => Object.keys(e.people).length + Object.keys(e.target).length + Object.keys(e.vol).length;
 
+/**
+ * How long this model thinks it takes to put somebody in a seat. Taken from the team's own
+ * requests where it has them and the plan's average where it does not, so an imported
+ * model uses its own number rather than one of mine.
+ */
+export function leadTimeFor(model: OperatingModel, teamId: string): number {
+  const own = model.hiringPlan.filter((h) => h.teamId === teamId).map((h) => h.leadTimeMonths);
+  const any = model.hiringPlan.map((h) => h.leadTimeMonths);
+  const from = own.length ? own : any;
+  return from.length ? Math.max(0, Math.round(from.reduce((a, b) => a + b, 0) / from.length)) : 3;
+}
+
+/**
+ * People added are requested, not conjured. A stepper that raised the starting headcount
+ * taught that hiring is a dial you turn, and every receipt then said the change showed up
+ * in January, which is the opposite of the most useful thing this model knows.
+ *
+ * Cuts are immediate on purpose. Losing people is fast and replacing them is slow, and
+ * that asymmetry is most of why an operating model is hard to run.
+ */
 function withEdits(model: OperatingModel, e: Edits): OperatingModel {
   if (!touched(e)) return model;
+  const hires = Object.entries(e.people)
+    .filter(([, p]) => p.add > 0)
+    .map(([teamId, p]) => ({
+      id: `sandbox-hire-${teamId}`,
+      teamId,
+      requestMonth: p.month,
+      headcount: p.add,
+      leadTimeMonths: leadTimeFor(model, teamId),
+    }));
   return {
     ...model,
-    teams: model.teams.map((t) => ({
-      ...t,
-      currentFte: e.fte[t.id] ?? t.currentFte,
-      targetUtilization: e.target[t.id] ?? t.targetUtilization,
-    })),
+    teams: model.teams.map((t) => {
+      const cut = Math.max(0, -(e.people[t.id]?.add ?? 0));
+      return {
+        ...t,
+        currentFte: Math.max(1, t.currentFte - cut),
+        targetUtilization: e.target[t.id] ?? t.targetUtilization,
+      };
+    }),
+    hiringPlan: [...model.hiringPlan, ...hires],
     demandStreams: model.demandStreams.map((s) => ({
       ...s,
       annualVolume: Math.max(0, Math.round(s.annualVolume * (e.vol[s.id] ?? 1))),
@@ -84,6 +119,18 @@ export function Sandbox() {
     [tuned, scenarioId, result],
   );
   const broke = useMemo(() => breaksAt(result), [result]);
+
+  /* The same year without the reader's changes in it. Every number in the receipt is this
+     run read against theirs, so nothing there is estimated or written down by hand. */
+  const baseResult = useMemo(() => run(model, { scenario: scenarioId }), [model, scenarioId]);
+  const baseBinding = useMemo(
+    () => bindingConstraints(model, { decisions: [], scenarioId }, [], baseResult),
+    [model, scenarioId, baseResult],
+  );
+  const rec = useMemo(
+    () => receipt(baseResult, result, baseBinding, binding),
+    [baseResult, result, baseBinding, binding],
+  );
   const name = (id: string) => model.teams.find((t) => t.id === id)?.name ?? id;
 
   /* Open on the month with something in it. January on a flat plan is eight teams inside
@@ -116,16 +163,33 @@ export function Sandbox() {
     : null;
   const shedNow = rows.reduce((a, r) => a + r.m.shedHours, 0);
 
-  const setFte = (id: string, v: number) => {
-    const t = tuned.teams.find((x) => x.id === id)!;
-    setEdits((e) => ({ ...e, fte: { ...e.fte, [id]: clamp(Math.round(t.currentFte + v), 1, 5000) } }));
-  };
+  /* The request keeps the month it was first asked in. Moving the playhead afterwards
+     scrubs the year; it does not quietly re-date a decision already taken. */
+  const setPeople = (id: string, v: number) => setEdits((e) => {
+    const was = e.people[id];
+    const t = model.teams.find((x) => x.id === id)!;
+    const add = clamp((was?.add ?? 0) + v, -(t.currentFte - 1), 5000);
+    if (add === 0) {
+      const { [id]: _drop, ...rest } = e.people;
+      return { ...e, people: rest };
+    }
+    return { ...e, people: { ...e.people, [id]: { add, month: was?.month ?? result.months[month] } } };
+  });
   const setTarget = (id: string, v: number) => {
     const t = tuned.teams.find((x) => x.id === id)!;
     setEdits((e) => ({ ...e, target: { ...e.target, [id]: clamp(Number((t.targetUtilization + v).toFixed(2)), 0.4, 0.99) } }));
   };
   const setVol = (id: string, mult: number) =>
     setEdits((e) => ({ ...e, vol: { ...e.vol, [id]: clamp((e.vol[id] ?? 1) * mult, 0.3, 3) } }));
+
+  const asValue = (v: number, unit: ReceiptLine['unit']) =>
+    unit === 'money' ? fmt.money(v) : unit === 'hours' ? fmt.hours(v)
+      : unit === 'points' ? pct(v) : String(Math.round(v));
+  const asDelta = (l: ReceiptLine) =>
+    l.unit === 'money' ? fmt.money(l.delta, { sign: true })
+      : l.unit === 'hours' ? signed(l.delta, fmt.hours)
+        : l.unit === 'points' ? pp(l.delta)
+          : signed(l.delta, (n) => String(Math.round(n)));
 
   const step = (label: string, value: string, onDown: () => void, onUp: () => void, sub?: string) => (
     <div className="fi-step">
@@ -143,6 +207,9 @@ export function Sandbox() {
     if (sel?.kind === 'team') {
       const t = tuned.teams.find((x) => x.id === sel.id)!;
       const m = rows.find((r) => r.team === sel.id)!.m;
+      const pending = edits.people[sel.id];
+      const askedAt = pending ? result.months.indexOf(pending.month) : -1;
+      const landing = { asked: askedAt, lands: askedAt + leadTimeFor(model, sel.id) };
       const feeds = result.flow.filter((f) => f.kind === 'route' && f.sourceId === sel.id);
       const fedBy = result.flow.filter((f) => f.toTeamId === sel.id);
       return (
@@ -156,8 +223,12 @@ export function Sandbox() {
             </span>
           </div>
           <div className="fi-steps">
-            {step('People', String(Math.round(m.availableFte)), () => setFte(t.id, -1), () => setFte(t.id, 1),
-                  `${fmt.money(t.monthlyFteCost)} each a month`)}
+            {step('People', String(Math.round(m.availableFte)), () => setPeople(t.id, -1), () => setPeople(t.id, 1),
+                  pending
+                    ? pending.add > 0
+                      ? `${pending.add} asked for in ${MONTHS[landing.asked]}, in their seats ${MONTHS[landing.lands] ?? 'after this year'}`
+                      : `${-pending.add} fewer from the start`
+                    : `${fmt.money(t.monthlyFteCost)} each a month, and new ones take ${leadTimeFor(model, t.id)} months to arrive`)}
             {step('Plans to run at', `${Math.round(t.targetUtilization * 100)}%`, () => setTarget(t.id, -0.05), () => setTarget(t.id, 0.05),
                   'of the hours it has')}
           </div>
@@ -271,6 +342,42 @@ export function Sandbox() {
           ))}
         </ol>
       </div>
+
+      {touched(edits) > 0 && (
+        <section className="fc-rcpt" aria-live="polite">
+          <h2>What your changes bought</h2>
+          {rec.lines.length === 0 ? (
+            <p className="fc-rcpt-none">
+              Nothing measurable moved. The year costs the same, answers the same share of its
+              work in time and leaves the same amount undone.
+            </p>
+          ) : (
+            <ul className="fc-rcpt-l">
+              {rec.lines.map((l) => (
+                <li key={l.key} className={l.good ? 'up' : 'down'}>
+                  <span className="rc-k">{l.label}</span>
+                  <b className="rc-d">{asDelta(l)}</b>
+                  <span className="rc-v">{asValue(l.from, l.unit)} &rarr; {asValue(l.to, l.unit)}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+          <p className="fc-rcpt-f">
+            {rec.firstMonth !== null
+              ? <>It first shows up in <b>{MONTHS[rec.firstMonth]}</b>.</>
+              : <>It changes nothing in any month of this year.</>}
+            {' '}
+            {/* Goldratt's whole point, made out of two measurements rather than asserted. */}
+            {rec.moved
+              ? rec.moved.to
+                ? <>The {rec.moved.metric === 'queue' ? 'queue' : 'money'} now turns on{' '}
+                    <b>{name(rec.moved.to)}</b>{rec.moved.from ? <> instead of {name(rec.moved.from)}</> : null}.</>
+                : <>Nothing binds the {rec.moved.metric === 'queue' ? 'queue' : 'money'} any more.</>
+              : <>The constraint has not moved.</>}
+            <span className="fc-rcpt-vs"> Measured against the plan as written, on the same year.</span>
+          </p>
+        </section>
+      )}
 
       <section className="fc-insp" aria-live="polite">{inspector()}</section>
 
