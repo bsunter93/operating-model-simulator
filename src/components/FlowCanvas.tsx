@@ -3,6 +3,7 @@ import type { ModelResult } from '../models/results';
 import type { OperatingModel } from '../models/types';
 import { asUnits, pressureOf, PRESSURE_WORD, workloadOf } from '../lib/workload';
 import { tiedTo } from '../lib/ties';
+import type { Lead } from '../lib/leads';
 
 /**
  * The work network as a map you read, not a dashboard you parse.
@@ -227,9 +228,11 @@ interface Props {
   fit?: number;
   /** Extra width per column gap, so the network spreads into the stage it is given. */
   spread?: number;
+  /** Changes made here that show up there: the reader's moves, and the plan's own waits. */
+  leads?: Lead[];
 }
 
-export function FlowCanvas({ model, result, month, selected, onSelect, compact, pipeline, monthLabels, fit = 1, spread = 0 }: Props) {
+export function FlowCanvas({ model, result, month, selected, onSelect, compact, pipeline, monthLabels, fit = 1, spread = 0, leads = [] }: Props) {
   const geo = useMemo(() => layout(model, result, spread), [model, result, spread]);
   const per = useMemo(() => peopleScale(model), [model]);
   const edges = result.flow.map((f) => ({ f, units: f.unitsByMonth[month] ?? 0 }));
@@ -304,6 +307,29 @@ export function FlowCanvas({ model, result, month, selected, onSelect, compact, 
                     </circle>
                   ));
                 })()}
+              </g>
+            );
+          })}
+
+          {/* Changes, as opposed to work. A lead leaves the side of one block, runs down
+              the gutter that the queues stand in, and turns into the side of another, so
+              it never has to cross a block whatever order the two are in. Dashed and
+              arrowed: nothing travels down it continuously, one thing happened once. */}
+          {leads.map((ld, i) => {
+            const a = geo.teams.get(ld.fromTeamId), b = geo.teams.get(ld.toTeamId);
+            if (!a || !b) return null;
+            const ax = a.x - 10, bx = b.x - 10;
+            const ay = a.y + a.h / 2, by = b.y + b.h / 2;
+            const lane = Math.min(ax, bx) - 16 - (i % 3) * 7;
+            const d = `M${a.x},${ay} L${lane},${ay} L${lane},${by} L${b.x - 7},${by}`;
+            return (
+              <g key={`lead-${i}`} className={'fc-lead k-' + ld.kind}>
+                <path className="fc-lead-p" d={d} />
+                <path className="fc-lead-h"
+                      d={`M${b.x - 12},${by - 3.5} L${b.x - 6},${by} L${b.x - 12},${by + 3.5}`} />
+                {ld.tag && (
+                  <text className="fc-lead-t" x={lane + 4} y={(ay + by) / 2 + 3}>{ld.tag}</text>
+                )}
               </g>
             );
           })}

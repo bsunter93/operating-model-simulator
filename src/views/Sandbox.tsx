@@ -10,6 +10,7 @@ import { pressureOf, PRESSURE_WORD, workloadOf, yearShape, asUnits } from '../li
 import { chainFor } from '../lib/chain';
 import { briefAt, verdictOf } from '../lib/brief';
 import { tiesFor } from '../lib/ties';
+import { leadsFor } from '../lib/leads';
 import { ledgerFor } from '../lib/ledger';
 import { tracksFor, divergesAt, type Track } from '../lib/replay';
 import { Replay } from '../components/Replay';
@@ -144,6 +145,12 @@ export function Sandbox() {
      and never hand each other a single case, which is exactly the connection a picture of
      work flowing cannot make. */
   const ties = useMemo(() => (focus ? tiesFor(model, focus) : []), [model, focus]);
+  /* The reader's own moves, always, plus the plan's own waits when they are looking at a
+     team on one end of one. Both are the same shape: something here, arriving there. */
+  const leads = useMemo(
+    () => leadsFor(model, decisions, result.months, sel?.kind === 'team' ? sel.id : null, MONTHS),
+    [model, decisions, result.months, sel],
+  );
 
   /* A move is armed before it is taken. Clicking one used to apply it, which makes the
      panel a settings screen: you change a value and the world changes under you. Naming
@@ -360,7 +367,7 @@ export function Sandbox() {
           <FlowCanvas model={tuned} result={result} month={month} selected={sel} onSelect={setSel}
                       compact={(n) => fmt.count(n)}
                       pipeline={(teamId) => pipelineAt(model, decisions, teamId, month, result.months)}
-                      monthLabels={MONTHS} fit={fit} spread={spread} />
+                      monthLabels={MONTHS} fit={fit} spread={spread} leads={leads} />
         </div>
         <p className="fc-hint">Drag the map sideways to follow the work.</p>
       </div>
@@ -441,6 +448,19 @@ export function Sandbox() {
                 ? <Why w={w} team={name(focus)} month={MONTHS[month]} answered={m.serviceLevel} fmt={fmt} />
                 : null;
             })()}
+            {leads.length > 0 && (
+              <div className="om-ties om-leads">
+                <p className="om-end-k">What reaches this team, and when</p>
+                <ul>
+                  {[...new Map(leads.map((l) => [l.detail, l])).values()].map((l, i) => (
+                    <li key={i} className={'k-' + l.kind}>
+                      <span>{l.detail}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
             {ties.length > 0 && (
               <div className="om-ties">
                 <p className="om-end-k">Staffing the same work</p>

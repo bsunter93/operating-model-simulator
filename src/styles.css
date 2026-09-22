@@ -2085,3 +2085,24 @@ body.world .foot{padding:6px clamp(16px,3vw,32px);font-size:10.5px;line-height:1
   font:600 13px/1.3 var(--sans);color:var(--plum);border-bottom:1px solid transparent}
 .om-ties button:hover{border-bottom-color:var(--plum)}
 .om-ties li span{font:400 11.5px/1.45 var(--sans);color:var(--muted)}
+
+/* ── a change made here, showing up there ───────────────────────────────────
+   The third kind of connection, and the only one about time. A channel is solid and work
+   moves down it continuously. A tie is a dashed edge and means two teams are promised to
+   the same programme. A lead is dashed with an arrow on it: one thing happened once, at
+   this end, and arrives at that one. The reader's own moves are always drawn; the plan's
+   own waits appear when they look at a team on either end of one. */
+.sb-live .fc-lead-p{fill:none;stroke-width:1.3;stroke-dasharray:4 3;stroke-linecap:butt;
+  stroke-linejoin:miter}
+.sb-live .fc-lead-h{fill:none;stroke-width:1.4;stroke-linecap:butt;stroke-linejoin:miter}
+.sb-live .fc-lead-t{font:600 8.5px var(--mono);letter-spacing:.04em}
+.sb-live .fc-lead.k-move .fc-lead-p,
+.sb-live .fc-lead.k-move .fc-lead-h{stroke:var(--accent)}
+.sb-live .fc-lead.k-move .fc-lead-t{fill:var(--accent)}
+.sb-live .fc-lead.k-waits-on .fc-lead-p,
+.sb-live .fc-lead.k-waits-on .fc-lead-h{stroke:var(--steel)}
+.sb-live .fc-lead.k-waits-on .fc-lead-t{fill:var(--steel)}
+.om-leads li{border-left:2px solid var(--line);padding-left:10px}
+.om-leads li.k-move{border-left-color:var(--accent)}
+.om-leads li.k-waits-on{border-left-color:var(--steel)}
+.om-leads li span{font:400 12.5px/1.55 var(--sans);color:var(--body)}
