@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { run } from '../engine';
 import { useStore } from '../state/store';
 import type { ModelResult, TeamMonth } from '../models/results';
@@ -13,7 +13,7 @@ import { ledgerFor } from '../lib/ledger';
 import { tracksFor, divergesAt, type Track } from '../lib/replay';
 import { Replay } from '../components/Replay';
 import { pct, pp, signed } from '../lib/format';
-import { FlowCanvas, type Sel } from '../components/FlowCanvas';
+import { FlowCanvas, layout, type Sel } from '../components/FlowCanvas';
 import { YearSpine } from '../components/YearSpine';
 import { Why } from '../components/Why';
 import { MONTHS } from './Run';
@@ -58,7 +58,16 @@ export function Sandbox() {
      are one thought, and a tab bar between them is a filing cabinet. */
   const [started, setStarted] = useState(false);
   const baseId = model.scenarios.find((x) => x.type === 'base')?.id ?? model.scenarios[0].id;
-  const [scenarioId, setScenarioId] = useState(baseId);
+  /* Open on the year the model nominates for its run, not on the plan as written.
+     Nothing queues on the base plan: every team crosses the line it planned to run at
+     and not one of them ever crosses what it can physically do, so carried work is zero
+     in all twelve months and the queues, which are the whole point of the picture, never
+     draw. The model already names the year with pressure in it, so the sandbox and the
+     run now open on the same one. Falls back to base for a model that names none. */
+  const openingId = model.run?.scenarioId
+    && model.scenarios.some((x) => x.id === model.run!.scenarioId)
+    ? model.run.scenarioId : baseId;
+  const [scenarioId, setScenarioId] = useState(openingId);
   const scenario = model.scenarios.find((x) => x.id === scenarioId) ?? model.scenarios[0];
   const [at, setAt] = useState(0);
 
@@ -126,9 +135,23 @@ export function Sandbox() {
     [focus, model, result, month, fmt],
   );
 
-  const take = (d: Decision) => setDecisions((xs) => [...xs, { ...d, month: result.months[month] }]);
+  /* A move is armed before it is taken. Clicking one used to apply it, which makes the
+     panel a settings screen: you change a value and the world changes under you. Naming
+     what it buys and then asking is the difference between configuring a model and
+     deciding something. */
+  const [armed, setArmed] = useState<string | null>(null);
+  /* The rail scrolls, and the options sit near the bottom of it, so arming a move can
+     open the thing you are being asked to read just off the end of the panel. */
+  const commitRef = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    if (armed) commitRef.current?.scrollIntoView({ block: 'nearest' });
+  }, [armed]);
+  const take = (d: Decision) => {
+    setDecisions((xs) => [...xs, { ...d, month: result.months[month] }]);
+    setArmed(null);
+  };
   const undo = () => setDecisions((xs) => xs.slice(0, -1));
-  const advance = () => setAt((m) => Math.min(m + 1, months - 1));
+  const advance = () => { setAt((m) => Math.min(m + 1, months - 1)); setArmed(null); };
 
   const asValue = (v: number, unit: ReceiptLine['unit']) =>
     unit === 'money' ? fmt.money(v) : unit === 'hours' ? fmt.hours(v)
@@ -151,6 +174,72 @@ export function Sandbox() {
     ].filter(Boolean);
     return bits.length ? bits.join(' · ') : 'nothing measurable this year';
   };
+
+  /* The organisation gets the stage, whatever size the stage is.
+     The canvas computes its own intrinsic box from the model, so rather than teaching
+     the layout about viewports, it is measured once and drawn at whatever scale fills
+     the space. The floor keeps a phone from rendering it as ants; the ceiling stops a
+     wide monitor from blowing 11px type up into a poster. */
+  /* The live sandbox pins the whole shell to the viewport. The gate before it is an
+     ordinary document and must still be able to scroll on a short screen, so the frame
+     is told which of the two it is holding rather than being switched on by the route. */
+  useLayoutEffect(() => {
+    document.body.classList.toggle('world', started);
+    return () => document.body.classList.remove('world');
+  }, [started]);
+
+  const stageRef = useRef<HTMLDivElement>(null);
+  const [box, setBox] = useState<{ w: number; h: number } | null>(null);
+  /* The content box, not the border box: fitting to the latter spends the stage's own
+     padding twice. Returning the previous object when nothing moved is what lets the
+     settle pass below run on every change without becoming a loop. */
+  const measure = useCallback(() => {
+    const el = stageRef.current;
+    if (!el) return;
+    const cs = getComputedStyle(el);
+    const w = el.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight) - 1;
+    const h = el.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom) - 1;
+    if (w <= 0 || h <= 0) return;
+    setBox((b) => (b && Math.abs(b.w - w) < 0.5 && Math.abs(b.h - h) < 0.5 ? b : { w, h }));
+  }, []);
+  useLayoutEffect(() => {
+    const el = stageRef.current;
+    if (!el) return;
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    /* The observer's notifications ride the frame loop, which a backgrounded or occluded
+       tab does not run. A window resize while the page is not painting would otherwise
+       leave the world sized for the window it was last drawn in. */
+    window.addEventListener('resize', measure);
+    return () => { ro.disconnect(); window.removeEventListener('resize', measure); };
+  }, [started, measure]);
+  /* The deck and the rail take their height from what the month is doing: a situation
+     sentence that wraps to a second line takes thirteen pixels off the stage, and the
+     observer on the stage does not reliably see a change it did not cause. Re-measuring
+     once after each render settles it. A timer rather than an animation frame, because a
+     background or occluded tab stops painting and would leave the fit stale until the
+     reader came back to it. */
+  useLayoutEffect(() => {
+    const id = setTimeout(measure, 0);
+    return () => clearTimeout(id);
+  });
+
+  /* Spread first, then scale. The height of the network is fixed by the model, so the
+     scale that fits the stage vertically is known before anything moves sideways; the
+     columns are then widened to exactly the width that scale wants. Because spreading
+     changes width only, the two settle in one pass instead of chasing each other. */
+  const base = useMemo(() => layout(tuned, result), [tuned, result]);
+  const spread = useMemo(() => {
+    if (!box) return 0;
+    const want = box.w / (box.h / base.height);
+    return Math.max(0, Math.min(200, (want - base.width) / base.cols));
+  }, [box, base]);
+  const geo = useMemo(() => layout(tuned, result, spread), [tuned, result, spread]);
+  const fit = useMemo(() => {
+    if (!box) return 1;
+    return Math.max(0.62, Math.min(1.45, Math.min(box.w / geo.width, box.h / geo.height)));
+  }, [box, geo]);
 
   if (!started) {
     const first = situationOf(model, result, 0);
@@ -206,7 +295,7 @@ export function Sandbox() {
   }
 
   return (
-    <main className="sandbox">
+    <main className="sandbox sb-live">
       <header className="om-top">
         <div>
           <h1>{isFixture ? model.name : 'Your model'}</h1>
@@ -226,47 +315,25 @@ export function Sandbox() {
         </p>
       </header>
 
-      <FlowCanvas model={tuned} result={result} month={month} selected={sel} onSelect={setSel}
-                  compact={(n) => fmt.count(n)}
-                  pipeline={(teamId) => pipelineAt(model, decisions, teamId, month, result.months)}
-                  monthLabels={MONTHS} />
-      <p className="fc-hint">The canvas is wider than this screen. Drag it sideways to follow the work.</p>
-
-      <YearSpine shape={shape} base={baseShape} month={month} labels={MONTHS} playing={false}
-                 onPick={(m) => setAt(m)} onPlay={advance} cash={cash} />
-
-      {/* What is happening, and the three things a person can do about it. */}
-      <section className={'om-sit s-' + sit.tone}>
-        <p className="om-sit-h">
-          {sit.row && sit.name ? (
-            <>
-              <b>{sit.name}</b> is {PRESSURE_WORD[pressureOf(sit.row)].toLowerCase()}
-              {(() => {
-                const w = workloadOf(result, sit.teamId!, month);
-                const q = w ? asUnits(w, sit.row.carriedInHours) : null;
-                const lost = w ? asUnits(w, sit.row.shedHours) : null;
-                return (
-                  <>
-                    {q !== null && q >= 1 && <>, with <b>{fmt.count(Math.round(q))} {w!.unit}</b> waiting</>}
-                    {lost !== null && lost >= 1 && <> and <b>{fmt.count(Math.round(lost))} {w!.unit}</b> turned away this month</>}
-                  </>
-                );
-              })()}.
-            </>
-          ) : <>Every team is inside the line it plans to run at.</>}
-        </p>
-        <div className="om-acts">
-          <button type="button" className="om-adv" onClick={advance} disabled={month >= months - 1}>
-            {month >= months - 1 ? 'The year is over' : `Advance to ${MONTHS[month + 1]}`}
-          </button>
-          {month > 0 && (
-            <button type="button" className="om-back" onClick={() => setAt(0)}>Back to {MONTHS[0]}</button>
-          )}
-          {decisions.length > 0 && (
-            <button type="button" className="om-back" onClick={undo}>Undo the last decision</button>
-          )}
+      {/* The world takes the stage, and the stage is whatever is left of the screen.
+          Everything else is chrome around it: the year and the decision ride the deck
+          along the bottom, why-and-what-now sits in the rail beside it, and nothing on
+          the loop scrolls the organisation out of sight. */}
+      <div className="sb-stage" ref={stageRef}>
+        {/* The element that is measured must not be the element that scrolls. Fitting to
+            a box whose own scrollbar appears and disappears as a result of the fit is a
+            loop: the bar takes a dozen pixels, the next measurement is narrower, the
+            canvas shrinks, the bar goes away, and the two sizes trade places forever. */}
+        <div className="sb-stagebox">
+          <FlowCanvas model={tuned} result={result} month={month} selected={sel} onSelect={setSel}
+                      compact={(n) => fmt.count(n)}
+                      pipeline={(teamId) => pipelineAt(model, decisions, teamId, month, result.months)}
+                      monthLabels={MONTHS} fit={fit} spread={spread} />
         </div>
-      </section>
+        <p className="fc-hint">Drag the map sideways to follow the work.</p>
+      </div>
+
+      <aside className="sb-rail">
 
       {/* One panel. Why it is happening and what you can do about it are one thought, and
           a tab bar between them files them in different drawers. */}
@@ -298,15 +365,54 @@ export function Sandbox() {
             })()}
             <h2 className="om-q om-q2">What can you do about it?</h2>
             <ul className="om-moves">
-              {moves.map((mv) => (
-                <li key={mv.decision.id}>
-                  <button type="button" onClick={() => take(mv.decision)}>
-                    <b>{mv.title}</b>
-                    <span className="om-move-w">{mv.when}</span>
-                    <span className="om-move-i">{moveLine(mv)}</span>
-                  </button>
-                </li>
-              ))}
+              {moves.map((mv) => {
+                const on = armed === mv.decision.id;
+                return (
+                  <li key={mv.decision.id} className={on ? 'on' : ''}>
+                    <button type="button" aria-expanded={on}
+                            onClick={() => setArmed(on ? null : mv.decision.id)}>
+                      <b>{mv.title}</b>
+                      <span className="om-move-w">{mv.when}</span>
+                      <span className="om-move-i">{moveLine(mv)}</span>
+                    </button>
+                    {on && (
+                      <div className="om-commit" ref={commitRef}>
+                        <dl>
+                          {Math.abs(mv.servicePoints) > 0.005 && (
+                            <>
+                              <dt>Answered in time</dt>
+                              <dd className={mv.servicePoints > 0 ? 'up' : 'down'}>
+                                {pp(mv.servicePoints)}
+                              </dd>
+                            </>
+                          )}
+                          {Math.abs(mv.exposure) > 50_000 && (
+                            <>
+                              <dt>At risk</dt>
+                              <dd className={mv.exposure > 0 ? 'up' : 'down'}>
+                                {fmt.money(Math.abs(mv.exposure))} {mv.exposure > 0 ? 'less' : 'more'}
+                              </dd>
+                            </>
+                          )}
+                          <dt>Cost</dt>
+                          <dd className={mv.cost > 50_000 ? 'down' : mv.cost < -50_000 ? 'up' : ''}>
+                            {mv.cost > 50_000 ? `${fmt.money(mv.cost)} more`
+                              : mv.cost < -50_000 ? `${fmt.money(-mv.cost)} saved` : 'no change'}
+                          </dd>
+                          <dt>Shows up</dt>
+                          <dd>{mv.landsAt !== null ? MONTHS[mv.landsAt] : 'not this year'}</dd>
+                        </dl>
+                        <p className="om-commit-a">
+                          <button type="button" className="om-go"
+                                  onClick={() => take(mv.decision)}>Commit</button>
+                          <button type="button" className="om-no"
+                                  onClick={() => setArmed(null)}>Cancel</button>
+                        </p>
+                      </div>
+                    )}
+                  </li>
+                );
+              })}
             </ul>
             <p className="om-note">
               Every number on those came from running the year with that move in it.
@@ -412,6 +518,46 @@ export function Sandbox() {
         <a className="rb-opt" href="#/model"><b>Open the full model</b>
           <span>Every team, month, scenario and assumption behind this.</span></a>
       </div>
+      </aside>
+
+      {/* The deck: the clock of this world, and the one button that moves it. Both are
+          pinned, so advancing a month is never something you scroll to find. */}
+      <footer className="sb-deck">
+        <YearSpine shape={shape} base={baseShape} month={month} labels={MONTHS} playing={false}
+                   onPick={(m) => setAt(m)} onPlay={advance} cash={cash} />
+      {/* What is happening, and the three things a person can do about it. */}
+      <section className={'om-sit s-' + sit.tone}>
+        <p className="om-sit-h">
+          {sit.row && sit.name ? (
+            <>
+              <b className="om-sit-who">{sit.name}</b> is {PRESSURE_WORD[pressureOf(sit.row)].toLowerCase()}
+              {(() => {
+                const w = workloadOf(result, sit.teamId!, month);
+                const q = w ? asUnits(w, sit.row.carriedInHours) : null;
+                const lost = w ? asUnits(w, sit.row.shedHours) : null;
+                return (
+                  <>
+                    {q !== null && q >= 1 && <>, with <b>{fmt.count(Math.round(q))} {w!.unit}</b> waiting</>}
+                    {lost !== null && lost >= 1 && <> and <b>{fmt.count(Math.round(lost))} {w!.unit}</b> turned away this month</>}
+                  </>
+                );
+              })()}.
+            </>
+          ) : <>Every team is inside the line it plans to run at.</>}
+        </p>
+        <div className="om-acts">
+          <button type="button" className="om-adv" onClick={advance} disabled={month >= months - 1}>
+            {month >= months - 1 ? 'The year is over' : `Advance to ${MONTHS[month + 1]}`}
+          </button>
+          {month > 0 && (
+            <button type="button" className="om-back" onClick={() => setAt(0)}>Back to {MONTHS[0]}</button>
+          )}
+          {decisions.length > 0 && (
+            <button type="button" className="om-back" onClick={undo}>Undo the last decision</button>
+          )}
+        </div>
+      </section>
+      </footer>
     </main>
   );
 }

@@ -37,13 +37,18 @@ const COL_GAP = QUEUE_W + WIRE_W;
     four marks long, which is a number in disguise rather than a line you can read. */
 const MARK_UNIT = 1 / 21;
 const MARK_MAX = 40;
-const MARK_ROWS = 4;
+/* A pile grows up before it grows back. Five to a column means a fortnight behind is a
+   stack that clears the block's shoulder, where four made it wrap into a tidy brick and
+   read as a swatch. */
+const MARK_ROWS = 5;
 
 interface Placed { x: number; y: number; w: number; h: number }
 
 export interface Layout {
   width: number;
   height: number;
+  /** Columns of teams, so a caller sizing the canvas knows how many gaps it can widen. */
+  cols: number;
   sources: Map<string, Placed>;
   teams: Map<string, Placed>;
 }
@@ -69,7 +74,14 @@ function teamHeights(model: OperatingModel): Map<string, number> {
   ]));
 }
 
-export function layout(model: OperatingModel, result: ModelResult): Layout {
+/**
+ * `spread` widens the gap between columns and nothing else. A stage is usually wider in
+ * proportion than the network is, and the alternative to spending that width here is a
+ * small picture floating in the middle of a large empty one. Queues keep their size
+ * because they are measured back from the block they wait in front of, so the extra room
+ * goes into the wires, which is where flow is legible anyway.
+ */
+export function layout(model: OperatingModel, result: ModelResult, spread = 0): Layout {
   const rank = new Map<string, number>(model.teams.map((t) => [t.id, 1]));
   const routes = result.flow.filter((f) => f.kind === 'route');
   for (let pass = 0; pass < 6; pass++) {
@@ -89,7 +101,8 @@ export function layout(model: OperatingModel, result: ModelResult): Layout {
 
   const th = teamHeights(model);
   const teams = new Map<string, Placed>();
-  const colX = (c: number) => PAD_X + SRC_W + COL_GAP + c * (TEAM_W + COL_GAP);
+  const gap = COL_GAP + Math.max(0, spread);
+  const colX = (c: number) => PAD_X + SRC_W + gap + c * (TEAM_W + gap);
   cols.forEach((ids, c) => {
     let y = PAD_Y;
     for (const id of ids) {
@@ -142,6 +155,7 @@ export function layout(model: OperatingModel, result: ModelResult): Layout {
   return {
     width: colX(Math.max(1, cols.length) - 1) + TEAM_W + PAD_X + 18,
     height: Math.max(...all.map((p) => p.y + p.h)) + PAD_Y + 16,
+    cols: Math.max(1, cols.length),
     sources, teams,
   };
 }
@@ -177,10 +191,21 @@ interface Props {
   /** People asked for who are not in their seats yet. Null when none are pending. */
   pipeline: (teamId: string) => { headcount: number; landsAt: number } | null;
   monthLabels: string[];
+  /**
+   * Draw the world at this scale so it fills whatever the stage gives it.
+   *
+   * The layout stays in its own coordinate space: every position, sweep and wire is
+   * computed exactly as before and the whole thing is scaled once at the root. The
+   * wrapper is sized to the scaled box so the layout box and the painted box agree,
+   * which is what keeps a scale over 1 from spilling out of its container.
+   */
+  fit?: number;
+  /** Extra width per column gap, so the network spreads into the stage it is given. */
+  spread?: number;
 }
 
-export function FlowCanvas({ model, result, month, selected, onSelect, compact, pipeline, monthLabels }: Props) {
-  const geo = useMemo(() => layout(model, result), [model, result]);
+export function FlowCanvas({ model, result, month, selected, onSelect, compact, pipeline, monthLabels, fit = 1, spread = 0 }: Props) {
+  const geo = useMemo(() => layout(model, result, spread), [model, result, spread]);
   const per = useMemo(() => peopleScale(model), [model]);
   const edges = result.flow.map((f) => ({ f, units: f.unitsByMonth[month] ?? 0 }));
   const peak = Math.max(1, ...edges.map((e) => e.units));
@@ -201,9 +226,16 @@ export function FlowCanvas({ model, result, month, selected, onSelect, compact, 
       (f.sourceId === selected.id || f.viaStreamId === selected.id) && f.toTeamId === teamId);
   };
 
+  const scaled = fit !== 1;
   return (
-    <div className="fc-scroll">
-      <div className="fc" style={{ width: geo.width, height: geo.height }}>
+    <div className={scaled ? 'fc-scroll fc-fitted' : 'fc-scroll'}
+         style={scaled
+           ? { width: Math.round(geo.width * fit), height: Math.round(geo.height * fit) }
+           : undefined}>
+      <div className="fc" style={{
+        width: geo.width, height: geo.height,
+        ...(scaled ? { transform: `scale(${fit})`, transformOrigin: '0 0' } : null),
+      }}>
         <svg className="fc-wires" viewBox={`0 0 ${geo.width} ${geo.height}`} aria-hidden="true">
           {edges.map(({ f, units }) => {
             const from = f.kind === 'arrival' ? geo.sources.get(f.sourceId) : geo.teams.get(f.sourceId);
