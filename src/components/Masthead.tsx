@@ -56,7 +56,7 @@ export function Masthead({ view }: { view: string }) {
               is the way to the numbers underneath. */}
           {view === 'sandbox'
             ? <a href="#/model">The full model &rarr;</a>
-            : <a href="#/">&larr; The organisation</a>}
+            : <a href="#/">&larr; The organization</a>}
           <a className="mast-mine" href={/^#\/mine/.test(window.location.hash) ? '#/' : '#/mine'}>{/^#\/mine/.test(window.location.hash) ? '← Back' : 'Your numbers →'}</a>
           <a href="https://bensunter.com/">bensunter.com</a>
         </nav>

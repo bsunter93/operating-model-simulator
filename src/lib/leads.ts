@@ -58,9 +58,8 @@ export function leadsFor(
       toTeamId: d.teamId,
       landsAt: at >= 0 ? at : null,
       tag: `${Math.round(d.amount)}`,
-      detail: `You moved ${Math.round(d.amount)} from ${name(d.fromTeamId)}`
-        + `${labels[at] ? ` in ${labels[at]}` : ''}. They left one team and arrived at the`
-        + ` other the same month.`,
+      detail: `You moved ${Math.round(d.amount)} off ${name(d.fromTeamId)}`
+        + `${labels[at] ? ` in ${labels[at]}` : ''}. They landed here the same month.`,
     });
   }
 
@@ -83,7 +82,7 @@ export function leadsFor(
         toTeamId: b,
         landsAt: null,
         tag: dep.lagMonths > 0 ? `+${dep.lagMonths}` : '',
-        detail: `${post.name} cannot start until ${pre.name} lands`
+        detail: `${post.name} can't start until ${pre.name} lands`
           + (dep.lagMonths > 0 ? `, plus ${dep.lagMonths} month${dep.lagMonths === 1 ? '' : 's'}` : '')
           + `. Slip one and the other moves with it.`,
       });

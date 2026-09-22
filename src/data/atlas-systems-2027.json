@@ -416,7 +416,7 @@
       "name": "Budget -10%",
       "type": "budgetConstraint",
       "budgetMultiplier": 0.9,
-      "description": "The modeled budget cap drops to 90% of plan. The engine names the levers; it does not pull them."
+      "description": "The modeled budget cap drops to 90% of plan. The engine names the levers; it doesn't pull them."
     },
     {
       "id": "scenario-productivity-15",
@@ -568,7 +568,7 @@
     "revenueExposure": 0.5
   },
   "demoIntent": {
-    "summary": "A mostly healthy organization with two or three teams near the ceiling, a hiring plan that arrives late, and a sequencing conflict the plan does not know about.",
+    "summary": "A mostly healthy organization with two or three teams near the ceiling, a hiring plan that arrives late, and a sequencing conflict the plan doesn't know about.",
     "intents": [
       "Implementation carries a meaningful gap (8 to 15 FTE at peak) that the planned 10 hires nearly close, five months after the need appears.",
       "Consumer Operations becomes constrained through the seasonal peak as attrition erodes headcount ahead of the planned hires.",
@@ -604,7 +604,7 @@
         "id": "d1",
         "when": "February",
         "monthIndex": 1,
-        "question": "Implementation cannot absorb the year in front of it.",
+        "question": "Implementation can't absorb the year in front of it.",
         "setup": "Fifty people, and ten more already approved. Recruiting takes five months, so they land in June, and the problem starts now.",
         "focusTeamId": "team-implementation",
         "options": [
@@ -632,8 +632,8 @@
         "id": "d2",
         "when": "March",
         "monthIndex": 2,
-        "question": "Two programmes are drawing on the same engineers.",
-        "setup": "Platform Scale and Enterprise Growth both staff out of Platform Engineering and Data Platform, and neither programme was planned around the other.",
+        "question": "Two programs are drawing on the same engineers.",
+        "setup": "Platform Scale and Enterprise Growth both staff out of Platform Engineering and Data Platform, and neither program was planned around the other.",
         "focusTeamId": "team-data-platform",
         "options": [
           {
@@ -689,7 +689,7 @@
         "when": "Q3",
         "monthIndex": 8,
         "question": "The portfolio is bigger than the year.",
-        "setup": "Four programmes, all committed, all staffed from teams that are already tight. You do not have to drop one to take pressure off.",
+        "setup": "Four programs, all committed, all staffed from teams that are already tight. You don't have to drop one to take pressure off.",
         "options": [
           {
             "interventionId": "intervention-half-portal",

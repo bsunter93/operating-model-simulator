@@ -53,7 +53,7 @@ export function YearSpine({ shape, base, month, labels, playing, onPick, onPlay,
                 )}
                 <i className={'ys-now ' + tone(p)} style={{ height: `${h(p)}%` }} />
               </span>
-              <span className="ys-l">{labels[p.month]?.slice(0, 1)}</span>
+              <span className="ys-l">{labels[p.month]}</span>
             </button>
           );
         })}

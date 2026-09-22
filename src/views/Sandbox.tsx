@@ -311,7 +311,7 @@ export function Sandbox() {
                 {q0 !== null && q0 >= 1 && <>, with <b>{fmt.count(Math.round(q0))} {w0!.unit}</b> waiting</>}.
               </>
             ) : (
-              <>Every team is inside the line it plans to run at. It does not stay that way.</>
+              <>Every team is inside the line it plans to run at. It doesn't stay that way.</>
             )}
           </p>
 
@@ -400,8 +400,8 @@ export function Sandbox() {
               </dd>
             </dl>
             <p className="om-note">
-              The objective was to get through the year without going past what your teams
-              can do, and without going past the budget.
+              The objective was to get through the year without going past what your
+              teams can do, and without going past the budget.
             </p>
           </section>
         )}
@@ -414,7 +414,7 @@ export function Sandbox() {
             {brief.focusTeamId && brief.focusTeamId !== focus && (
               <button type="button" className="om-brief-go"
                       onClick={() => setSel({ kind: 'team', id: brief.focusTeamId! })}>
-                Look at {name(brief.focusTeamId)} &rarr;
+                Show me {name(brief.focusTeamId)} &rarr;
               </button>
             )}
           </section>
@@ -434,7 +434,7 @@ export function Sandbox() {
             </p>
           );
         })() : !focus ? (
-          <p className="fi-idle">Click a building to look inside it.</p>
+          <p className="fi-idle">Pick a team. You'll get what it's handling now, and what you can do about it.</p>
         ) : (
           <>
             <h2 className="om-q">Why is {name(focus)} where it is in {MONTHS[month]}?</h2>
@@ -475,8 +475,8 @@ export function Sandbox() {
                   ))}
                 </ul>
                 <p className="om-note">
-                  People here are promised to those as well. Hiring into this team does not
-                  help them, and letting one of those slip lands back here.
+                  These teams are drawing on the same people. Hiring here won't help them,
+                  and if one of them slips it comes back to this one.
                 </p>
               </div>
             )}
@@ -572,7 +572,7 @@ export function Sandbox() {
                 ? <>The {rec.moved.metric === 'queue' ? 'queue' : 'money'} now turns on{' '}
                     <b>{name(rec.moved.to)}</b>{rec.moved.from ? <> instead of {name(rec.moved.from)}</> : null}.</>
                 : <>Nothing binds the {rec.moved.metric === 'queue' ? 'queue' : 'money'} any more.</>
-              : <>The constraint has not moved.</>}
+              : <>The constraint hasn't moved.</>}
           </p>
 
           {tracks.length > 0 && (
@@ -592,7 +592,7 @@ export function Sandbox() {
                   <b>{e.decision.label}</b>
                 </p>
                 {e.effect.lines.length === 0 ? (
-                  <p className="om-led-none">Bought nothing measurable on top of what was already decided.</p>
+                  <p className="om-led-none">Bought nothing on top of what was already decided.</p>
                 ) : (
                   <ul className="om-led-l">
                     {e.effect.lines.map((l) => (
@@ -638,7 +638,7 @@ export function Sandbox() {
       {model.run && (
         <div className="rb-opts sb-go">
           <a className="rb-opt" href="#/answer"><b>Read the answer instead</b>
-            <span>There is no best plan, only a best plan for something. Every path,
+            <span>There's no best plan, only a best plan for something. Every path,
               ranked against each objective in turn.</span></a>
         </div>
       )}

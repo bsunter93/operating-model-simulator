@@ -387,7 +387,7 @@
       "type": "demandMultiplier",
       "demandMultiplier": 0.92,
       "fromMonth": "2027-10",
-      "description": "The winter that does not come. Worth seeing, because the plan still has to hold."
+      "description": "The winter that doesn't come. Worth seeing, because the plan still has to hold."
     },
     {
       "id": "scenario-hard-year",
@@ -435,7 +435,7 @@
       "headcount": 8,
       "timeToImpactMonths": 1,
       "implementationCost": 96000,
-      "description": "They can run clinics within the month. The visits they were doing do not stop existing."
+      "description": "They can run clinics within the month. The visits they were doing don't stop existing."
     },
     {
       "id": "intervention-defer-hub",
@@ -484,7 +484,7 @@
         "when": "January",
         "monthIndex": 0,
         "focusTeamId": "team-diagnostics",
-        "question": "Diagnostics will not hold the winter.",
+        "question": "Diagnostics won't hold the winter.",
         "setup": "Twelve radiography posts were approved this month. Advert, shortlist, interview, references, clearance and notice take nine months, so they are in post in October, a month into the surge they were approved for.",
         "options": [
           {
@@ -596,7 +596,7 @@
         "when": "The last call",
         "monthIndex": 10,
         "question": "October, and the referrals are climbing.",
-        "setup": "Whatever you have not spent is still available, and there are eight weeks before the peak.",
+        "setup": "Whatever you haven't spent is still available, and there are eight weeks before the peak.",
         "options": [
           {
             "interventionId": "intervention-outsource-imaging",

@@ -421,7 +421,7 @@
       "headcount": 6,
       "timeToImpactMonths": 1,
       "implementationCost": 120000,
-      "description": "They can do production design inside a month. They are not doing Meridian while they do it."
+      "description": "They can do production design inside a month. They aren't doing Meridian while they do it."
     },
     {
       "id": "intervention-drop-design-system",
@@ -470,7 +470,7 @@
         "when": "February",
         "monthIndex": 1,
         "focusTeamId": "team-design",
-        "question": "The Design Studio cannot hold both engagements.",
+        "question": "The Design Studio can't hold both engagements.",
         "setup": "Brightline and Meridian both staff out of the same thirty-eight people, and the studio is also carrying the retainer book and an internal design system nobody bills for.",
         "options": [
           {
@@ -499,7 +499,7 @@
         "monthIndex": 2,
         "focusTeamId": "team-design",
         "question": "Two senior designers have resigned this month.",
-        "setup": "Five design hires were approved in March at a two-month lead time. Seniority is not a number of people; the work they were holding does not redistribute evenly.",
+        "setup": "Five design hires were approved in March at a two-month lead time. Seniority isn't a number of people; the work they were holding doesn't redistribute evenly.",
         "options": [
           {
             "interventionId": "intervention-expedite-design",
@@ -582,7 +582,7 @@
         "when": "The last call",
         "monthIndex": 10,
         "question": "One more before the year closes.",
-        "setup": "October. Whatever you have not spent is still there, and December is short.",
+        "setup": "October. Whatever you haven't spent is still there, and December is short.",
         "options": [
           {
             "interventionId": "intervention-freelance-design",

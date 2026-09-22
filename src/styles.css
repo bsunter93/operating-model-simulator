@@ -2106,3 +2106,34 @@ body.world .foot{padding:6px clamp(16px,3vw,32px);font-size:10.5px;line-height:1
 .om-leads li.k-move{border-left-color:var(--accent)}
 .om-leads li.k-waits-on{border-left-color:var(--steel)}
 .om-leads li span{font:400 12.5px/1.55 var(--sans);color:var(--body)}
+
+/* ── the channels, visible on the dark ground ───────────────────────────────
+   The lane and its centre line were drawn in --hair and --line, which are a hair's
+   breadth from the paper in light and from the ground in dark, so on a dark screen the
+   whole network of channels was barely there. Mixed against the ink instead, which holds
+   in both themes. */
+.sb-live .fc-edge .fc-lane{stroke:color-mix(in srgb,var(--ink) 13%,transparent)}
+.sb-live .fc-edge .fc-wire{stroke:color-mix(in srgb,var(--ink) 34%,transparent)}
+.sb-live .fc-tap{fill:color-mix(in srgb,var(--ink) 42%,transparent)}
+.sb-live .fc-mouth{stroke:color-mix(in srgb,var(--ink) 42%,transparent)}
+.sb-live .fc-edge{transition:opacity .13s}
+.sb-live .fc-edge .fc-lane,.sb-live .fc-edge .fc-wire{transition:stroke .13s}
+/* lit: the pointer is over one end of it, or a click has settled there */
+.sb-live .fc-edge.on .fc-lane{stroke:color-mix(in srgb,var(--accent) 30%,transparent)}
+.sb-live .fc-edge.on .fc-wire{stroke:var(--accent);opacity:1}
+.sb-live .fc-edge.on .fc-tap{fill:var(--accent)}
+.sb-live .fc-edge.on .fc-mouth{stroke:var(--accent)}
+
+/* ── things you can pick up ─────────────────────────────────────────────────
+   Hovering now lights every channel into a team and every team it shares work with, so
+   the strongest affordance is the canvas answering. These give it an edge to land on. */
+.sb-live .fc-node,.sb-live .fc-src{transition:background .13s,box-shadow .13s,opacity .13s}
+.sb-live .fc-node:hover{box-shadow:inset 0 -1px 0 var(--accent),0 0 0 1px var(--accent-soft)}
+.sb-live .fc-src:hover{background:color-mix(in srgb,var(--accent) 8%,transparent);
+  box-shadow:inset 0 -1px 0 var(--accent)}
+.sb-live .fc-node.on{box-shadow:inset 0 -1px 0 var(--accent),0 0 0 2px var(--accent-soft)}
+
+/* three letters to a month. One was J F M A M J J A S O N D, which repeats five of its
+   twelve labels and asks the reader to count along the row to find out where they are. */
+.ys-l{font-size:9px;letter-spacing:.02em}
+@media (max-width:620px){.ys-l{font-size:8px;letter-spacing:0}}

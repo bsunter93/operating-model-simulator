@@ -53,7 +53,7 @@ export const OBJECTIVES: Objective[] = [
     read: (r) => `${Math.round(r.summary.endingFte)} people at year end` },
   { id: 'budget', label: () => 'The budget', who: 'a non-profit, or anyone with a hard cap',
     score: spend, read: (r, f) => `${cash(f, spend(r))} spent on changes` },
-  { id: 'portfolio', label: () => 'What you promised', who: 'a product or delivery organisation',
+  { id: 'portfolio', label: () => 'What you promised', who: 'a product or delivery organization',
     score: (r) => -r.summary.portfolioValue,
     read: (r, f) => `${cash(f, r.summary.portfolioValue)} of the portfolio delivered` },
   { id: 'service', label: served, who: 'anyone whose queue is somebody waiting',

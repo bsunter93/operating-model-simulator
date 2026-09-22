@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import type { ModelResult } from '../models/results';
 import type { OperatingModel } from '../models/types';
 import { asUnits, pressureOf, PRESSURE_WORD, workloadOf } from '../lib/workload';
@@ -237,29 +237,33 @@ export function FlowCanvas({ model, result, month, selected, onSelect, compact, 
   const per = useMemo(() => peopleScale(model), [model]);
   const edges = result.flow.map((f) => ({ f, units: f.unitsByMonth[month] ?? 0 }));
   const peak = Math.max(1, ...edges.map((e) => e.units));
+  /* Hovering lights exactly what clicking would, so a reader can trace a channel back to
+     where its work comes from without committing to a selection first. */
+  const [hover, setHover] = useState<Sel>(null);
+  const focus = selected ?? hover;
   const isOn = (kind: 'team' | 'stream', id: string) => selected?.kind === kind && selected.id === id;
   const lit = (teamId: string, sourceId: string, viaStream?: string) =>
-    !selected ? false
-      : selected.kind === 'team' ? selected.id === teamId || selected.id === sourceId
-        : selected.id === sourceId || selected.id === viaStream;
+    !focus ? false
+      : focus.kind === 'team' ? focus.id === teamId || focus.id === sourceId
+        : focus.id === sourceId || focus.id === viaStream;
   /* Everything the selected team shares a programme with, which is a connection the
      routes cannot show: an initiative is staffed out of several teams at once, so two
      teams that never hand each other a case are still competing for the same people. */
   const tied = useMemo(
-    () => (selected?.kind === 'team' ? tiedTo(model, selected.id) : new Set<string>()),
-    [model, selected],
+    () => (focus?.kind === 'team' ? tiedTo(model, focus.id) : new Set<string>()),
+    [model, focus],
   );
   const near = (teamId: string) => {
-    if (!selected) return true;
-    if (selected.kind === 'team') {
-      if (selected.id === teamId) return true;
+    if (!focus) return true;
+    if (focus.kind === 'team') {
+      if (focus.id === teamId) return true;
       if (tied.has(teamId)) return true;
       return result.flow.some((f) => f.kind === 'route'
-        && ((f.sourceId === selected.id && f.toTeamId === teamId)
-          || (f.sourceId === teamId && f.toTeamId === selected.id)));
+        && ((f.sourceId === focus.id && f.toTeamId === teamId)
+          || (f.sourceId === teamId && f.toTeamId === focus.id)));
     }
     return result.flow.some((f) =>
-      (f.sourceId === selected.id || f.viaStreamId === selected.id) && f.toTeamId === teamId);
+      (f.sourceId === focus.id || f.viaStreamId === focus.id) && f.toTeamId === teamId);
   };
 
   const scaled = fit !== 1;
@@ -354,11 +358,13 @@ export function FlowCanvas({ model, result, month, selected, onSelect, compact, 
           const units = f.unitsByMonth[month] ?? 0;
           return (
             <button key={f.sourceId} type="button"
-                    className={'fc-src' + (isOn('stream', f.sourceId) ? ' on' : selected ? ' dim' : '')}
+                    className={'fc-src' + (focus?.kind === 'stream' && focus.id === f.sourceId ? ' on' : selected ? ' dim' : '')}
                     style={{ left: p.x, top: p.y, width: p.w, height: p.h }}
                     aria-pressed={isOn('stream', f.sourceId)}
                     aria-label={`${f.label}: ${Math.round(units)} ${f.unit} this month`}
                     title={`${f.label}: ${compact(Math.round(units))} ${f.unit} this month`}
+                    onMouseEnter={() => setHover({ kind: 'stream', id: f.sourceId })}
+                    onMouseLeave={() => setHover(null)}
                     onClick={() => onSelect(isOn('stream', f.sourceId) ? null : { kind: 'stream', id: f.sourceId })}>
               <b>{compact(Math.round(units))}</b>
               <span>{f.unit}</span>
@@ -393,10 +399,13 @@ export function FlowCanvas({ model, result, month, selected, onSelect, compact, 
           ].filter(Boolean).join(' · ');
           return (
             <button key={t.id} type="button"
-                    className={`fc-node s-${m.status}` + (isOn('team', t.id) ? ' on' : near(t.id) ? '' : ' dim')
+                    className={`fc-node s-${m.status}`
+                      + (focus?.kind === 'team' && focus.id === t.id ? ' on' : near(t.id) ? '' : ' dim')
                       + (tied.has(t.id) ? ' tied' : '')}
                     style={{ left: p.x, top: p.y, width: p.w, height: p.h }}
                     aria-pressed={isOn('team', t.id)} aria-label={tip} title={tip}
+                    onMouseEnter={() => setHover({ kind: 'team', id: t.id })}
+                    onMouseLeave={() => setHover(null)}
                     onClick={() => onSelect(isOn('team', t.id) ? null : { kind: 'team', id: t.id })}>
               {/* The block is the gauge. A bar beside a percentage is the most
                   dashboard-shaped object there is; a level rising inside the building
@@ -429,11 +438,17 @@ export function FlowCanvas({ model, result, month, selected, onSelect, compact, 
                 <b className="fc-pc">{Math.round(util * 100)}<em>%</em></b>
               </span>
               <span className="fc-line">
+                {/* A team past the line it planned to run at was printing its service
+                    level, so a block read "88%" in alert red over "100% picked up in
+                    time". Both numbers were true and the pair was nonsense. Past the
+                    line, the line is what the block says. */}
                 {queued !== null && queued >= 1
                   ? <><b>{compact(Math.round(queued))}</b> {w.unit} waiting</>
-                  : m.serviceLevel !== null
-                    ? <><b>{Math.round(m.serviceLevel * 100)}%</b> picked up in time</>
-                    : <>{PRESSURE_WORD[press].toLowerCase()}</>}
+                  : press !== 'holding'
+                    ? <>{PRESSURE_WORD[press].toLowerCase()}</>
+                    : m.serviceLevel !== null
+                      ? <><b>{Math.round(m.serviceLevel * 100)}%</b> picked up in time</>
+                      : <>{PRESSURE_WORD[press].toLowerCase()}</>}
                 {lost !== null && lost >= 1 && (
                   <em className="fc-lost" title={`${compact(Math.round(lost))} ${w.unit} turned away for good`}>
                     &minus;{compact(Math.round(lost))}

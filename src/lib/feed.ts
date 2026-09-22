@@ -26,6 +26,10 @@ export function feedFor(
   const out: FeedItem[] = [];
   const n = result.teams[0]?.months.length ?? 0;
 
+  const left: Record<number, number> = {};
+
+  const leftTeams: Record<number, Set<string>> = {};
+
   for (const t of result.teams) {
     let wasOver = false, wasBuried = false, hadQueue = false, hadShed = false;
     for (let i = 0; i < n; i++) {
@@ -52,12 +56,28 @@ export function feedFor(
       if (m.hiresLanded > 0) {
         out.push({ month: i, tone: 'good', text: `${Math.round(m.hiresLanded)} people landed on ${name(t.teamId)}` });
       }
+      /* Attrition is not news. Every team loses somebody most months, so a line each
+         made three of the five entries the same three lines every month and the feed
+         read as a loop rather than a wire. Counted here and reported once below. */
       if (m.attritionLoss >= 1) {
-        out.push({ month: i, tone: 'flat', text: `${name(t.teamId)} lost ${Math.round(m.attritionLoss)} to attrition` });
+        left[i] = (left[i] ?? 0) + Math.round(m.attritionLoss);
+        leftTeams[i] = (leftTeams[i] ?? new Set<string>()).add(t.teamId);
       }
       wasOver = over;
       wasBuried = buried;
     }
+  }
+
+  /* One line a month for everybody who left, rather than one a team. */
+  for (const key of Object.keys(left)) {
+    const i = Number(key);
+    const n = left[i], teams = leftTeams[i]?.size ?? 0;
+    out.push({
+      month: i, tone: 'flat',
+      text: teams === 1
+        ? `${[...leftTeams[i]].map(name)[0]} lost ${n} to attrition`
+        : `${n} people left, across ${teams} teams`,
+    });
   }
 
   /* Decisions belong in the feed too: the year is partly the reader's doing and the log

@@ -85,8 +85,8 @@
       }
     },
     {
-      "id": "team-programmes",
-      "name": "Programme Management",
+      "id": "team-programs",
+      "name": "Program Management",
       "teamType": "portfolio-and-run",
       "currentFte": 22,
       "annualAttrition": 0.16,
@@ -174,7 +174,7 @@
     {
       "id": "demand-partner-requests",
       "name": "Partner and compliance requests",
-      "teamId": "team-programmes",
+      "teamId": "team-programs",
       "unit": "requests",
       "annualVolume": 3200,
       "handlingMinutesPerUnit": 145,
@@ -229,7 +229,7 @@
       "requiredFteByTeam": {
         "team-field": 18,
         "team-logistics": 4,
-        "team-programmes": 3
+        "team-programs": 3
       },
       "strategicValue": 9,
       "financialValue": 4200000,
@@ -247,7 +247,7 @@
       "requiredFteByTeam": {
         "team-chw": 22,
         "team-me": 5,
-        "team-programmes": 3
+        "team-programs": 3
       },
       "strategicValue": 8,
       "financialValue": 3100000,
@@ -264,7 +264,7 @@
       "durationMonths": 5,
       "requiredFteByTeam": {
         "team-fundraising": 8,
-        "team-programmes": 3,
+        "team-programs": 3,
         "team-me": 4
       },
       "strategicValue": 10,
@@ -282,7 +282,7 @@
       "durationMonths": 7,
       "requiredFteByTeam": {
         "team-me": 7,
-        "team-programmes": 3,
+        "team-programs": 3,
         "team-field": 4
       },
       "strategicValue": 7,
@@ -301,7 +301,7 @@
   "funds": [
     {
       "id": "fund-wash",
-      "name": "WASH programme grant",
+      "name": "WASH program grant",
       "funder": "An institutional funder",
       "amount": 2900000,
       "restrictedTo": {
@@ -381,7 +381,7 @@
       "fundIds": [
         "fund-wash-renewal"
       ],
-      "description": "The bid does not land. Everything it was going to pay for still has to be paid for."
+      "description": "The bid doesn't land. Everything it was going to pay for still has to be paid for."
     },
     {
       "id": "scenario-core-cut",
@@ -398,14 +398,14 @@
       "name": "Every funder trims 15%",
       "type": "fundingShock",
       "fundMultiplier": 0.85,
-      "description": "A sector-wide squeeze, applied evenly, which is not how it lands."
+      "description": "A sector-wide squeeze, applied evenly, which isn't how it lands."
     },
     {
       "id": "scenario-need-rises",
       "name": "Need up 25%",
       "type": "demandMultiplier",
       "demandMultiplier": 1.25,
-      "description": "More people need the service. The grant does not grow to match."
+      "description": "More people need the service. The grant doesn't grow to match."
     },
     {
       "id": "scenario-turnover",
@@ -469,7 +469,7 @@
       "headcount": 5,
       "timeToImpactMonths": 1,
       "implementationCost": 40000,
-      "description": "They can do household work within a month. They are not writing the donor reports while they do it, and the reports are a condition of the grant."
+      "description": "They can do household work within a month. They aren't writing the donor reports while they do it, and the reports are a condition of the grant."
     },
     {
       "id": "intervention-defer-digital",
@@ -484,7 +484,7 @@
       "name": "Stop digital case management",
       "type": "cancel",
       "initiativeId": "init-case-management",
-      "description": "Drop it and give Monitoring and Programmes their people back. It was the thing that would have made next year cheaper."
+      "description": "Drop it and give Monitoring and Programs their people back. It was the thing that would have made next year cheaper."
     },
     {
       "id": "intervention-half-training",
@@ -519,7 +519,7 @@
         "monthIndex": 1,
         "focusTeamId": "team-fundraising",
         "question": "Next year is paid for by twelve people no grant will fund.",
-        "setup": "The WASH renewal bid needs eight of the twelve in Fundraising, plus people from Programmes and Monitoring. Every grant in the building pays for delivery. None of them pays for winning the next one, so all of that comes out of core.",
+        "setup": "The WASH renewal bid needs eight of the twelve in Fundraising, plus people from Programs and Monitoring. Every grant in the building pays for delivery. None of them pays for winning the next one, so all of that comes out of core.",
         "options": [
           {
             "interventionId": "intervention-cancel-digital",
@@ -547,7 +547,7 @@
         "monthIndex": 3,
         "focusTeamId": "team-field",
         "question": "The rains, and fourteen posts that land in June.",
-        "setup": "Half the districts are unreachable until May and the work does not disappear while they are, it waits. The posts approved in February arrive in June, which is after the backlog and before the peak.",
+        "setup": "Half the districts are unreachable until May and the work doesn't disappear while they are, it waits. The posts approved in February arrive in June, which is after the backlog and before the peak.",
         "options": [
           {
             "interventionId": "intervention-expedite-field",
@@ -574,7 +574,7 @@
         "when": "Mid-year",
         "monthIndex": 6,
         "focusTeamId": "team-field",
-        "question": "The tranche has not landed.",
+        "question": "The tranche hasn't landed.",
         "setup": "The renewal was due in July and is now expected in October. The WASH grant is spent. Field Delivery and Logistics have work, people and a funder, and for three months no money any of them is allowed to draw on.",
         "options": [
           {
@@ -655,7 +655,7 @@
     ]
   },
   "demoIntent": {
-    "summary": "An organisation that does not own its own money. Income arrives restricted, so it can be short of cash and holding cash at the same time, and the people who win next year's funding are the only ones no funder will pay for.",
+    "summary": "An organisation that doesn't own its own money. Income arrives restricted, so it can be short of cash and holding cash at the same time, and the people who win next year's funding are the only ones no funder will pay for.",
     "intents": [
       "Restricted money cannot move to where the shortfall is, so unfunded cost and stranded funds rise together.",
       "Bid writing is the only work that secures next year and the only work with no grant behind it.",

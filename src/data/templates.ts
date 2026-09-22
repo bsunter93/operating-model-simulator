@@ -54,13 +54,13 @@ export const TEMPLATES: Template[] = [
   {
     id: 'atlas-systems-2027', name: 'Atlas Systems', blurb: 'B2B platform company, 725 people in 8 teams, $500M revenue. The default: mostly healthy, two teams near the ceiling, one sequencing conflict.',
     build: atlas, shape: 'mixed',
-    shapeLine: 'Both. Queues to answer and programmes to land, competing for the same people.',
+    shapeLine: 'Both. Queues to answer and programs to land, competing for the same people.',
   },
   {
     id: 'meadowbrook-health-2027', name: 'Community health service',
     blurb: 'Six clinical and support teams, 428 people, in pounds. Nine-month hiring, a physical bottleneck in Diagnostics, and a winter that arrives whether or not the posts are filled.',
     build: asModel(health), shape: 'queue',
-    shapeLine: 'Mostly a queue. Work arrives whether or not you are ready, and the question is who it waits for.',
+    shapeLine: 'Mostly a queue. Work arrives whether or not you\u2019re ready, and the question is who it waits for.',
   },
   {
     id: 'northgate-studio-2027', name: 'Client services firm',
@@ -69,7 +69,7 @@ export const TEMPLATES: Template[] = [
     shapeLine: 'Mostly projects. Named pieces of work with dates and people on them, and a bench you pay for either way.',
   },
   {
-    id: 'riverbank-trust-2027', name: 'Grant-funded organisation',
+    id: 'riverbank-trust-2027', name: 'Grant-funded organization',
     blurb: '398 people across field and support teams, paid for by four grants with purposes attached. It can be short of money and holding money at the same time, and the people who win next year\u2019s funding are the only ones no funder will pay for.',
     build: asModel(ngo), shape: 'restricted',
     shapeLine: 'Someone else\u2019s money. Income arrives earmarked, so what you can spend is decided before you decide anything.',
