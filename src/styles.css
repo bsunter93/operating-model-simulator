@@ -2155,3 +2155,57 @@ body.world .foot{padding:6px clamp(16px,3vw,32px);font-size:10.5px;line-height:1
 /* "no queue" sits where the sources would be, and on a phone there is no such column for
    it to sit in. The block's own reading already says the team is holding. */
 @media (max-width:960px){ .sb-live .fc-inhouse{display:none} }
+
+/* ── the other three screens, in the same language ──────────────────────────
+   The sandbox is the front door and it set a vocabulary: a small muted mono label over
+   the thing it names, readings in mono with the unit stepped back, a panel with a real
+   radius rather than a hairline corner, and a pill for anything you press. The answer,
+   the full model's summary and Your numbers were all written before that existed, so
+   each arrived with its own: 3px corners, rectangular buttons, figures set in display
+   type. Nothing here changes what those screens say. It changes what they are set in,
+   because a reader who follows a link out of the sandbox should not feel handed to a
+   different product. */
+
+/* labels: one size, one colour, one job */
+.eyebrow{font-size:9px;letter-spacing:.14em;color:var(--muted)}
+.eyebrow:before{width:14px;height:1.5px}
+.ans-h,.card h3{font:600 9px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;
+  color:var(--muted)}
+
+/* anything you press is a pill */
+.btn{border-radius:999px;padding:8px 16px;font-weight:600}
+.btn.ghost{border-color:var(--line);color:var(--body)}
+.btn.ghost:hover{border-color:var(--accent);color:var(--accent);filter:none}
+.btn.small{padding:6px 13px;font-size:12px}
+.chipbtn{border-radius:999px}
+
+/* panels and pickable cards carry the sandbox's corner */
+.card,.ans-pick,.summary-tbl,.mine-inputs > .card{border-radius:10px}
+.ans-pick{border-radius:10px;padding:13px 15px}
+.ans-pick.on{border-color:var(--accent);background:var(--accent-soft)}
+
+/* the summary's five figures become an instrument panel, the way the gate's facts and
+   the title block are: a label over a mono reading, with a rule between each pair */
+.summary-nums{gap:0;padding:0;border:1px solid var(--line);border-radius:10px;
+  overflow:hidden;background:var(--surface)}
+.summary-nums > *{padding:9px 13px;border-left:1px solid var(--line);min-width:0}
+.summary-nums > *:first-child{border-left:0}
+.summary-nums b{font:600 15px/1.1 var(--mono);font-variant-numeric:tabular-nums;
+  order:2;margin-top:4px}
+.summary-nums span{display:block;font:600 8.5px/1 var(--mono);letter-spacing:.14em;
+  text-transform:uppercase;color:var(--muted);order:1}
+.summary-nums > *{display:flex;flex-direction:column}
+
+/* readings are mono wherever they are read as readings */
+.summary-verdict b{font-family:var(--mono);font-size:17px;letter-spacing:-.01em}
+.mine-title{font-size:clamp(22px,2.6vw,28px)}
+
+@media (max-width:760px){
+  .summary-nums{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .summary-nums > *:nth-child(odd){border-left:0}
+  .summary-nums > *:nth-child(n+3){border-top:1px solid var(--line)}
+}
+/* the last three that were still speaking the old dialect */
+.eyebrow{font-weight:600}
+.rb-when{font:600 9px/1 var(--mono);letter-spacing:.14em;color:var(--muted)}
+.rb-opt{border-radius:10px}
