@@ -14,13 +14,24 @@ export function Masthead({ view }: { view: string }) {
           <h1>Operating Model Simulator</h1>
           <span>{model.name} · {model.calendar.startMonth.slice(0, 4)} plan{isFixture ? ' · fictional' : ' · your numbers'}</span>
         </a>
-        {/* These belong to the full model, where you pick them. On the run they described
-            a year the run was not playing: the chip read "Base plan" while the run was on
-            the spike, and the levers it listed were not the five decisions being made. */}
-        {view !== 'run' && view !== 'answer' && view !== 'sandbox' && (
+        {/* The board has to say which year it is showing, and a reader's calls change that
+            year as much as a lever does. It said "levers on: none" after four decisions,
+            which is true and useless: the numbers underneath had already moved. */}
+        {view !== 'answer' && view !== 'sandbox' && (
           <div className="state">
             <span className="strip-l">Scenario</span><span className="chip">{scenario.name}</span>
-            <span className="strip-l">Levers on</span>{on.length === 0 ? <span className="chip dim">none</span> : on.map((iv) => <span key={iv.id} className="chip on" title={iv.name}>{iv.name}</span>)}
+            <span className="strip-l">Your calls</span>
+            {state.decisions.length === 0
+              ? <span className="chip dim">none</span>
+              : state.decisions.map((d, i) => (
+                <span key={d.id + i} className="chip on" title={`Taken in ${d.month}`}>{d.label}</span>
+              ))}
+            {on.length > 0 && (
+              <>
+                <span className="strip-l">Levers on</span>
+                {on.map((iv) => <span key={iv.id} className="chip on" title={iv.name}>{iv.name}</span>)}
+              </>
+            )}
             {!isBase && <button className="strip-reset" onClick={() => dispatch({ type: 'reset' })}>Reset</button>}
           </div>
         )}

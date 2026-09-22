@@ -3,7 +3,7 @@ import { useStore } from '../state/store';
 import type { ModelResult } from '../models/results';
 import type { OperatingModel, RunSpec } from '../models/types';
 import type { Fmt } from '../lib/format';
-import { Word, runWith, word } from './Run';
+import { runWith, word } from './Run';
 import { OBJECTIVES, spend, strain, type Objective } from '../lib/objectives';
 
 /**
@@ -258,8 +258,6 @@ function AnswerFor({ model, spec }: { model: OperatingModel; spec: RunSpec }) {
       </div>
 
       <div className="ans-go">
-        <a className="rb-opt" href="#/run"><b>Run it yourself &rarr;</b>
-          <span>{Word(spec.decisions.length)} decisions, and see where you land against all {paths.length} endings.</span></a>
         <a className="rb-opt" href="#/model"><b>Open the full model</b>
           <span>Every team, month, scenario and assumption behind this.</span></a>
       </div>

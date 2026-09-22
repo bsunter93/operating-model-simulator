@@ -23,7 +23,8 @@ import { bindingConstraints, type Binding } from '../lib/constraint';
  * model's run, or tells you it has not got one.
  */
 
-export const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+import { MONTHS } from '../lib/format';
+export { MONTHS };
 const MONTHS_LONG = ['January','February','March','April','May','June',
                      'July','August','September','October','November','December'];
 

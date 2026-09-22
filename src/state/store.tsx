@@ -5,6 +5,7 @@ import { SAMPLE_IDS } from '../data/templates';
 import { createModelStore, decodeShare, type ModelStore } from './persistence';
 import type { ReactNode } from 'react';
 import { run, validateModel } from '../engine';
+import { applyDecisions, type Decision } from '../lib/edits';
 import type { OperatingModel, DecisionWeights, Intervention } from '../models/types';
 import type { ModelResult } from '../models/results';
 import fixture from '../data/atlas-systems-2027.json';
@@ -17,6 +18,15 @@ export type Overrides = Record<string, number>;
 export interface State {
   model: OperatingModel;
   scenarioId: string;
+  /**
+   * What the reader has done to this company, in the order they did it.
+   *
+   * This lived in the sandbox as component state, which meant the full model was
+   * computing a different year from the one the reader was playing: they picked the
+   * shock year and made four calls, and the board behind it still showed the plan as
+   * written. One list, here, and every view answers about the same year.
+   */
+  decisions: Decision[];
   interventionIds: string[];
   overrides: Overrides;
   weights: DecisionWeights;
@@ -33,6 +43,8 @@ type Action =
   | { type: 'override'; id: string; value: number }
   | { type: 'weights'; weights: DecisionWeights }
   | { type: 'model'; model: OperatingModel }
+  | { type: 'decide'; decision: Decision }
+  | { type: 'undoDecision' }
   | { type: 'editModel'; model: OperatingModel }
   | { type: 'tour'; step: number | null }
   | { type: 'tourChoice'; id: string | null }
@@ -41,20 +53,35 @@ type Action =
 
 const baseId = (m: OperatingModel) => m.scenarios.find((s) => s.type === 'base')!.id;
 
+/**
+ * A model opens on the year it nominates for its run, not on the plan as written. The
+ * base plan is the one year in which nothing ever queues, so opening there shows a
+ * reader an organisation where nothing happens and asks them to go looking for the
+ * pressure.
+ */
+const openingScenario = (m: OperatingModel) =>
+  (m.run?.scenarioId && m.scenarios.some((x) => x.id === m.run!.scenarioId)
+    ? m.run.scenarioId : baseId(m));
+
 function fresh(model: OperatingModel): State {
-  return { model, scenarioId: baseId(model), interventionIds: [], overrides: {}, weights: model.decisionWeights, tourStep: null, tourChoice: null, teamId: null };
+  return { model, scenarioId: openingScenario(model), decisions: [], interventionIds: [], overrides: {}, weights: model.decisionWeights, tourStep: null, tourChoice: null, teamId: null };
 }
 
 function reducer(s: State, a: Action): State {
   switch (a.type) {
-    case 'scenario': return { ...s, scenarioId: a.id };
+    /* A decision is taken against a team and a month of one year. Changing the year
+       underneath it would leave a hire attached to a team that may not be short in the
+       new one, so the log is cleared with the scenario. */
+    case 'scenario': return { ...s, scenarioId: a.id, decisions: [] };
+    case 'decide': return { ...s, decisions: [...s.decisions, a.decision] };
+    case 'undoDecision': return { ...s, decisions: s.decisions.slice(0, -1) };
     case 'toggleIntervention':
       return { ...s, interventionIds: s.interventionIds.includes(a.id) ? s.interventionIds.filter((x) => x !== a.id) : [...s.interventionIds, a.id] };
     case 'setInterventions': return { ...s, interventionIds: a.ids };
     case 'override': return { ...s, overrides: { ...s.overrides, [a.id]: a.value } };
     case 'weights': return { ...s, weights: a.weights };
     case 'model': return fresh(a.model);
-    case 'editModel': return { ...s, model: a.model, scenarioId: a.model.scenarios.some((x) => x.id === s.scenarioId) ? s.scenarioId : baseId(a.model), interventionIds: s.interventionIds.filter((id) => (isCustomId(id) ? a.model.teams.some((t) => t.id === id.split(':')[0]) : a.model.interventions.some((x) => x.id === id))) };
+    case 'editModel': return { ...s, model: a.model, decisions: [], scenarioId: a.model.scenarios.some((x) => x.id === s.scenarioId) ? s.scenarioId : baseId(a.model), interventionIds: s.interventionIds.filter((id) => (isCustomId(id) ? a.model.teams.some((t) => t.id === id.split(':')[0]) : a.model.interventions.some((x) => x.id === id))) };
     case 'tour': return { ...s, tourStep: a.step, tourChoice: a.step === null ? null : s.tourChoice };
     case 'tourChoice': return { ...s, tourChoice: a.id };
     case 'team': return { ...s, teamId: a.id };
@@ -132,7 +159,10 @@ export function effectiveInterventions(model: OperatingModel, overrides: Overrid
 interface Ctx {
   state: State;
   dispatch: (a: Action) => void;
+  /** The model as authored. Editing and schema work read this one. */
   model: OperatingModel;
+  /** The model with the reader's decisions folded in, which is what `result` was run on. */
+  tuned: OperatingModel;
   /** Interventions with overrides applied. */
   interventions: Intervention[];
   /** Current scenario with the active interventions applied. */
@@ -156,7 +186,7 @@ interface Ctx {
 
 const StoreContext = createContext<Ctx | null>(null);
 
-const PAGES = ['#/mine', '#/summary', '#/model', '#/answer', '#/sandbox', '#/run'];
+const PAGES = ['#/mine', '#/summary', '#/model', '#/answer', '#/sandbox'];
 
 /**
  * Where the full board lives. Four helpers in this file built links as "#/" plus a query,
@@ -306,10 +336,23 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const active = useMemo(() => interventions.filter((iv) => state.interventionIds.includes(iv.id)), [interventions, state.interventionIds]);
   const base = useMemo(() => run(model), [model]);
   const doNothing = useMemo(() => (state.scenarioId === baseId(model) ? base : run(model, { scenario: state.scenarioId })), [model, state.scenarioId, base]);
-  const result = useMemo(() => (active.length === 0 ? doNothing : run(model, { scenario: state.scenarioId, interventions: active })), [model, state.scenarioId, active, doNothing]);
+  /* The reader's calls, folded in here rather than in whichever view happens to be open,
+     so `result` is the year they are playing wherever it is read from. `base` and
+     `doNothing` stay clear of them, because they are what the year is being compared
+     against. */
+  const applied = useMemo(() => applyDecisions(model, state.decisions), [model, state.decisions]);
+  const result = useMemo(() => {
+    if (active.length === 0 && state.decisions.length === 0) return doNothing;
+    /* Objects for the ones the reader toggled, ids for the ones a decision built, which
+       exist on the adjusted model rather than the authored one. run() takes either. */
+    return run(applied.model, {
+      scenario: state.scenarioId,
+      interventions: [...active, ...applied.interventionIds],
+    });
+  }, [applied, state.scenarioId, active, doNothing, state.decisions.length]);
   const value = useMemo<Ctx>(() => ({
-    state, dispatch, model, interventions, result, doNothing, base,
-    isBase: state.scenarioId === baseId(model) && active.length === 0,
+    state, dispatch, model, tuned: applied.model, interventions, result, doNothing, base,
+    isBase: state.scenarioId === baseId(model) && active.length === 0 && state.decisions.length === 0,
     // Any model the app ships, not just Atlas. A community health service is no more
     // "your numbers" than Atlas is.
     isFixture: SAMPLE_IDS.has(model.id),
@@ -319,7 +362,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     dismissRestored: () => setRestoredFrom(null),
     teamName: (id) => model.teams.find((t) => t.id === id)?.name ?? id,
     initName: (id) => model.initiatives.find((i) => i.id === id)?.name ?? id,
-  }), [state, model, interventions, result, doNothing, base, active.length, store, restoredFrom]);
+  }), [state, model, applied.model, interventions, result, doNothing, base, active.length, store, restoredFrom]);
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
 }
 

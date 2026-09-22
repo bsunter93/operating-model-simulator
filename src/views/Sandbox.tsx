@@ -1,10 +1,9 @@
 import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { run } from '../engine';
 import { useStore } from '../state/store';
 import type { ModelResult, TeamMonth } from '../models/results';
 import { bindingConstraints } from '../lib/constraint';
 import { receipt, type ReceiptLine } from '../lib/receipt';
-import { applyDecisions, pipelineAt, type Decision } from '../lib/edits';
+import { pipelineAt, type Decision } from '../lib/edits';
 import { movesFor, type Move } from '../lib/options';
 import { feedFor } from '../lib/feed';
 import { pressureOf, PRESSURE_WORD, workloadOf, yearShape, asUnits } from '../lib/workload';
@@ -12,11 +11,10 @@ import { chainFor } from '../lib/chain';
 import { ledgerFor } from '../lib/ledger';
 import { tracksFor, divergesAt, type Track } from '../lib/replay';
 import { Replay } from '../components/Replay';
-import { pct, pp, signed } from '../lib/format';
+import { MONTHS, pct, pp, signed } from '../lib/format';
 import { FlowCanvas, layout, type Sel } from '../components/FlowCanvas';
 import { YearSpine } from '../components/YearSpine';
 import { Why } from '../components/Why';
-import { MONTHS } from './Run';
 import { RUN_WORLDS } from '../data/templates';
 
 /**
@@ -52,39 +50,31 @@ function situationOf(model: { teams: { id: string; name: string }[] }, result: M
 }
 
 export function Sandbox() {
-  const { model, fmt, isFixture, dispatch } = useStore();
-  const [decisions, setDecisions] = useState<Decision[]>([]);
+  const { model, tuned, result, doNothing: baseResult, fmt, isFixture, dispatch, state } = useStore();
+  /* The year the reader is playing lives in the store, not here. Holding it locally
+     meant the full model was computing a different year from the sandbox: same company,
+     same screen, two answers. */
+  const decisions = state.decisions;
   const [sel, setSel] = useState<Sel>(null);
   /* One panel, not three tabs. Why something is happening and what you can do about it
      are one thought, and a tab bar between them is a filing cabinet. */
   const [started, setStarted] = useState(false);
-  const baseId = model.scenarios.find((x) => x.type === 'base')?.id ?? model.scenarios[0].id;
   /* The year is not something you pick. A demand shock, a winter, a grant that arrives
      three months late: those are things that happen to an organisation, and offering
      them in a dropdown asks the reader to choose the outcome before they have made a
-     single decision. What a reader can honestly answer is what kind of work they run,
-     so that is the question, and the year each world gets is the one its own model
-     nominates. Falls back to the plan as written for a model that names none, which is
-     also the only year in which nothing ever queues. */
-  const scenarioId = model.run?.scenarioId
-    && model.scenarios.some((x) => x.id === model.run!.scenarioId)
-    ? model.run.scenarioId : baseId;
+     single decision. What a reader can honestly answer is what kind of work they run, so
+     that is the question, and the store opens each world on the year its own model
+     nominates. */
+  const scenarioId = state.scenarioId;
   const [at, setAt] = useState(0);
 
-  const applied = useMemo(() => applyDecisions(model, decisions), [model, decisions]);
-  const tuned = applied.model;
-  const result = useMemo(
-    () => run(tuned, { scenario: scenarioId, interventions: applied.interventionIds }),
-    [tuned, scenarioId, applied.interventionIds],
-  );
   const months = result.teams[0]?.months.length ?? 12;
   const month = Math.min(at, months - 1);
   const name = (id: string) => model.teams.find((t) => t.id === id)?.name ?? id;
 
-  const baseResult = useMemo(() => run(model, { scenario: scenarioId }), [model, scenarioId]);
   const binding = useMemo(
-    () => bindingConstraints(tuned, { decisions: [], scenarioId }, applied.interventionIds, result),
-    [tuned, scenarioId, result, applied.interventionIds],
+    () => bindingConstraints(tuned, { decisions: [], scenarioId }, [], result),
+    [tuned, scenarioId, result],
   );
   const baseBinding = useMemo(
     () => bindingConstraints(model, { decisions: [], scenarioId }, [], baseResult),
@@ -154,10 +144,10 @@ export function Sandbox() {
     if (armed) commitRef.current?.scrollIntoView({ block: 'nearest' });
   }, [armed]);
   const take = (d: Decision) => {
-    setDecisions((xs) => [...xs, { ...d, month: result.months[month] }]);
+    dispatch({ type: 'decide', decision: { ...d, month: result.months[month] } });
     setArmed(null);
   };
-  const undo = () => setDecisions((xs) => xs.slice(0, -1));
+  const undo = () => dispatch({ type: 'undoDecision' });
   const advance = () => { setAt((m) => Math.min(m + 1, months - 1)); setArmed(null); };
 
   const asValue = (v: number, unit: ReceiptLine['unit']) =>
