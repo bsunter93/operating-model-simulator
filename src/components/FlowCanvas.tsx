@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import type { ModelResult } from '../models/results';
 import type { OperatingModel } from '../models/types';
 import { asUnits, pressureOf, PRESSURE_WORD, workloadOf } from '../lib/workload';
+import { tiedTo } from '../lib/ties';
 
 /**
  * The work network as a map you read, not a dashboard you parse.
@@ -238,10 +239,18 @@ export function FlowCanvas({ model, result, month, selected, onSelect, compact, 
     !selected ? false
       : selected.kind === 'team' ? selected.id === teamId || selected.id === sourceId
         : selected.id === sourceId || selected.id === viaStream;
+  /* Everything the selected team shares a programme with, which is a connection the
+     routes cannot show: an initiative is staffed out of several teams at once, so two
+     teams that never hand each other a case are still competing for the same people. */
+  const tied = useMemo(
+    () => (selected?.kind === 'team' ? tiedTo(model, selected.id) : new Set<string>()),
+    [model, selected],
+  );
   const near = (teamId: string) => {
     if (!selected) return true;
     if (selected.kind === 'team') {
       if (selected.id === teamId) return true;
+      if (tied.has(teamId)) return true;
       return result.flow.some((f) => f.kind === 'route'
         && ((f.sourceId === selected.id && f.toTeamId === teamId)
           || (f.sourceId === teamId && f.toTeamId === selected.id)));
@@ -358,7 +367,8 @@ export function FlowCanvas({ model, result, month, selected, onSelect, compact, 
           ].filter(Boolean).join(' · ');
           return (
             <button key={t.id} type="button"
-                    className={`fc-node s-${m.status}` + (isOn('team', t.id) ? ' on' : near(t.id) ? '' : ' dim')}
+                    className={`fc-node s-${m.status}` + (isOn('team', t.id) ? ' on' : near(t.id) ? '' : ' dim')
+                      + (tied.has(t.id) ? ' tied' : '')}
                     style={{ left: p.x, top: p.y, width: p.w, height: p.h }}
                     aria-pressed={isOn('team', t.id)} aria-label={tip} title={tip}
                     onClick={() => onSelect(isOn('team', t.id) ? null : { kind: 'team', id: t.id })}>

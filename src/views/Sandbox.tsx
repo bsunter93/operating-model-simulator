@@ -9,6 +9,7 @@ import { feedFor } from '../lib/feed';
 import { pressureOf, PRESSURE_WORD, workloadOf, yearShape, asUnits } from '../lib/workload';
 import { chainFor } from '../lib/chain';
 import { briefAt, verdictOf } from '../lib/brief';
+import { tiesFor } from '../lib/ties';
 import { ledgerFor } from '../lib/ledger';
 import { tracksFor, divergesAt, type Track } from '../lib/replay';
 import { Replay } from '../components/Replay';
@@ -139,6 +140,10 @@ export function Sandbox() {
     () => (focus ? chainFor(model, result, focus, month, fmt) : []),
     [focus, model, result, month, fmt],
   );
+  /* Who else this team's people are promised to. Two teams can be on the same programme
+     and never hand each other a single case, which is exactly the connection a picture of
+     work flowing cannot make. */
+  const ties = useMemo(() => (focus ? tiesFor(model, focus) : []), [model, focus]);
 
   /* A move is armed before it is taken. Clicking one used to apply it, which makes the
      panel a settings screen: you change a value and the world changes under you. Naming
@@ -436,6 +441,26 @@ export function Sandbox() {
                 ? <Why w={w} team={name(focus)} month={MONTHS[month]} answered={m.serviceLevel} fmt={fmt} />
                 : null;
             })()}
+            {ties.length > 0 && (
+              <div className="om-ties">
+                <p className="om-end-k">Staffing the same work</p>
+                <ul>
+                  {ties.map((t) => (
+                    <li key={t.teamId}>
+                      <button type="button" onClick={() => setSel({ kind: 'team', id: t.teamId })}>
+                        {name(t.teamId)}
+                      </button>
+                      <span>{t.shared.map((x) => x.name).join(', ')}</span>
+                    </li>
+                  ))}
+                </ul>
+                <p className="om-note">
+                  People here are promised to those as well. Hiring into this team does not
+                  help them, and letting one of those slip lands back here.
+                </p>
+              </div>
+            )}
+
             <h2 className="om-q om-q2">What can you do about it?</h2>
             <ul className="om-moves">
               {moves.map((mv) => {
