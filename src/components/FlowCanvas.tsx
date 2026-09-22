@@ -379,10 +379,18 @@ export function FlowCanvas({ model, result, month, selected, onSelect, compact, 
                 <path className="fc-spark-l" d={sparkLine(series)} />
                 <line className="fc-spark-t" x1="0" x2="100"
                       y1={sparkY(m.targetUtilization)} y2={sparkY(m.targetUtilization)} />
-                <circle className="fc-spark-d" r="1.9"
-                        cx={series.length > 1 ? (month / (series.length - 1)) * 100 : 50}
-                        cy={sparkY(util)} />
               </svg>
+              {/* Where you are on the block's own arc. It used to be a circle inside the
+                  trace, and the trace is drawn with preserveAspectRatio="none" on a
+                  100x16 box: stretched to the block it turned a 1.9 radius into a 9x24
+                  smear sitting across the readout. Marked in HTML instead, so it is a
+                  dot at every block size. */}
+              <span className="fc-sparkd" aria-hidden="true">
+                <i style={{
+                  left: `${series.length > 1 ? (month / (series.length - 1)) * 100 : 50}%`,
+                  top: `${(sparkY(util) / 16) * 100}%`,
+                }} />
+              </span>
               {pending && (
                 <span className="fc-pipe" title={`${pending.headcount} people arriving ${monthLabels[pending.landsAt] ?? 'after this year'}`}>
                   {Array.from({ length: Math.min(10, pending.headcount) }, (_, i) => <i key={i} />)}
