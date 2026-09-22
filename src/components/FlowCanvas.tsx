@@ -27,7 +27,13 @@ const TEAM_W = 236;
    the year underneath. The last pass stripped the numbers off entirely, which fixed the
    noise and took the instrument with it. Density is not the problem; density with no
    hierarchy is. */
-const TEAM_H_MIN = 84, TEAM_H_MAX = 108;
+const TEAM_H_MIN = 76, TEAM_H_MAX = 132;
+/* The interior runs from nothing to half again what the team can do, so the ceiling is a
+   line drawn inside the building rather than the top of it. Going past what you can do is
+   then something you watch happen, with room above it, instead of a bar that fills up and
+   has nowhere left to say anything. */
+const LEVEL_TOP = 1.5;
+const level = (u: number) => Math.max(0, Math.min(1, u / LEVEL_TOP)) * 100;
 const ROW_GAP = 15;
 /* Room for a queue to grow into before it reaches whatever is feeding it. */
 const QUEUE_W = 68, WIRE_W = 52;
@@ -331,6 +337,14 @@ export function FlowCanvas({ model, result, month, selected, onSelect, compact, 
                     style={{ left: p.x, top: p.y, width: p.w, height: p.h }}
                     aria-pressed={isOn('team', t.id)} aria-label={tip} title={tip}
                     onClick={() => onSelect(isOn('team', t.id) ? null : { kind: 'team', id: t.id })}>
+              {/* The block is the gauge. A bar beside a percentage is the most
+                  dashboard-shaped object there is; a level rising inside the building
+                  says the same thing and says it about a place. */}
+              <span className="fc-vessel" aria-hidden="true">
+                <i className="fc-level" style={{ height: level(util) + '%' }} />
+                <u className="fc-plan" style={{ bottom: level(m.targetUtilization) + '%' }} />
+                <u className="fc-ceil" style={{ bottom: level(1) + '%' }} />
+              </span>
               {marks > 0 && (
                 <span className="fc-q" aria-hidden="true">
                   {Array.from({ length: Math.ceil(marks / MARK_ROWS) }, (_, c) => (
@@ -352,10 +366,6 @@ export function FlowCanvas({ model, result, month, selected, onSelect, compact, 
               </span>
               <span className="fc-read">
                 <b className="fc-pc">{Math.round(util * 100)}<em>%</em></b>
-                <span className="fc-bar">
-                  <i style={{ width: Math.min(100, util * 100) + '%' }} />
-                  <u style={{ left: Math.min(100, m.targetUtilization * 100) + '%' }} />
-                </span>
               </span>
               <span className="fc-line">
                 {queued !== null && queued >= 1

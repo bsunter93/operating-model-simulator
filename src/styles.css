@@ -1853,3 +1853,71 @@ body.world .foot{padding:6px clamp(16px,3vw,32px);font-size:10.5px;line-height:1
 .sb-stage{overflow:hidden;scrollbar-gutter:auto}
 .sb-stagebox{max-width:100%;max-height:100%;overflow:auto;
   display:flex;align-items:center;justify-content:center}
+
+/* ── the block is the gauge ─────────────────────────────────────────────────
+   Seven identical rectangles, each with a number and a horizontal progress bar, read as
+   seven KPI widgets whatever colour they are.
+
+   Two attempts at filling the whole block like a vessel were worse, and the reason is
+   geometry: a block is 236 wide and about 100 tall, so a level rising through it has
+   almost no travel and enormous width, which reads as a horizontal band behind the text,
+   which is the bar again with the legibility ruined. The gauge is a tank standing on the
+   block's own left edge instead. It has the full height to travel through, the plan and
+   the ceiling are ticks on it, and the words keep a clean field to sit in. */
+.sb-live .fc-vessel{position:absolute;left:0;top:3px;bottom:0;width:13px;
+  overflow:visible;pointer-events:none;z-index:0;
+  background:color-mix(in srgb,var(--ink) 4%,transparent);
+  border-right:1px solid var(--hair)}
+.sb-live .fc-level{position:absolute;left:0;right:0;bottom:0;display:block;
+  background:color-mix(in srgb,var(--accent) 62%,transparent);transition:height .32s ease}
+.sb-live .fc-node.s-watch .fc-level{background:color-mix(in srgb,var(--warm) 70%,transparent)}
+.sb-live .fc-node.s-constrained .fc-level,
+.sb-live .fc-node.s-severe .fc-level{background:color-mix(in srgb,var(--alert) 72%,transparent)}
+/* what it planned to run at, and what it can actually do, as marks on the tank */
+.sb-live .fc-plan,.sb-live .fc-ceil{position:absolute;left:0;height:0;text-decoration:none;
+  background:none}
+.sb-live .fc-plan{right:-3px;border-top:1px dashed color-mix(in srgb,var(--ink) 45%,transparent)}
+.sb-live .fc-ceil{right:-5px;border-top:1.5px solid color-mix(in srgb,var(--ink) 70%,transparent)}
+/* the block itself: a structure, not a card. Content clears the tank. */
+.sb-live .fc-node{padding:0 11px 0 23px}
+/* One instrument to a block. The bar is gone, the number steps back to a reading, and the
+   trace keeps its line and loses its area and its dot, which were a second shape
+   competing with the first. */
+.sb-live .fc-bar{display:none}
+.sb-live .fc-spark-a,.sb-live .fc-sparkd{display:none}
+.sb-live .fc-pc{font-size:16px}
+.sb-live .fc-pc em{font-size:9px}
+.sb-live .fc-read{gap:0}
+
+/* ── what do you run ────────────────────────────────────────────────────────
+   The gate used to ask which scenario to run, and the scenarios are things like a 30%
+   demand step or a hiring freeze. Those are what happens to an organisation, not what
+   it is, and offering them as the first choice asks a reader to pick the outcome before
+   making a single decision. The question is what kind of work they run; each world then
+   brings the year its own model nominates. */
+.om-gate-k1{margin-top:0}
+/* minmax(248px,1fr) makes every track demand 248px whatever the container has, so on a
+   phone the grid laid out two columns, grew the gate to its 736px max-width and took the
+   whole page sideways with it. min(248px,100%) lets a track fall below its own minimum
+   when that is all there is. */
+.om-worlds{list-style:none;margin:0 0 34px;padding:0;display:grid;gap:8px;
+  grid-template-columns:repeat(auto-fit,minmax(min(248px,100%),1fr));max-width:56rem}
+.om-worlds button{display:grid;gap:6px;width:100%;height:100%;text-align:left;
+  padding:13px 15px;border:1px solid var(--line);border-radius:10px;
+  background:var(--surface);transition:border-color .12s,background .12s}
+.om-worlds button:hover{border-color:var(--accent)}
+.om-worlds button.on{border-color:var(--accent);background:var(--accent-soft)}
+.om-worlds b{font:400 13.5px/1.45 var(--sans);color:var(--ink);font-weight:500}
+.om-worlds span{font:500 9.5px/1 var(--mono);letter-spacing:.11em;text-transform:uppercase;
+  color:var(--muted)}
+.om-worlds button.on span{color:var(--accent)}
+
+/* A grid item's automatic minimum size is its min-content width, so the gate was allowed
+   to grow past the track that was supposed to be holding it and took the page sideways.
+   min-width:0 is what actually stops it; the single column below 640px is belt and braces
+   so the world cards never argue about how many will fit on a phone. */
+.om-gate{min-width:0}
+.om-worlds,.om-worlds li,.om-worlds button{min-width:0}
+@media (max-width:640px){
+  .om-worlds{grid-template-columns:minmax(0,1fr)}
+}

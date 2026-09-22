@@ -17,6 +17,7 @@ import { FlowCanvas, layout, type Sel } from '../components/FlowCanvas';
 import { YearSpine } from '../components/YearSpine';
 import { Why } from '../components/Why';
 import { MONTHS } from './Run';
+import { RUN_WORLDS } from '../data/templates';
 
 /**
  * You are not using a simulator. You are running this company for a year.
@@ -51,24 +52,23 @@ function situationOf(model: { teams: { id: string; name: string }[] }, result: M
 }
 
 export function Sandbox() {
-  const { model, fmt, isFixture } = useStore();
+  const { model, fmt, isFixture, dispatch } = useStore();
   const [decisions, setDecisions] = useState<Decision[]>([]);
   const [sel, setSel] = useState<Sel>(null);
   /* One panel, not three tabs. Why something is happening and what you can do about it
      are one thought, and a tab bar between them is a filing cabinet. */
   const [started, setStarted] = useState(false);
   const baseId = model.scenarios.find((x) => x.type === 'base')?.id ?? model.scenarios[0].id;
-  /* Open on the year the model nominates for its run, not on the plan as written.
-     Nothing queues on the base plan: every team crosses the line it planned to run at
-     and not one of them ever crosses what it can physically do, so carried work is zero
-     in all twelve months and the queues, which are the whole point of the picture, never
-     draw. The model already names the year with pressure in it, so the sandbox and the
-     run now open on the same one. Falls back to base for a model that names none. */
-  const openingId = model.run?.scenarioId
+  /* The year is not something you pick. A demand shock, a winter, a grant that arrives
+     three months late: those are things that happen to an organisation, and offering
+     them in a dropdown asks the reader to choose the outcome before they have made a
+     single decision. What a reader can honestly answer is what kind of work they run,
+     so that is the question, and the year each world gets is the one its own model
+     nominates. Falls back to the plan as written for a model that names none, which is
+     also the only year in which nothing ever queues. */
+  const scenarioId = model.run?.scenarioId
     && model.scenarios.some((x) => x.id === model.run!.scenarioId)
     ? model.run.scenarioId : baseId;
-  const [scenarioId, setScenarioId] = useState(openingId);
-  const scenario = model.scenarios.find((x) => x.id === scenarioId) ?? model.scenarios[0];
   const [at, setAt] = useState(0);
 
   const applied = useMemo(() => applyDecisions(model, decisions), [model, decisions]);
@@ -248,6 +248,20 @@ export function Sandbox() {
     return (
       <main className="sandbox">
         <section className="om-gate">
+          <p className="om-gate-k om-gate-k1">What do you run?</p>
+          <ul className="om-worlds">
+            {RUN_WORLDS.map((w) => (
+              <li key={w.id}>
+                <button type="button" className={w.id === model.id ? 'on' : ''}
+                        aria-pressed={w.id === model.id}
+                        onClick={() => dispatch({ type: 'model', model: w.build() })}>
+                  <b>{w.shapeLine}</b>
+                  <span>{w.name}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+
           <h1>{isFixture ? model.name : 'Your model'}</h1>
           <p className="om-gate-sub">{result.months[0]?.slice(0, 4)} operating model</p>
           <p className="om-gate-facts">
@@ -274,17 +288,6 @@ export function Sandbox() {
               <>Every team is inside the line it plans to run at. It does not stay that way.</>
             )}
           </p>
-
-          <label className="om-gate-pick">
-            <span>The year you are running</span>
-            <select value={scenarioId} title={scenario.description}
-                    onChange={(e) => setScenarioId(e.target.value)}>
-              {model.scenarios.map((sc) => (
-                <option key={sc.id} value={sc.id} title={sc.description}>{sc.name}</option>
-              ))}
-            </select>
-            <em>{scenario.description}</em>
-          </label>
 
           <button type="button" className="om-gate-go" onClick={() => setStarted(true)}>
             Start the year &rarr;
