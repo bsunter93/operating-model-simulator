@@ -585,21 +585,18 @@ export function Sandbox() {
         )}
       </section>
 
-      {/* Two ways out, and neither of them is a second game: the numbers underneath, and
-          the written answer for anyone who would rather not play. This used to promote
-          the run, which was a different experience with its own opening questions, so
-          following it mid-year threw away the year you were playing. */}
-      <div className="rb-opts sb-go">
-        <a className="rb-opt" href="#/model"><b>Open the full model</b>
-          <span>Every team, month, scenario and assumption behind this.</span></a>
-        {/* The page bails on a model that carries no run, so it is only offered for one
-            that does. */}
-        {model.run && (
+      {/* One way out, and it is not a second game. The numbers underneath are already a
+          masthead link, so offering them again here was the same door twice; what is not
+          anywhere else is the written answer, for a reader who would rather not play.
+          The page bails on a model that carries no run, so it is only offered for one
+          that does. */}
+      {model.run && (
+        <div className="rb-opts sb-go">
           <a className="rb-opt" href="#/answer"><b>Read the answer instead</b>
             <span>There is no best plan, only a best plan for something. Every path,
               ranked against each objective in turn.</span></a>
-        )}
-      </div>
+        </div>
+      )}
       </aside>
 
       {/* The deck: the clock of this world, and the one button that moves it. Both are
