@@ -535,9 +535,10 @@ export function Sandbox() {
         )}
       </section>
 
+      {/* No second front door from inside the game. This used to promote the run, which
+          is a different experience with its own opening questions, so clicking it mid-year
+          threw away the year you were playing and landed you in a form. */}
       <div className="rb-opts sb-go">
-        <a className="rb-opt rb-go" href="#/run"><b>Take the run &rarr;</b>
-          <span>Five decisions on a year with real pressure in it, and a scoreboard at the end.</span></a>
         <a className="rb-opt" href="#/model"><b>Open the full model</b>
           <span>Every team, month, scenario and assumption behind this.</span></a>
       </div>

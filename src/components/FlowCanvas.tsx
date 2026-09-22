@@ -182,9 +182,27 @@ const sparkLine = (s: number[]) => (s.length ? 'M' + sparkPts(s).join(' L') : ''
 const sparkArea = (s: number[], _m: number) =>
   s.length ? `M0,16 L${sparkPts(s).join(' L')} L100,16 Z` : '';
 
-const curve = (x1: number, y1: number, x2: number, y2: number) => {
-  const dx = Math.max(34, (x2 - x1) / 2.1);
-  return `M${x1},${y1} C${x1 + dx},${y1} ${x2 - dx},${y2} ${x2},${y2}`;
+/**
+ * A run of channel, not a freehand curve.
+ *
+ * Work does not travel along a bezier. A conduit leaves its source horizontally, turns
+ * once, runs, turns back and enters square: two elbows and three straight sections, with
+ * a small radius on each corner so a bend reads as a bend in a run rather than a kink.
+ * The corner radius is clamped against both legs, because a short drop between two teams
+ * that sit almost level would otherwise round straight through itself.
+ */
+const channel = (x1: number, y1: number, x2: number, y2: number) => {
+  const dy = y2 - y1;
+  const run = x2 - x1;
+  if (Math.abs(dy) < 1.5 || run < 8) return `M${x1},${y1} L${x2},${y2}`;
+  const mid = x1 + Math.max(16, run / 2);
+  const r = Math.max(1, Math.min(10, Math.abs(dy) / 2, mid - x1 - 1, x2 - mid - 1));
+  const s = Math.sign(dy);
+  return `M${x1},${y1} L${mid - r},${y1}`
+    + ` Q${mid},${y1} ${mid},${y1 + s * r}`
+    + ` L${mid},${y2 - s * r}`
+    + ` Q${mid},${y2} ${mid + r},${y2}`
+    + ` L${x2},${y2}`;
 };
 
 interface Props {
@@ -247,7 +265,9 @@ export function FlowCanvas({ model, result, month, selected, onSelect, compact, 
             const from = f.kind === 'arrival' ? geo.sources.get(f.sourceId) : geo.teams.get(f.sourceId);
             const to = geo.teams.get(f.toTeamId);
             if (!from || !to) return null;
-            const d = curve(from.x + from.w, from.y + from.h / 2, to.x - QUEUE_W, to.y + to.h / 2);
+            const x1 = from.x + from.w, y1 = from.y + from.h / 2;
+            const x2 = to.x - QUEUE_W, y2 = to.y + to.h / 2;
+            const d = channel(x1, y1, x2, y2);
             const rel = units / peak;
             const on = lit(f.toTeamId, f.sourceId, f.viaStreamId);
             return (
@@ -258,6 +278,11 @@ export function FlowCanvas({ model, result, month, selected, onSelect, compact, 
                 <path id={`lane-${f.id}`} className="fc-lane" d={d}
                       style={{ strokeWidth: 7 + 5 * Math.sqrt(rel) }} />
                 <path className="fc-wire" d={d} style={{ strokeWidth: 1 + 2 * Math.sqrt(rel) }} />
+                {/* Where the run is tapped off, and where it lands. A channel that simply
+                    stops is a line; a channel with a takeoff and a mouth is plumbing. */}
+                <rect className="fc-tap" x={x1 - 2.5} y={y1 - 2.5} width="5" height="5" />
+                <path className="fc-mouth"
+                      d={`M${x2 - 6.5},${y2 - 4} L${x2 - 1},${y2} L${x2 - 6.5},${y2 + 4}`} />
                 {(() => {
                   const count = Math.max(1, Math.round(1 + 5 * Math.sqrt(rel)));
                   const dur = 5.4 - 3 * rel;

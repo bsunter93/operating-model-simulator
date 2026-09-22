@@ -1995,3 +1995,16 @@ body.world .foot{padding:6px clamp(16px,3vw,32px);font-size:10.5px;line-height:1
    the sources column on its left could not be scrolled back to. Safe centring falls back
    to start alignment the moment the content stops fitting. */
 .sb-stagebox{justify-content:safe center;align-items:safe center}
+
+/* ── channels, not curves ───────────────────────────────────────────────────
+   Square caps and joins, because a run of conduit does not have rounded ends, and a
+   takeoff at the source with a mouth at the delivery so the channel reads as plumbing
+   rather than as a line that happens to stop. */
+.sb-live .fc-edge .fc-lane{stroke-linecap:butt;stroke-linejoin:miter}
+.sb-live .fc-edge .fc-wire{stroke-linecap:butt;stroke-linejoin:miter}
+.sb-live .fc-tap{fill:var(--line)}
+.sb-live .fc-mouth{fill:none;stroke:var(--line);stroke-width:1.2;
+  stroke-linecap:butt;stroke-linejoin:miter}
+.sb-live .fc-edge.on .fc-tap{fill:var(--accent)}
+.sb-live .fc-edge.on .fc-mouth{stroke:var(--accent)}
+.sb-live .fc-edge.dim .fc-tap,.sb-live .fc-edge.dim .fc-mouth{opacity:.4}
