@@ -17,6 +17,7 @@ import { FlowCanvas, layout, type Sel } from '../components/FlowCanvas';
 import { YearSpine } from '../components/YearSpine';
 import { Why } from '../components/Why';
 import { RUN_WORLDS } from '../data/templates';
+import { WorldMark } from '../components/WorldMark';
 
 /**
  * You are not using a simulator. You are running this company for a year.
@@ -256,27 +257,32 @@ export function Sandbox() {
     return (
       <main className="sandbox">
         <section className="om-gate">
-          <p className="om-gate-k om-gate-k1">What do you run?</p>
-          <ul className="om-worlds">
-            {RUN_WORLDS.map((w) => (
-              <li key={w.id}>
-                <button type="button" className={w.id === model.id ? 'on' : ''}
-                        aria-pressed={w.id === model.id}
-                        onClick={() => dispatch({ type: 'model', model: w.build() })}>
-                  <b>{w.shapeLine}</b>
-                  <span>{w.name}</span>
-                </button>
-              </li>
-            ))}
-          </ul>
+          <div className="om-pick">
+            <p className="om-gate-k om-gate-k1">What do you run?</p>
+            <ul className="om-worlds">
+              {RUN_WORLDS.map((w, i) => (
+                <li key={w.id}>
+                  <button type="button" className={'w' + i + (w.id === model.id ? ' on' : '')}
+                          aria-pressed={w.id === model.id}
+                          onClick={() => dispatch({ type: 'model', model: w.build() })}>
+                    {w.shape && <WorldMark shape={w.shape} />}
+                    <b>{w.shapeLine}</b>
+                    <span>{w.name}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
 
+          <div className="om-chosen">
           <h1>{isFixture ? model.name : 'Your model'}</h1>
           <p className="om-gate-sub">{result.months[0]?.slice(0, 4)} operating model</p>
-          <p className="om-gate-facts">
-            <span>{Math.round(result.summary.startingFte)} people</span>
-            <span>{fmt.money(result.financials.annualBudget)} budget</span>
-            <span>{months} months</span>
-          </p>
+          <dl className="om-gate-facts">
+            <div><dt>People</dt><dd>{fmt.count(Math.round(result.summary.startingFte))}</dd></div>
+            <div><dt>Budget</dt><dd>{fmt.money(result.financials.annualBudget)}</dd></div>
+            <div><dt>Teams</dt><dd>{model.teams.length}</dd></div>
+            <div><dt>Months</dt><dd>{months}</dd></div>
+          </dl>
 
           <p className="om-gate-k">Your objective</p>
           <p className="om-gate-obj">
@@ -300,6 +306,7 @@ export function Sandbox() {
           <button type="button" className="om-gate-go" onClick={() => setStarted(true)}>
             Start the year &rarr;
           </button>
+          </div>
         </section>
       </main>
     );

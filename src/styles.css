@@ -2020,3 +2020,48 @@ body.world .foot{padding:6px clamp(16px,3vw,32px);font-size:10.5px;line-height:1
 .om-end-l dd{margin:0;text-align:right;font:600 12px/1.5 var(--mono);color:var(--ink)}
 .om-end-l dd.up{color:var(--ok)}
 .om-end-l dd.down{color:var(--alert)}
+
+/* ── the gate: four kinds of work, told apart by their shape ────────────────
+   Four identical grey boxes make a choice that is structural read as a choice between
+   paragraphs. Each world gets a mark drawn in the canvas's own language and a colour of
+   its own, so the difference is visible before it is read. The colour is confined to
+   this screen: on the canvas colour still means exactly one thing, how close a team is
+   to its limit, and a second meaning there would cost more than it bought. */
+.om-gate{display:grid;gap:clamp(30px,5vw,58px);align-items:start;max-width:64rem}
+@media (min-width:1000px){
+  .om-gate{grid-template-columns:minmax(0,1.05fr) minmax(0,1fr)}
+  .om-chosen{position:sticky;top:26px}
+}
+.om-worlds{grid-template-columns:minmax(0,1fr);margin-bottom:0;max-width:none}
+.om-worlds button{position:relative;grid-template-columns:auto minmax(0,1fr);
+  grid-template-areas:"mark line" "mark name";gap:2px 13px;align-items:center;
+  padding:14px 16px;overflow:hidden}
+.om-worlds .wm{grid-area:mark;width:34px;height:22px;align-self:center;
+  color:var(--muted);transition:color .14s}
+.om-worlds .wm rect{fill:currentColor}
+.om-worlds .wm .wm-l{fill:none;stroke:currentColor;stroke-width:1.4;stroke-linecap:square}
+.om-worlds b{grid-area:line}
+.om-worlds span{grid-area:name}
+/* a hairline of the world's own colour down the edge, filled in once it is chosen */
+.om-worlds button::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;
+  background:currentColor;opacity:.3;transition:opacity .14s}
+.om-worlds button.on::before{opacity:1}
+.om-worlds .w0{color:var(--accent)}
+.om-worlds .w1{color:var(--steel)}
+.om-worlds .w2{color:var(--plum)}
+.om-worlds .w3{color:var(--warm)}
+.om-worlds button:hover,.om-worlds button.on{border-color:currentColor}
+.om-worlds button.on{background:color-mix(in srgb,currentColor 8%,transparent)}
+.om-worlds button:hover .wm,.om-worlds button.on .wm{color:inherit}
+.om-worlds button.on span{color:inherit}
+
+/* the organisation you picked, as an instrument panel rather than a line of prose */
+.om-gate-facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(88px,100%),1fr));
+  gap:0;margin:22px 0 0;padding:0 0 0;border:1px solid var(--line);border-radius:8px;
+  overflow:hidden;background:var(--surface)}
+.om-gate-facts > div{padding:9px 13px;border-left:1px solid var(--line);min-width:0}
+.om-gate-facts > div:first-child{border-left:0}
+.om-gate-facts dt{font:600 8.5px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;
+  color:var(--muted)}
+.om-gate-facts dd{margin:4px 0 0;font:600 15px/1.1 var(--mono);color:var(--ink);
+  font-variant-numeric:tabular-nums}
