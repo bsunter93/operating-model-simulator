@@ -796,22 +796,14 @@ details.tuck p{font-size:12.5px;color:var(--muted);margin:8px 0 6px}
 @container (max-width:620px){.flowframe iframe{aspect-ratio:620/790}}
 .flowframe figcaption{margin-top:8px;font-size:12.5px;line-height:1.5;color:var(--muted)}
 
-/* A third masthead link pushed the bar to 465px inside a 390px phone. It is dropped
-   below the point where the masthead already runs out of room; the same explainer is
-   reachable from the first story beat and from the board's own detail tabs, both of
-   which are visible on a phone. */
 /* The masthead has room for about two things on a phone. Every link added here has now
    pushed it past the viewport twice, so the rule is stated once: below 900px only the
-   run and the way home survive. The explainer is reachable from the first story beat and
-   the board's own tabs; Your numbers is a tool affordance and this is a demonstration. */
+   way home and the site link survive. The first slot is contextual rather than a third
+   link, so getting back to the organisation never costs one. Your numbers is a tool
+   affordance and this is a demonstration. */
 @media (max-width:900px){
-  /* Two things fit here. Now that the run is where you land, the one worth keeping is the
-     way out of it; Your numbers is a tool affordance and this is a demonstration. */
   .mast-how,.mast-mine{display:none}
 }
-/* The run is the short way in, so it survives the narrow masthead where the
-   explainer link does not. */
-.mast-links a[href="#/run"]{color:var(--accent)}
 
 /* ── the run ─────────────────────────────────────────────────────────────────
    One question on screen, the board beside it, and nothing to configure. The

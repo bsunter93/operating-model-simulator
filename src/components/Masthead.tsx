@@ -50,7 +50,13 @@ export function Masthead({ view }: { view: string }) {
           </div>
         </details>
         <nav className="mast-links" aria-label="Pages">
-          <a href="#/model">The full model &rarr;</a>
+          {/* One slot, used for whichever of the two you are not looking at. The masthead
+              has room for about two links on a phone, so a way home could not be a third
+              one; on the board and the answer it is the way home, and on the sandbox it
+              is the way to the numbers underneath. */}
+          {view === 'sandbox'
+            ? <a href="#/model">The full model &rarr;</a>
+            : <a href="#/">&larr; The organisation</a>}
           <a className="mast-mine" href={/^#\/mine/.test(window.location.hash) ? '#/' : '#/mine'}>{/^#\/mine/.test(window.location.hash) ? '← Back' : 'Your numbers →'}</a>
           <a href="https://bensunter.com/">bensunter.com</a>
         </nav>
