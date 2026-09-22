@@ -238,7 +238,11 @@ export function Sandbox() {
   const geo = useMemo(() => layout(tuned, result, spread), [tuned, result, spread]);
   const fit = useMemo(() => {
     if (!box) return 1;
-    return Math.max(0.62, Math.min(1.45, Math.min(box.w / geo.width, box.h / geo.height)));
+    /* The floor is a legibility floor, not a fitting one. A short window was shrinking
+       the world to 0.62, which is 7px type: the whole organisation on one screen and
+       none of it readable. Below this the stage scrolls instead, because a readable
+       world you move around beats an unreadable one you can see all of. */
+    return Math.max(0.85, Math.min(1.45, Math.min(box.w / geo.width, box.h / geo.height)));
   }, [box, geo]);
 
   if (!started) {

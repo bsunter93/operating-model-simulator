@@ -1921,3 +1921,22 @@ body.world .foot{padding:6px clamp(16px,3vw,32px);font-size:10.5px;line-height:1
 @media (max-width:640px){
   .om-worlds{grid-template-columns:minmax(0,1fr)}
 }
+
+/* ── the container is what says "card" ──────────────────────────────────────
+   A surface with an edge around a name and a number is a card, and no amount of
+   restyling the contents changes that, because the box is the thing being read. So the
+   box goes. A team is a tank, a name, a reading and a floor line: marks standing on the
+   canvas rather than a widget sitting on top of it. Selection and hover get a wash
+   instead of a border, since a border is the thing we just removed. */
+.sb-live .fc-node{background:none;box-shadow:inset 0 -1px 0 color-mix(in srgb,var(--ink) 22%,transparent)}
+.sb-live .fc-node::before{display:none}
+.sb-live .fc-node:hover{background:color-mix(in srgb,var(--accent) 8%,transparent);
+  box-shadow:inset 0 -1px 0 var(--accent)}
+.sb-live .fc-node.on{background:color-mix(in srgb,var(--accent) 11%,transparent);
+  box-shadow:inset 0 -1px 0 var(--accent)}
+.sb-live .fc-node.s-watch{box-shadow:inset 0 -1px 0 color-mix(in srgb,var(--warm) 70%,transparent)}
+.sb-live .fc-node.s-constrained,
+.sb-live .fc-node.s-severe{box-shadow:inset 0 -1px 0 color-mix(in srgb,var(--alert) 70%,transparent)}
+/* the source chips lose their box for the same reason */
+.sb-live .fc-src{background:none;border:0;box-shadow:inset 0 -1px 0 color-mix(in srgb,var(--ink) 16%,transparent)}
+.sb-live .fc-src:hover{box-shadow:inset 0 -1px 0 var(--accent)}
