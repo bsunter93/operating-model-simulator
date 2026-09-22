@@ -2209,3 +2209,21 @@ body.world .foot{padding:6px clamp(16px,3vw,32px);font-size:10.5px;line-height:1
 .eyebrow{font-weight:600}
 .rb-when{font:600 9px/1 var(--mono);letter-spacing:.14em;color:var(--muted)}
 .rb-opt{border-radius:10px}
+
+/* ── people on the way, drawn like the work is ──────────────────────────────
+   Ten hollow circles in a row beside a month read as `ooooooooo Jun`, which is a string
+   of lowercase letters, not ten people. The queue already had a mark language for
+   countable things: upright marks standing on a line. Hiring gets the same one, hollow
+   because they are not here yet, standing on a dashed floor because the floor is a date
+   rather than a place. */
+.sb-live .fc-pipe{gap:2px;align-items:flex-end;margin-left:9px;padding-bottom:4px}
+.sb-live .fc-pipe i{width:3.5px;height:8px;border-radius:.5px;background:none;
+  border:1px solid color-mix(in srgb,var(--accent) 62%,transparent)}
+.sb-live .fc-pipe::after{content:"";position:absolute;left:0;right:15px;bottom:0;
+  height:0;border-top:1px dashed color-mix(in srgb,var(--accent) 55%,transparent)}
+.sb-live .fc-pipe em{align-self:flex-end;margin:0 0 -1px 5px;opacity:1;
+  font-weight:600;letter-spacing:.04em}
+/* the year ahead: what the rail holds before a reader has picked anything */
+.om-ahead{border-left:3px solid var(--steel)}
+.om-ahead-l{margin:0 0 10px;font:400 13.5px/1.65 var(--sans);color:var(--body)}
+.om-ahead-l b{color:var(--ink);font-weight:600}

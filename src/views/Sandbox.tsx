@@ -53,6 +53,26 @@ function situationOf(model: { teams: { id: string; name: string }[] }, result: M
   } as const;
 }
 
+/**
+ * Open straight into a running year: `#/?play` starts it, `#/?at=7` starts it in August.
+ *
+ * Read at module load, not in an effect, because writeQuery rebuilds the hash from a
+ * fixed list of keys it knows about and runs before anything else gets a look in. The
+ * parameter is gone from the URL a moment later, which is the right behaviour: it is an
+ * instruction for the first render, not a piece of state.
+ */
+const OPEN_AT: number | null = (() => {
+  if (typeof window === 'undefined') return null;
+  try {
+    const q = new URLSearchParams(window.location.hash.split('?')[1] ?? '');
+    if (q.get('at') !== null) {
+      const n = Number(q.get('at'));
+      return Number.isFinite(n) ? Math.max(0, Math.min(11, Math.trunc(n))) : 0;
+    }
+    return q.has('play') ? 0 : null;
+  } catch { return null; }
+})();
+
 export function Sandbox() {
   const { model, tuned, result, doNothing: baseResult, fmt, isFixture, dispatch, state } = useStore();
   /* The year the reader is playing lives in the store, not here. Holding it locally
@@ -62,7 +82,7 @@ export function Sandbox() {
   const [sel, setSel] = useState<Sel>(null);
   /* One panel, not three tabs. Why something is happening and what you can do about it
      are one thought, and a tab bar between them is a filing cabinet. */
-  const [started, setStarted] = useState(false);
+  const [started, setStarted] = useState(OPEN_AT !== null);
   /* The year is not something you pick. A demand shock, a winter, a grant that arrives
      three months late: those are things that happen to an organisation, and offering
      them in a dropdown asks the reader to choose the outcome before they have made a
@@ -70,7 +90,7 @@ export function Sandbox() {
      that is the question, and the store opens each world on the year its own model
      nominates. */
   const scenarioId = state.scenarioId;
-  const [at, setAt] = useState(0);
+  const [at, setAt] = useState(OPEN_AT ?? 0);
 
   const months = result.teams[0]?.months.length ?? 12;
   const month = Math.min(at, months - 1);
@@ -126,6 +146,27 @@ export function Sandbox() {
   const brief = useMemo(() => briefAt(model, month), [model, month]);
   const over = month >= months - 1;
   const verdict = useMemo(() => (over ? verdictOf(result) : null), [over, result]);
+
+  /* What the year does, for a reader who has not picked anything yet.
+     January is quiet on every one of these models, so the first screen after Start used
+     to be a picture with nothing wrong in it and a rail holding one line. The shape of
+     the year is already computed for the spine; said in words it gives the opening
+     something to be about and a reason to press the button. */
+  const ahead = useMemo(() => {
+    let first: { at: number; teamId: string } | null = null;
+    const ever = new Set<string>();
+    for (let i = 0; i < months; i++) {
+      for (const t of result.teams) {
+        const m = t.months[i];
+        if (!m || m.utilization <= m.targetUtilization) continue;
+        ever.add(t.teamId);
+        if (!first) first = { at: i, teamId: t.teamId };
+      }
+    }
+    let worst = 0;
+    for (let i = 1; i < shape.length; i++) if (shape[i].over > shape[worst].over) worst = i;
+    return { first, count: ever.size, teams: result.teams.length, worst, worstOver: shape[worst]?.over ?? 0 };
+  }, [result, months, shape]);
 
   const sit = useMemo(() => situationOf(model, result, month), [model, result, month]);
   /* Investigate and decide both act on whatever the reader has picked, falling back to
@@ -416,6 +457,25 @@ export function Sandbox() {
           </section>
         )}
 
+        {!focus && !verdict && ahead.first && (
+          <section className="om-panel om-ahead">
+            <p className="om-end-k">The year ahead</p>
+            <p className="om-ahead-l">
+              <b>{ahead.count} of {ahead.teams}</b> teams go past the line they plan to run
+              at before December. The first is <b>{name(ahead.first.teamId)}</b>, in{' '}
+              <b>{MONTHS[ahead.first.at]}</b>.
+              {ahead.worstOver > 0 && (
+                <> The worst month is <b>{MONTHS[ahead.worst]}</b>, with{' '}
+                  <b>{ahead.worstOver}</b> of them over at once.</>
+              )}
+            </p>
+            <p className="om-note">
+              Advance the year and watch where it gives, or pick a team to see what it is
+              handling now.
+            </p>
+          </section>
+        )}
+
         {brief && (
           <section className="om-panel om-brief">
             <p className="om-end-k">{brief.when}</p>
@@ -432,6 +492,7 @@ export function Sandbox() {
 
       {/* One panel. Why it is happening and what you can do about it are one thought, and
           a tab bar between them files them in different drawers. */}
+      {!(sel?.kind !== 'stream' && !focus && ahead.first && !verdict) && (
       <section className="om-panel">
         {sel?.kind === 'stream' ? (() => {
           const st = tuned.demandStreams.find((x) => x.id === sel.id)!;
@@ -444,7 +505,10 @@ export function Sandbox() {
             </p>
           );
         })() : !focus ? (
-          <p className="fi-idle">Pick a team. You'll get what it's handling now, and what you can do about it.</p>
+          /* The year-ahead panel above already holds this ground when it is showing, and
+             two panels saying nothing is picked yet is one too many. */
+          <p className="fi-idle">Pick a team. You'll get what it's handling now, and
+            what you can do about it.</p>
         ) : (
           <>
             <h2 className="om-q">Why is {name(focus)} where it is in {MONTHS[month]}?</h2>
@@ -548,6 +612,7 @@ export function Sandbox() {
           </>
         )}
       </section>
+      )}
 
       {decisions.length > 0 && (
         <section className="om-panel om-year">
