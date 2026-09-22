@@ -1940,3 +1940,58 @@ body.world .foot{padding:6px clamp(16px,3vw,32px);font-size:10.5px;line-height:1
 /* the source chips lose their box for the same reason */
 .sb-live .fc-src{background:none;border:0;box-shadow:inset 0 -1px 0 color-mix(in srgb,var(--ink) 16%,transparent)}
 .sb-live .fc-src:hover{box-shadow:inset 0 -1px 0 var(--accent)}
+
+/* ── the title block ────────────────────────────────────────────────────────
+   A drawing carries a title block: who, when, and the readings that matter, in labelled
+   cells with rules between them. This bar was a row of loose text set in the page's own
+   type, which reads as a document heading, and two of its four figures never moved all
+   year. It is chrome now, and every figure in it changes as the year does.
+
+   This is also the honest version of an icon toolbar. RCT's bar earns its icons because
+   it has a dozen verbs to compress; this has five, all of which say what they do in two
+   words, so icons would be a private language a first-time reader has to learn. What the
+   bar actually gives you is persistent, dense, deliberate chrome around the world, and
+   that is what this takes. */
+.sb-live .om-top{display:grid;grid-template-columns:minmax(0,1fr) repeat(4,auto);
+  align-items:stretch;gap:0;padding:0;background:var(--surface);
+  border-bottom:1px solid var(--line)}
+.tb-id{display:flex;flex-direction:column;justify-content:center;
+  padding:8px clamp(14px,2.2vw,26px)}
+.tb-cell{display:flex;flex-direction:column;justify-content:center;gap:3px;
+  padding:8px 17px;border-left:1px solid var(--line);min-width:92px}
+.tb-k{font:600 8.5px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;
+  color:var(--muted)}
+.tb-cell p{margin:0;display:flex;align-items:baseline;gap:6px;white-space:nowrap}
+.tb-cell b{font:600 15px/1.1 var(--mono);color:var(--ink);font-variant-numeric:tabular-nums}
+.tb-cell em{font:400 10px/1.2 var(--mono);font-style:normal;color:var(--muted)}
+.tb-state.s-good b{color:var(--ok)}
+.tb-state.s-warn b{color:var(--warm)}
+.tb-state.s-bad b{color:var(--alert)}
+
+/* ── drawn, not rendered ────────────────────────────────────────────────────
+   Hatching is how a drawing says "material", and it is the one texture that can sit
+   under a four-pixel mark without becoming noise. The queue stands on hatched ground and
+   the work turned away spills onto it. Corner ticks frame the sheet. */
+.sb-live .fc{border-radius:0}
+.sb-live .fc::before,.sb-live .fc::after{content:"";position:absolute;width:13px;height:13px;
+  pointer-events:none;border-color:color-mix(in srgb,var(--ink) 30%,transparent);
+  border-style:solid;border-width:0}
+.sb-live .fc::before{left:0;top:0;border-left-width:1px;border-top-width:1px}
+.sb-live .fc::after{right:0;bottom:0;border-right-width:1px;border-bottom-width:1px}
+.sb-live .fc-q::after{height:5px;bottom:-5px;left:-4px;right:-6px;opacity:1;
+  background:repeating-linear-gradient(45deg,
+    color-mix(in srgb,var(--warm) 65%,transparent) 0 1px,transparent 1px 3.5px)}
+.sb-live .fc-node.s-constrained .fc-q::after,
+.sb-live .fc-node.s-severe .fc-q::after{background:repeating-linear-gradient(45deg,
+  color-mix(in srgb,var(--alert) 65%,transparent) 0 1px,transparent 1px 3.5px)}
+
+@media (max-width:960px){
+  .sb-live .om-top{grid-template-columns:minmax(0,1fr) repeat(2,auto)}
+  .sb-live .om-top .tb-cell:nth-of-type(n+4){display:none}
+}
+
+/* Centring an overflowing flex container pushes the overflow off BOTH ends and makes the
+   start of it unreachable: at the legibility floor the canvas is wider than the stage, and
+   the sources column on its left could not be scrolled back to. Safe centring falls back
+   to start alignment the moment the content stops fitting. */
+.sb-stagebox{justify-content:safe center;align-items:safe center}

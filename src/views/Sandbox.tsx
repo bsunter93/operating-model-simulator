@@ -120,6 +120,13 @@ export function Sandbox() {
     return { spentToDate, budget, pace: (budget / months) * (month + 1), fmt: (n: number) => fmt.money(n) };
   }, [result, month, months, fmt]);
 
+  /* The people actually in their seats this month. The title block used to print the
+     starting figure all year, which never moved while attrition and hiring did. */
+  const headcount = useMemo(
+    () => result.teams.reduce((a, t) => a + (t.months[month]?.availableFte ?? 0), 0),
+    [result, month],
+  );
+
   const sit = useMemo(() => situationOf(model, result, month), [model, result, month]);
   /* Investigate and decide both act on whatever the reader has picked, falling back to
      whatever is loudest this month, so the buttons always do something. */
@@ -303,23 +310,32 @@ export function Sandbox() {
 
   return (
     <main className="sandbox sb-live">
+      {/* A title block, the way a drawing carries one: who, when, and the three readings
+          that change under you, in labelled cells with rules between them. It was a row
+          of loose text in the page's own type, which reads as a document heading, and
+          two of its four figures were facts that never moved. */}
       <header className="om-top">
-        <div>
+        <div className="tb-id">
           <h1>{isFixture ? model.name : 'Your model'}</h1>
           <p className="om-sub">{result.months[0]?.slice(0, 4)} operating model</p>
         </div>
-        <p className="om-clock">
-          <b>{MONTHS[month]}</b>
-          <span>month {month + 1} of {months}</span>
-        </p>
-        <p className={'om-state s-' + sit.tone}>
-          {sit.tone === 'good' ? 'On plan'
-            : sit.overCount === 1 ? '1 team over' : `${sit.overCount} teams over`}
-        </p>
-        <p className="om-wall">
-          <span>{fmt.money(result.financials.annualBudget)}</span>
-          <span>{Math.round(result.summary.startingFte)} people</span>
-        </p>
+        <div className="tb-cell tb-clock">
+          <span className="tb-k">Month</span>
+          <p><b>{MONTHS[month]}</b><em>{month + 1} of {months}</em></p>
+        </div>
+        <div className={'tb-cell tb-state s-' + sit.tone}>
+          <span className="tb-k">State</span>
+          <p><b>{sit.tone === 'good' ? 'On plan'
+            : sit.overCount === 1 ? '1 team over' : `${sit.overCount} teams over`}</b></p>
+        </div>
+        <div className="tb-cell">
+          <span className="tb-k">Committed</span>
+          <p><b>{fmt.money(cash.spentToDate)}</b><em>of {fmt.money(cash.budget)}</em></p>
+        </div>
+        <div className="tb-cell">
+          <span className="tb-k">People</span>
+          <p><b>{fmt.count(Math.round(headcount))}</b><em>in their seats</em></p>
+        </div>
       </header>
 
       {/* The world takes the stage, and the stage is whatever is left of the screen.
