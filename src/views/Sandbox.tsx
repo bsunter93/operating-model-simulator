@@ -388,7 +388,9 @@ export function Sandbox() {
         </div>
         <div className="tb-cell tb-clock">
           <span className="tb-k">Month</span>
-          <p><b>{MONTHS[month]}</b><em>{month + 1} of {months}</em></p>
+          {/* Keyed on the month so it remounts when the year moves, which is what lets it
+              mark the change rather than simply reading differently afterwards. */}
+          <p><b key={month}>{MONTHS[month]}</b><em>{month + 1} of {months}</em></p>
         </div>
         <div className={'tb-cell tb-state s-' + sit.tone}>
           <span className="tb-k">State</span>

@@ -477,7 +477,8 @@ export function FlowCanvas({ model, result, month, selected, onSelect, compact, 
                 <span className="fc-q" aria-hidden="true">
                   {Array.from({ length: Math.ceil(marks / MARK_ROWS) }, (_, c) => (
                     <span key={c}>
-                      {Array.from({ length: Math.min(MARK_ROWS, marks - c * MARK_ROWS) }, (_, r) => <i key={r} />)}
+                      {Array.from({ length: Math.min(MARK_ROWS, marks - c * MARK_ROWS) },
+                        (_, r) => <i key={c * MARK_ROWS + r} />)}
                     </span>
                   ))}
                 </span>

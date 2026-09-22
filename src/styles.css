@@ -2227,3 +2227,28 @@ body.world .foot{padding:6px clamp(16px,3vw,32px);font-size:10.5px;line-height:1
 .om-ahead{border-left:3px solid var(--steel)}
 .om-ahead-l{margin:0 0 10px;font:400 13.5px/1.65 var(--sans);color:var(--body)}
 .om-ahead-l b{color:var(--ink);font-weight:600}
+
+/* ── only what changed, moves ───────────────────────────────────────────────
+   Advancing a month replaced the picture, so a reader read a new state instead of
+   watching one happen. Five things move now and nothing else does: the level in each
+   tank, work arriving in a queue, work falling out of a block, the bars of the year, and
+   the month itself. Everything is short and nothing loops, because the point is "that
+   changed", not "look, it is animated". The reduced-motion reset at the top of this file
+   turns all of it off.
+
+   Queue marks carry stable keys across the whole pile, so React reuses the ones that were
+   already standing there and only the marks that genuinely just arrived are mounted, and
+   only they animate. */
+.sb-live .fc-level{transition:height .38s cubic-bezier(.4,0,.2,1),
+  background-color .38s ease,border-color .38s ease}
+@keyframes fc-arrive{from{opacity:0;transform:translateX(7px) scaleY(.3)}
+  to{opacity:1;transform:none}}
+.sb-live .fc-q i{transform-origin:bottom;animation:fc-arrive .34s cubic-bezier(.2,.7,.3,1) both}
+@keyframes fc-fall{from{opacity:0;transform:translateY(-7px)}to{opacity:1;transform:none}}
+.sb-live .fc-shed i{animation:fc-fall .32s cubic-bezier(.3,.6,.4,1) both}
+/* the year underneath, growing and shrinking rather than being redrawn */
+.ys-now,.ys-was{transition:height .38s cubic-bezier(.4,0,.2,1),background-color .3s ease}
+.ys-m{transition:box-shadow .2s ease}
+/* the month, saying so once */
+@keyframes tb-tick{0%{opacity:.25;transform:translateY(-3px)}100%{opacity:1;transform:none}}
+.tb-clock b{animation:tb-tick .3s cubic-bezier(.2,.7,.3,1) both}
