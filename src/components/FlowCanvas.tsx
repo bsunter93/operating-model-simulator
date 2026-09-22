@@ -57,6 +57,8 @@ export interface Layout {
   height: number;
   /** Columns of teams, so a caller sizing the canvas knows how many gaps it can widen. */
   cols: number;
+  /** Room reserved in front of a block for its queue, which the wires stop short of. */
+  queueW: number;
   sources: Map<string, Placed>;
   teams: Map<string, Placed>;
 }
@@ -89,7 +91,23 @@ function teamHeights(model: OperatingModel): Map<string, number> {
  * because they are measured back from the block they wait in front of, so the extra room
  * goes into the wires, which is where flow is legible anyway.
  */
-export function layout(model: OperatingModel, result: ModelResult, spread = 0): Layout {
+/**
+ * `narrow` is the width available, in pixels, when there is not enough of it for the map.
+ *
+ * A phone has about 340. The map wants 854, so fitting it meant a scale of 0.44 and type
+ * at five pixels, and the floor that stopped that from happening left it scrolling
+ * sideways instead. Neither is a layout. Given a narrow width it builds a different one:
+ * every team in a single column at the full width available, routing depth carried by the
+ * order they are stacked in rather than by a second column, and the sources left off,
+ * because their volumes are one tap away in the panel and their column is a third of the
+ * width the phone has. Vertical scrolling is what a phone is for; sideways is not.
+ */
+export function layout(
+  model: OperatingModel,
+  result: ModelResult,
+  spread = 0,
+  narrow: number | null = null,
+): Layout {
   const rank = new Map<string, number>(model.teams.map((t) => [t.id, 1]));
   const routes = result.flow.filter((f) => f.kind === 'route');
   for (let pass = 0; pass < 6; pass++) {
@@ -109,6 +127,31 @@ export function layout(model: OperatingModel, result: ModelResult, spread = 0): 
 
   const th = teamHeights(model);
   const teams = new Map<string, Placed>();
+
+  if (narrow !== null) {
+    /* One column, deepest routing last, so what feeds what is still readable as an order
+       even with no second column to put it in. */
+    const queueW = 30;
+    const teamW = Math.max(150, narrow - PAD_X * 2 - queueW);
+    const x = PAD_X + queueW;
+    let y = PAD_Y;
+    for (const ids of cols) {
+      for (const id of ids) {
+        const h = th.get(id)!;
+        teams.set(id, { x, y, w: teamW, h });
+        y += h + 11;
+      }
+    }
+    return {
+      width: PAD_X * 2 + queueW + teamW,
+      height: y - 11 + PAD_Y + 10,
+      cols: 1,
+      queueW,
+      sources: new Map(),
+      teams,
+    };
+  }
+
   const gap = COL_GAP + Math.max(0, spread);
   const colX = (c: number) => PAD_X + SRC_W + gap + c * (TEAM_W + gap);
   cols.forEach((ids, c) => {
@@ -164,6 +207,7 @@ export function layout(model: OperatingModel, result: ModelResult, spread = 0): 
     width: colX(Math.max(1, cols.length) - 1) + TEAM_W + PAD_X + 18,
     height: Math.max(...all.map((p) => p.y + p.h)) + PAD_Y + 16,
     cols: Math.max(1, cols.length),
+    queueW: QUEUE_W,
     sources, teams,
   };
 }
@@ -196,7 +240,16 @@ const sparkArea = (s: number[], _m: number) =>
 const channel = (x1: number, y1: number, x2: number, y2: number) => {
   const dy = y2 - y1;
   const run = x2 - x1;
-  if (Math.abs(dy) < 1.5 || run < 8) return `M${x1},${y1} L${x2},${y2}`;
+  if (Math.abs(dy) < 1.5 && run >= 0) return `M${x1},${y1} L${x2},${y2}`;
+  if (run < 8) {
+    /* Stacked in one column, so the two ends face the same way: out past both, down, back.
+       A straight line here would cut through every block between them. */
+    const out = Math.max(x1, x2) + 20;
+    const r = Math.min(8, Math.abs(dy) / 2, 18);
+    const s = Math.sign(dy) || 1;
+    return `M${x1},${y1} L${out - r},${y1} Q${out},${y1} ${out},${y1 + s * r}`
+      + ` L${out},${y2 - s * r} Q${out},${y2} ${out - r},${y2} L${x2},${y2}`;
+  }
   const mid = x1 + Math.max(16, run / 2);
   const r = Math.max(1, Math.min(10, Math.abs(dy) / 2, mid - x1 - 1, x2 - mid - 1));
   const s = Math.sign(dy);
@@ -228,12 +281,14 @@ interface Props {
   fit?: number;
   /** Extra width per column gap, so the network spreads into the stage it is given. */
   spread?: number;
+  /** Width available, when there is too little of it for the map: build the list instead. */
+  narrow?: number | null;
   /** Changes made here that show up there: the reader's moves, and the plan's own waits. */
   leads?: Lead[];
 }
 
-export function FlowCanvas({ model, result, month, selected, onSelect, compact, pipeline, monthLabels, fit = 1, spread = 0, leads = [] }: Props) {
-  const geo = useMemo(() => layout(model, result, spread), [model, result, spread]);
+export function FlowCanvas({ model, result, month, selected, onSelect, compact, pipeline, monthLabels, fit = 1, spread = 0, leads = [], narrow = null }: Props) {
+  const geo = useMemo(() => layout(model, result, spread, narrow), [model, result, spread, narrow]);
   const per = useMemo(() => peopleScale(model), [model]);
   const edges = result.flow.map((f) => ({ f, units: f.unitsByMonth[month] ?? 0 }));
   const peak = Math.max(1, ...edges.map((e) => e.units));
@@ -282,7 +337,7 @@ export function FlowCanvas({ model, result, month, selected, onSelect, compact, 
             const to = geo.teams.get(f.toTeamId);
             if (!from || !to) return null;
             const x1 = from.x + from.w, y1 = from.y + from.h / 2;
-            const x2 = to.x - QUEUE_W, y2 = to.y + to.h / 2;
+            const x2 = to.x - geo.queueW, y2 = to.y + to.h / 2;
             const d = channel(x1, y1, x2, y2);
             const rel = units / peak;
             const on = lit(f.toTeamId, f.sourceId, f.viaStreamId);
@@ -346,7 +401,7 @@ export function FlowCanvas({ model, result, month, selected, onSelect, compact, 
             if (!box) return null;
             return (
               <span key={t.id} className={'fc-inhouse' + (selected ? ' dim' : '')}
-                    style={{ left: box.x - QUEUE_W - 4, top: box.y + box.h / 2 - 7 }}
+                    style={{ left: box.x - geo.queueW - 4, top: box.y + box.h / 2 - 7 }}
                     title={`${t.name} has no arriving work: its year is change work`}>
                 no queue
               </span>
@@ -354,7 +409,10 @@ export function FlowCanvas({ model, result, month, selected, onSelect, compact, 
           })}
 
         {result.flow.filter((f) => f.kind === 'arrival').map((f) => {
-          const p = geo.sources.get(f.sourceId)!;
+          /* The narrow layout places no sources: their column is a third of the width a
+             phone has, and what arrives is one tap away in the panel. */
+          const p = geo.sources.get(f.sourceId);
+          if (!p) return null;
           const units = f.unitsByMonth[month] ?? 0;
           return (
             <button key={f.sourceId} type="button"

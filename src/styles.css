@@ -2137,3 +2137,21 @@ body.world .foot{padding:6px clamp(16px,3vw,32px);font-size:10.5px;line-height:1
    twelve labels and asks the reader to count along the row to find out where they are. */
 .ys-l{font-size:9px;letter-spacing:.02em}
 @media (max-width:620px){.ys-l{font-size:8px;letter-spacing:0}}
+
+/* ── the phone gets a column, not a shrunken map ────────────────────────────
+   The stage used to be a fixed slice of the viewport with the whole map crushed into it
+   and dragged sideways. The canvas builds a single column at the width the phone has, so
+   the stage stops being a box: it takes the height the column needs and the page scrolls
+   down through the organisation, which is the one direction a phone is good at. The deck
+   stays pinned, so the next decision is always under the thumb. */
+@media (max-width:960px){
+  .sb-stage{height:auto;min-height:0;padding:10px clamp(10px,3vw,16px) 4px;
+    display:block;overflow:visible}
+  .sb-stagebox{max-height:none;overflow:visible;display:block}
+  .sb-stage .fc-hint{display:none}
+  /* nothing is scaled, so the canvas is its own size and centred by its own box */
+  .sb-live .fc-scroll{margin:0 auto}
+}
+/* "no queue" sits where the sources would be, and on a phone there is no such column for
+   it to sit in. The block's own reading already says the team is holding. */
+@media (max-width:960px){ .sb-live .fc-inhouse{display:none} }

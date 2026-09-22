@@ -246,21 +246,31 @@ export function Sandbox() {
      scale that fits the stage vertically is known before anything moves sideways; the
      columns are then widened to exactly the width that scale wants. Because spreading
      changes width only, the two settle in one pass instead of chasing each other. */
+  /* Below this there is not enough width for the map, whatever it is scaled to, so the
+     canvas builds a single column at the width there is instead of a wide picture the
+     reader has to drag sideways. */
+  const narrow = box && box.w < 560 ? Math.round(box.w) : null;
   const base = useMemo(() => layout(tuned, result), [tuned, result]);
   const spread = useMemo(() => {
-    if (!box) return 0;
+    if (!box || narrow !== null) return 0;
     const want = box.w / (box.h / base.height);
     return Math.max(0, Math.min(200, (want - base.width) / base.cols));
-  }, [box, base]);
-  const geo = useMemo(() => layout(tuned, result, spread), [tuned, result, spread]);
+  }, [box, base, narrow]);
+  const geo = useMemo(
+    () => layout(tuned, result, spread, narrow),
+    [tuned, result, spread, narrow],
+  );
   const fit = useMemo(() => {
     if (!box) return 1;
+    /* The narrow layout is already built to the width it has, so it is drawn at its own
+       size and the page scrolls down through it, which is what a phone is for. */
+    if (narrow !== null) return 1;
     /* The floor is a legibility floor, not a fitting one. A short window was shrinking
        the world to 0.62, which is 7px type: the whole organisation on one screen and
        none of it readable. Below this the stage scrolls instead, because a readable
        world you move around beats an unreadable one you can see all of. */
     return Math.max(0.85, Math.min(1.45, Math.min(box.w / geo.width, box.h / geo.height)));
-  }, [box, geo]);
+  }, [box, geo, narrow]);
 
   if (!started) {
     const first = situationOf(model, result, 0);
@@ -367,7 +377,7 @@ export function Sandbox() {
           <FlowCanvas model={tuned} result={result} month={month} selected={sel} onSelect={setSel}
                       compact={(n) => fmt.count(n)}
                       pipeline={(teamId) => pipelineAt(model, decisions, teamId, month, result.months)}
-                      monthLabels={MONTHS} fit={fit} spread={spread} leads={leads} />
+                      monthLabels={MONTHS} fit={fit} spread={spread} leads={leads} narrow={narrow} />
         </div>
         <p className="fc-hint">Drag the map sideways to follow the work.</p>
       </div>
