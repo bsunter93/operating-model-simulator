@@ -2008,3 +2008,23 @@ body.world .foot{padding:6px clamp(16px,3vw,32px);font-size:10.5px;line-height:1
 .sb-live .fc-edge.on .fc-tap{fill:var(--accent)}
 .sb-live .fc-edge.on .fc-mouth{stroke:var(--accent)}
 .sb-live .fc-edge.dim .fc-tap,.sb-live .fc-edge.dim .fc-mouth{opacity:.4}
+
+/* ── what somebody wrote about this month, and how the year ended ───────────
+   The run was a separate screen whose value was these two things: prose attached to
+   particular months of particular organisations, and a statement at the end about
+   whether the objective was met. They lead the rail, because a month that has something
+   written about it should say so before the reader goes looking. */
+.om-brief{border-left:3px solid var(--warm)}
+.om-end-k{margin:0 0 6px;font:600 9px/1 var(--mono);letter-spacing:.14em;
+  text-transform:uppercase;color:var(--muted)}
+.om-brief-s{margin:0;font:400 13px/1.65 var(--sans);color:var(--body)}
+.om-brief-go{margin-top:12px;padding:7px 13px;border:1px solid var(--line);border-radius:999px;
+  background:var(--paper);font:500 12px/1 var(--sans);color:var(--body)}
+.om-brief-go:hover{border-color:var(--accent);color:var(--accent)}
+.om-end{border-left:3px solid var(--accent)}
+.om-end-l{display:grid;grid-template-columns:auto minmax(0,1fr);gap:5px 14px;margin:0 0 12px}
+.om-end-l dt{font:500 9.5px/1.5 var(--mono);letter-spacing:.06em;text-transform:uppercase;
+  color:var(--muted);align-self:center}
+.om-end-l dd{margin:0;text-align:right;font:600 12px/1.5 var(--mono);color:var(--ink)}
+.om-end-l dd.up{color:var(--ok)}
+.om-end-l dd.down{color:var(--alert)}

@@ -3,8 +3,15 @@ import { useStore } from '../state/store';
 import type { ModelResult } from '../models/results';
 import type { OperatingModel, RunSpec } from '../models/types';
 import type { Fmt } from '../lib/format';
-import { runWith, word } from './Run';
+import { word } from '../lib/format';
+import { run } from '../engine';
+
 import { OBJECTIVES, spend, strain, type Objective } from '../lib/objectives';
+
+/* A one-line wrapper that used to live in the run's own view. It is the only thing this
+   page needed from there. */
+const runWith = (model: OperatingModel, spec: RunSpec, interventions: string[] = []) =>
+  run(model, { scenario: spec.scenarioId, interventions });
 
 /**
  * The short version, for anyone who does not want to play.

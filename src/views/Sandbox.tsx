@@ -8,6 +8,7 @@ import { movesFor, type Move } from '../lib/options';
 import { feedFor } from '../lib/feed';
 import { pressureOf, PRESSURE_WORD, workloadOf, yearShape, asUnits } from '../lib/workload';
 import { chainFor } from '../lib/chain';
+import { briefAt, verdictOf } from '../lib/brief';
 import { ledgerFor } from '../lib/ledger';
 import { tracksFor, divergesAt, type Track } from '../lib/replay';
 import { Replay } from '../components/Replay';
@@ -116,6 +117,12 @@ export function Sandbox() {
     () => result.teams.reduce((a, t) => a + (t.months[month]?.availableFte ?? 0), 0),
     [result, month],
   );
+
+  /* The months somebody wrote something about, and the ending. Both came off the run,
+     which was a separate screen built around exactly these two things. */
+  const brief = useMemo(() => briefAt(model, month), [model, month]);
+  const over = month >= months - 1;
+  const verdict = useMemo(() => (over ? verdictOf(result) : null), [over, result]);
 
   const sit = useMemo(() => situationOf(model, result, month), [model, result, month]);
   /* Investigate and decide both act on whatever the reader has picked, falling back to
@@ -347,6 +354,52 @@ export function Sandbox() {
       </div>
 
       <aside className="sb-rail">
+        {verdict && (
+          <section className="om-panel om-end">
+            <p className="om-end-k">The year is over</p>
+            <h2 className="om-q">
+              {verdict.met
+                ? 'You got through it.'
+                : verdict.pastCapacity && verdict.overBudget
+                  ? 'You went past both.'
+                  : verdict.pastCapacity
+                    ? 'You went past what your teams could do.'
+                    : 'You went past the budget.'}
+            </h2>
+            <dl className="om-end-l">
+              <dt>Worst month</dt>
+              <dd className={verdict.pastCapacity ? 'down' : 'up'}>
+                {pct(verdict.peak)} of what that team could do
+              </dd>
+              <dt>Spent</dt>
+              <dd className={verdict.overBudget ? 'down' : 'up'}>
+                {fmt.money(verdict.spent)} of {fmt.money(verdict.budget)}
+              </dd>
+              <dt>Turned away</dt>
+              <dd className={verdict.shed > 0 ? 'down' : 'up'}>
+                {verdict.shed > 0 ? `${fmt.hours(verdict.shed)} of work, for good` : 'nothing'}
+              </dd>
+            </dl>
+            <p className="om-note">
+              The objective was to get through the year without going past what your teams
+              can do, and without going past the budget.
+            </p>
+          </section>
+        )}
+
+        {brief && (
+          <section className="om-panel om-brief">
+            <p className="om-end-k">{brief.when}</p>
+            <h2 className="om-q">{brief.question}</h2>
+            <p className="om-brief-s">{brief.setup}</p>
+            {brief.focusTeamId && brief.focusTeamId !== focus && (
+              <button type="button" className="om-brief-go"
+                      onClick={() => setSel({ kind: 'team', id: brief.focusTeamId! })}>
+                Look at {name(brief.focusTeamId)} &rarr;
+              </button>
+            )}
+          </section>
+        )}
 
       {/* One panel. Why it is happening and what you can do about it are one thought, and
           a tab bar between them files them in different drawers. */}

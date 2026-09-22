@@ -112,3 +112,9 @@ export function signed(v: number, f: (n: number) => string): string {
   if (Math.abs(v) < 1e-9) return '±0';
   return (v > 0 ? '+' : MINUS) + f(Math.abs(v));
 }
+
+/* Small counts read as words in a sentence and as digits in a label. "Two of your 5
+   calls" is neither. */
+const WORDS = ['no', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve'];
+export const word = (n: number) => WORDS[n] ?? String(n);
+export const Word = (n: number) => word(n).replace(/^./, (c) => c.toUpperCase());
