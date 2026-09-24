@@ -238,12 +238,22 @@ export function Sandbox() {
      is told which of the two it is holding rather than being switched on by the route. */
   useLayoutEffect(() => {
     document.body.classList.toggle('world', started);
+    /* The start screen is a scrolled document; the year opens at its top. */
+    if (started) window.scrollTo({ top: 0 });
     return () => document.body.classList.remove('world');
   }, [started]);
 
   /* A new month is a new headline, so the rail goes back to the top of it. */
   const railRef = useRef<HTMLElement>(null);
   useLayoutEffect(() => { railRef.current?.scrollTo({ top: 0 }); }, [month]);
+  /* On a phone the panel sits above the map, so picking a team further down the page
+     brings its answer back into view. */
+  const picked = sel?.kind === 'team' || sel?.kind === 'stream' ? sel.id : null;
+  useLayoutEffect(() => {
+    if (picked && window.matchMedia('(max-width:960px)').matches) {
+      railRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, [picked]);
 
   const stageRef = useRef<HTMLDivElement>(null);
   const [box, setBox] = useState<{ w: number; h: number } | null>(null);
