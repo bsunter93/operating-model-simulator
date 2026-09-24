@@ -14,9 +14,29 @@ import { asUnits, PRESSURE_WORD, pressureOf, type Workload } from '../lib/worklo
 
 const KIND_ORDER = { waiting: 0, arrival: 1, route: 2, change: 3 } as const;
 
-export function Why({ w, team, month, answered, fmt }:
-  { w: Workload; team: string; month: string; answered: number | null; fmt: Fmt }) {
+/** The headline for a team this month: its pressure, and by how much it missed its plan. */
+export function headlineOf(w: Workload, fmt: Fmt) {
   const press = pressureOf(w);
+  const planned = w.capacityHours * w.targetUtilization;
+  const count = (hours: number) => {
+    const u = asUnits(w, hours);
+    return u !== null && u >= 1 ? `${fmt.count(Math.round(u))} ${w.unit}` : fmt.hours(hours);
+  };
+  const past = w.given - planned;
+  return {
+    press,
+    word: PRESSURE_WORD[press],
+    by: (press === 'over' || press === 'buried') && past > 0 ? count(past) : null,
+    line: `${count(w.given)} came in. The plan covered ${count(planned)}.`,
+  };
+}
+
+/**
+ * 'bar' is the picture: the bar and what each colour is. 'detail' is the arithmetic
+ * behind it, for a reader who opens it.
+ */
+export function Why({ w, answered, fmt, variant = 'bar' }:
+  { w: Workload; answered: number | null; fmt: Fmt; variant?: 'bar' | 'detail' }) {
   const total = Math.max(w.given, w.capacityHours, 1);
   const capAt = (w.capacityHours / total) * 100;
   /* Two lines, not one. "Over capacity" here means past the line the team planned to run
@@ -31,14 +51,36 @@ export function Why({ w, team, month, answered, fmt }:
     return u !== null && u >= 1 ? `${fmt.count(Math.round(u))} ${w.unit}` : fmt.hours(hours);
   };
 
+  if (variant === 'detail') {
+    return (
+      <div className="why why-detail">
+        <ul className="why-key">
+          {segs.map((s) => (
+            <li key={s.key}>
+              <i className={'k-' + s.kind} />
+              <span className="why-k-l">{s.label}</span>
+              <b>{fmt.hours(s.hours)}</b>
+              <em>{Math.round(s.share * 100)}%</em>
+            </li>
+          ))}
+        </ul>
+        <p className="why-end">
+          It planned for <b>{count(planned)}</b> and could do at most <b>{count(w.capacityHours)}</b>,
+          {' '}with {Math.round(w.people)} people at {Math.round(w.hoursEach)} productive hours each.
+          {' '}It got through <b>{count(w.gotTo)}</b>.
+          {w.waits > 0 && <> <b>{count(w.waits)}</b> left waiting for next month.</>}
+          {w.lost > 0 && <> <b className="p-buried">{count(w.lost)}</b> turned away for good.</>}
+          {w.waits <= 0 && w.lost <= 0 && <> Nothing was left over.</>}
+          {answered !== null && (
+            <> <b>{Math.round(answered * 100)}%</b> was picked up inside its target.</>
+          )}
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="why">
-      <p className="why-q">
-        Why is {team} <b className={'p-' + press}>{PRESSURE_WORD[press].toLowerCase()}</b> in {month}?
-        {' '}It was handed <b>{count(w.given)}</b>. It planned for <b>{count(planned)}</b> and
-        {' '}could do at most <b>{count(w.capacityHours)}</b>.
-      </p>
-
       <div className="why-bar" role="img"
            aria-label={`${Math.round(w.utilization * 100)} percent of capacity`}>
         {segs.map((s) => (
@@ -55,28 +97,11 @@ export function Why({ w, team, month, answered, fmt }:
         </u>
       </div>
 
-      <ul className="why-key">
+      <ul className="why-key why-key-short">
         {segs.map((s) => (
-          <li key={s.key}>
-            <i className={'k-' + s.kind} />
-            <span className="why-k-l">{s.label}</span>
-            <b>{fmt.hours(s.hours)}</b>
-            <em>{Math.round(s.share * 100)}%</em>
-          </li>
+          <li key={s.key}><i className={'k-' + s.kind} /><span className="why-k-l">{s.label}</span></li>
         ))}
       </ul>
-
-      <p className="why-end">
-        {Math.round(w.people)} people, {Math.round(w.hoursEach)} productive hours each.
-        {' '}It gets through <b>{count(w.gotTo)}</b>.
-        {w.waits > 0 && <> <b>{count(w.waits)}</b> left waiting for next month.</>}
-        {w.lost > 0 && <> <b className="p-buried">{count(w.lost)}</b> turned away for good.</>}
-        {w.waits <= 0 && w.lost <= 0 && <> Nothing is left over.</>}
-        {answered !== null && (
-          <> Of what arrived, <b className={answered < 0.5 ? 'p-buried' : answered < 0.85 ? 'p-over' : 'p-holding'}>
-            {Math.round(answered * 100)}%</b> was picked up inside its target.</>
-        )}
-      </p>
     </div>
   );
 }

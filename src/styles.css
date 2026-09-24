@@ -2252,3 +2252,116 @@ body.world .foot{padding:6px clamp(16px,3vw,32px);font-size:10.5px;line-height:1
 /* the month, saying so once */
 @keyframes tb-tick{0%{opacity:.25;transform:translateY(-3px)}100%{opacity:1;transform:none}}
 .tb-clock b{animation:tb-tick .3s cubic-bezier(.2,.7,.3,1) both}
+
+/* ── rail and header, v2 ─────────────────────────────────────────────────
+   One answer and then the moves. The rail leads with a headline, one sentence and the
+   bar, puts the moves straight under it, and keeps everything else one click away. */
+.sb-rail{gap:14px;padding:16px clamp(14px,1.4vw,20px) 32px}
+.rl-card{padding:18px;border:1px solid var(--line);border-radius:14px;background:var(--paper);
+  overflow-x:clip}
+.rl-eyebrow{margin:0 0 4px;font:500 12px/1.3 var(--sans);color:var(--muted)}
+.rl-h{margin:0;font:600 23px/1.2 var(--display);color:var(--ink);letter-spacing:-.005em}
+.rl-h-s{font-size:18px}
+.rl-h em{font-style:normal;color:var(--alert)}
+.rl-focus.p-over .rl-h,.rl-focus.p-buried .rl-h{color:var(--alert)}
+.rl-focus.p-over .rl-h em,.rl-focus.p-buried .rl-h em{color:var(--ink)}
+.rl-focus.p-tight .rl-h{color:var(--warm)}
+.rl-line{margin:8px 0 0;font:400 14.5px/1.5 var(--sans);color:var(--body)}
+.rl-line b{color:var(--ink);font-weight:600}
+.rl-note{margin:10px 0 0;font:400 12.5px/1.5 var(--sans);color:var(--muted)}
+.rl-link{margin-top:12px;font:600 13px/1 var(--sans);color:var(--accent)}
+.rl-link:hover{text-decoration:underline;text-underline-offset:3px}
+
+/* the bar, in the card: taller, rounder, labels below */
+.rl-card .why{margin:16px 0 22px;padding:0;border:0}
+.rl-card .why-bar{height:14px;border-radius:7px;background:var(--hair)}
+.rl-card .why-bar i:first-child{border-radius:7px 0 0 7px}
+.rl-card .why-bar i:last-of-type{border-radius:0 7px 7px 0}
+.rl-card .why-bar u span{font:500 11px/1 var(--sans);letter-spacing:0;text-transform:none}
+.why-key-short{margin:26px 0 0;gap:6px 14px}
+.why-key-short li{font-size:12px}
+
+/* the numbers the month cost, as tiles */
+.rl-tiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:0}
+.rl-tiles div{padding:10px 12px;border-radius:10px;background:var(--surface);
+  border:1px solid var(--hair);display:flex;flex-direction:column}
+.rl-tiles dd{margin:0;font:600 18px/1.15 var(--sans);color:var(--ink);font-variant-numeric:tabular-nums}
+.rl-tiles dt{margin-top:3px;font:400 12px/1.35 var(--sans);color:var(--muted)}
+.rl-tiles .t-bad dd{color:var(--alert)}
+.rl-tiles .t-warn dd{color:var(--warm)}
+.rl-end .rl-tiles{margin-top:14px;grid-template-columns:minmax(0,1fr)}
+
+/* the moves: what it is, what it does, and one button */
+.rl-moves{margin-top:20px}
+.rl-sub{display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap;
+  margin:0 0 10px;font:600 14px/1.3 var(--sans);color:var(--ink)}
+.rl-sub span{font:400 12px/1.3 var(--sans);color:var(--muted)}
+.rl-moves ul{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.rl-moves li{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:start;gap:0 12px;
+  padding:12px 12px 12px 14px;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+.rl-moves li:hover{border-color:var(--accent)}
+.rl-moves b{display:block;font:600 14px/1.3 var(--sans);color:var(--ink)}
+.rl-moves li > div{display:contents}
+.rl-moves li b{grid-column:1;align-self:center}
+.rl-moves li button{grid-column:2;grid-row:1}
+.rl-chips{grid-column:1 / -1;display:flex;flex-wrap:wrap;gap:5px;margin:8px 0 0}
+.rl-chips span{padding:2px 8px;border-radius:6px;background:var(--hair);
+  font:500 11.5px/1.5 var(--sans);color:var(--body);white-space:nowrap}
+.rl-chips .up{background:color-mix(in srgb,var(--ok) 14%,transparent);color:var(--ok)}
+.rl-chips .down{background:var(--alert-soft);color:var(--alert)}
+.rl-moves button{padding:8px 13px;border-radius:9px;border:1px solid var(--accent);
+  font:600 12.5px/1 var(--sans);color:var(--accent)}
+.rl-moves button:hover{background:var(--accent);color:var(--paper)}
+
+/* everything else: one line each, open on request */
+.rl-more{margin-top:18px;border-top:1px solid var(--line)}
+.rl-more details{border-bottom:1px solid var(--hair)}
+.rl-more summary{list-style:none;cursor:pointer;display:flex;justify-content:space-between;
+  align-items:center;padding:11px 0;font:500 13px/1.3 var(--sans);color:var(--body)}
+.rl-more summary::-webkit-details-marker{display:none}
+.rl-more summary::after{content:"";width:6px;height:6px;margin-right:4px;flex:none;
+  border-right:1.5px solid var(--muted);border-bottom:1.5px solid var(--muted);
+  transform:rotate(-45deg);transition:transform .15s}
+.rl-more details[open] summary::after{transform:rotate(45deg)}
+.rl-more summary:hover{color:var(--ink)}
+.rl-more details > :not(summary){margin-bottom:14px}
+.rl-more .why-detail{margin:0 0 14px}
+.rl-more .why-detail .why-key{margin:2px 0 10px;flex-direction:column;gap:7px}
+.rl-list{list-style:none;margin:0;padding:0;display:grid;gap:8px;font:400 13px/1.45 var(--sans);color:var(--body)}
+.rl-list button{display:block;font:600 13px/1.3 var(--sans);color:var(--accent)}
+.rl-list span{color:var(--muted);font-size:12.5px}
+.rl-foot{margin-top:0}
+.rl-row{display:flex;justify-content:space-between;padding:11px 0;border-bottom:1px solid var(--hair);
+  font:500 13px/1.3 var(--sans);color:var(--body)}
+.rl-row:hover{color:var(--accent);text-decoration:none}
+.om-feed-l{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.om-feed-l li{display:flex;gap:12px;font:400 12.5px/1.5 var(--sans);color:var(--body)}
+.om-feed-l li span{flex:none;width:28px;color:var(--muted)}
+.om-feed-l li.t-bad{color:var(--alert)}
+.om-feed-l li.t-warn{color:var(--warm)}
+.rl-card .om-vs{margin:14px 0 0}
+.rl-card .om-vs thead th{font:500 11px/1 var(--sans);letter-spacing:0;text-transform:none}
+
+/* header: the organisation, then four readings as quiet chips */
+.sb-live .om-top{grid-template-columns:minmax(0,1fr) repeat(4,auto);gap:8px;
+  padding:10px clamp(14px,2.2vw,26px);align-items:center}
+.sb-live .tb-id{padding:0}
+.sb-live .om-sub{font:400 12.5px/1.3 var(--sans);letter-spacing:0;text-transform:none;margin-top:3px}
+.sb-live .tb-cell{position:relative;border:1px solid var(--hair);border-radius:10px;
+  background:var(--paper);padding:7px 14px;min-width:0;gap:2px}
+.sb-live .tb-k{font:400 11.5px/1.2 var(--sans);letter-spacing:0;text-transform:none}
+.sb-live .tb-cell b{font:600 16px/1.2 var(--sans)}
+.sb-live .tb-cell em{font:400 12px/1.2 var(--sans)}
+.sb-live .tb-state.s-good b{color:var(--ink)}
+.tb-meter{position:relative;display:block;height:4px;margin-top:5px;border-radius:2px;background:var(--hair)}
+.tb-meter i{position:absolute;left:0;top:0;bottom:0;border-radius:2px;background:var(--accent)}
+.tb-meter i.hot{background:var(--alert)}
+.tb-meter u{position:absolute;top:-2px;bottom:-2px;width:1.5px;background:var(--muted);text-decoration:none}
+@media (max-width:960px){
+  .sb-live .om-top{grid-template-columns:minmax(0,1fr) repeat(2,auto)}
+}
+
+/* the live year runs edge to edge, so the bar above it does too */
+body.world .mast-in{max-width:none;padding-left:clamp(14px,2.2vw,26px);padding-right:clamp(14px,2.2vw,26px)}
+.sandbox.sb-live{grid-template-columns:minmax(0,1fr) clamp(340px,28vw,440px)}
+@media (max-width:960px){.sandbox.sb-live{grid-template-columns:minmax(0,1fr)}}

@@ -12,7 +12,10 @@ export function Masthead({ view }: { view: string }) {
       <div className="mast-in">
         <a className="brand" href="#/">
           <h1>Operating Model Simulator</h1>
-          <span>{model.name} · {model.calendar.startMonth.slice(0, 4)} plan{isFixture ? ' · fictional' : ' · your numbers'}</span>
+          {/* The live year names the organisation in its own header. */}
+          {view !== 'sandbox' && (
+            <span>{model.name} · {model.calendar.startMonth.slice(0, 4)} plan{isFixture ? ' · fictional' : ' · your numbers'}</span>
+          )}
         </a>
         {/* The board has to say which year it is showing, and a reader's calls change that
             year as much as a lever does. It said "levers on: none" after four decisions,
