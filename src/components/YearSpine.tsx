@@ -25,15 +25,13 @@ interface Props {
   cash: { spentToDate: number; budget: number; pace: number; fmt: (n: number) => string };
 }
 
-export function YearSpine({ shape, base, month, labels, playing, onPick, onPlay, cash }: Props) {
+export function YearSpine({ shape, base, month, labels, playing, onPick, onPlay }: Props) {
   const teams = shape[0]?.teams || 1;
-  const h = (p: YearPoint) => (p.over / teams) * 100;
-  const tone = (p: YearPoint) => (p.over === 0 ? 'ok' : p.over / teams > 0.5 ? 'bad' : 'mid');
+  const most = Math.max(1, ...shape.map((p) => p.over), ...(base ?? []).map((p) => p.over));
 
   return (
-    <div className="ys">
-      <p className="ys-title">Teams over capacity, month by month</p>
-      <button type="button" className="ys-play" onClick={onPlay} aria-label={playing ? 'Pause' : 'Play the year'}>
+    <div className="ys ys2">
+      <button type="button" className="ys-play" onClick={onPlay} aria-label={playing ? 'Pause' : 'Next month'}>
         {playing ? '❙❙' : '▶'}
       </button>
       <div className="ys-track" role="group" aria-label="Month">
@@ -41,45 +39,26 @@ export function YearSpine({ shape, base, month, labels, playing, onPick, onPlay,
           const was = base?.[p.month];
           return (
             <button key={p.month} type="button"
-                    className={'ys-m' + (p.month === month ? ' on' : '')}
+                    className={'ys-m' + (p.month === month ? ' on' : p.month < month ? ' past' : '')}
                     aria-pressed={p.month === month}
                     aria-label={`${labels[p.month]}: ${p.over} of ${p.teams} teams over capacity`}
+                    title={`${labels[p.month]}: ${p.over} of ${teams} teams over capacity`}
                     onClick={() => onPick(p.month)}>
-              <span className="ys-bars">
-                {/* The plan as written sits behind, so a change reads as a difference in
-                    shape rather than a number the reader has to remember. */}
+              <span className="ys-stack">
+                {/* One block per team over capacity. The plan as written sits behind as an
+                    outline, so a change reads as a difference in height. */}
                 {was && was.over !== p.over && (
-                  <i className="ys-was" style={{ height: `${h(was)}%` }} />
+                  <span className="ys-was" style={{ height: `${(was.over / most) * 100}%` }} />
                 )}
-                <i className={'ys-now ' + tone(p)} style={{ height: `${h(p)}%` }} />
+                {Array.from({ length: p.over }, (_, i) => <i key={i} style={{ height: `${100 / most}%` }} />)}
               </span>
               <span className="ys-l">{labels[p.month]}</span>
             </button>
           );
         })}
       </div>
-      {/* Money on the same spine as time, because it is spent by the month and a year that
-          holds its service level by outspending its budget has not held anything. */}
-      <div className="ys-cash">
-        <span className="ys-cash-b" role="img"
-              aria-label={`${cash.fmt(cash.spentToDate)} of ${cash.fmt(cash.budget)} committed`}>
-          <i className={cash.spentToDate > cash.pace ? 'over' : ''}
-             style={{ width: `${Math.min(100, (cash.spentToDate / Math.max(cash.budget, 1)) * 100)}%` }} />
-          <u style={{ left: `${Math.min(100, (cash.pace / Math.max(cash.budget, 1)) * 100)}%` }} />
-        </span>
-        <span className="ys-cash-l">
-          <b>{cash.fmt(cash.spentToDate)}</b> of {cash.fmt(cash.budget)} committed
-          {cash.spentToDate > cash.pace && <em> · ahead of pace</em>}
-        </span>
-      </div>
-
       <p className="ys-cap">
-        <b>{labels[month]}</b>
-        {' · '}
-        {shape[month].over === 0
-          ? 'every team inside its limit'
-          : `${shape[month].over} of ${shape[month].teams} teams over capacity`}
-        {base && <span className="ys-key">Dashed outlines are the plan as written.</span>}
+        Each block is a team over capacity that month{base ? '. Outlines are the plan as written.' : ', if nothing changes.'}
       </p>
     </div>
   );

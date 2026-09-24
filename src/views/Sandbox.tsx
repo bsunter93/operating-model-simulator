@@ -7,7 +7,7 @@ import { pipelineAt, type Decision } from '../lib/edits';
 import { movesFor, type Move } from '../lib/options';
 import { feedFor } from '../lib/feed';
 import { pressureOf, PRESSURE_WORD, workloadOf, yearShape, asUnits } from '../lib/workload';
-import { chainFor } from '../lib/chain';
+import { impactFor } from '../lib/chain';
 import { briefAt, verdictOf } from '../lib/brief';
 import { tiesFor } from '../lib/ties';
 import { leadsFor } from '../lib/leads';
@@ -18,6 +18,7 @@ import { MONTHS, pct, pp, signed } from '../lib/format';
 import { FlowCanvas, layout, type Sel } from '../components/FlowCanvas';
 import { YearSpine } from '../components/YearSpine';
 import { Why } from '../components/Why';
+import { headlineOf } from '../lib/headline';
 import { RUN_WORLDS } from '../data/templates';
 import { WorldMark } from '../components/WorldMark';
 
@@ -178,8 +179,8 @@ export function Sandbox() {
       : []),
     [focus, started, model, decisions, scenarioId, result, month],
   );
-  const chain = useMemo(
-    () => (focus ? chainFor(model, result, focus, month, fmt) : []),
+  const impact = useMemo(
+    () => (focus ? impactFor(model, result, focus, month, fmt) : []),
     [focus, model, result, month, fmt],
   );
   /* Who else this team's people are promised to. Two teams can be on the same programme
@@ -193,23 +194,11 @@ export function Sandbox() {
     [model, decisions, result.months, sel],
   );
 
-  /* A move is armed before it is taken. Clicking one used to apply it, which makes the
-     panel a settings screen: you change a value and the world changes under you. Naming
-     what it buys and then asking is the difference between configuring a model and
-     deciding something. */
-  const [armed, setArmed] = useState<string | null>(null);
-  /* The rail scrolls, and the options sit near the bottom of it, so arming a move can
-     open the thing you are being asked to read just off the end of the panel. */
-  const commitRef = useRef<HTMLDivElement>(null);
-  useLayoutEffect(() => {
-    if (armed) commitRef.current?.scrollIntoView({ block: 'nearest' });
-  }, [armed]);
   const take = (d: Decision) => {
     dispatch({ type: 'decide', decision: { ...d, month: result.months[month] } });
-    setArmed(null);
   };
   const undo = () => dispatch({ type: 'undoDecision' });
-  const advance = () => { setAt((m) => Math.min(m + 1, months - 1)); setArmed(null); };
+  const advance = () => setAt((m) => Math.min(m + 1, months - 1));
 
   const asValue = (v: number, unit: ReceiptLine['unit']) =>
     unit === 'money' ? fmt.money(v) : unit === 'hours' ? fmt.hours(v)
@@ -220,17 +209,23 @@ export function Sandbox() {
         : l.unit === 'points' ? pp(l.delta)
           : signed(l.delta, (n) => String(Math.round(n)));
 
-  /* Say which way each number goes in words. "−$633K less at risk" is a double negative
-     that reads as an improvement and means the opposite. */
-  const moveLine = (mv: Move) => {
-    const bits = [
-      Math.abs(mv.servicePoints) > 0.005 ? `${pp(mv.servicePoints)} answered in time` : null,
-      Math.abs(mv.exposure) > 50_000
-        ? `${fmt.money(Math.abs(mv.exposure))} ${mv.exposure > 0 ? 'less' : 'more'} at risk` : null,
-      Math.abs(mv.cost) > 50_000
-        ? (mv.cost > 0 ? `costs ${fmt.money(mv.cost)} more` : `saves ${fmt.money(-mv.cost)}`) : null,
-    ].filter(Boolean);
-    return bits.length ? bits.join(' · ') : 'nothing measurable this year';
+  /* Each effect as its own chip, with the direction said in words: "−$633K less at risk"
+     is a double negative that reads as an improvement and means the opposite. */
+  const chipsOf = (mv: Move) => {
+    const out: { text: string; tone: 'up' | 'down' | '' }[] = [];
+    if (Math.abs(mv.servicePoints) > 0.005) {
+      out.push({ text: `${pp(mv.servicePoints)} in time`, tone: mv.servicePoints > 0 ? 'up' : 'down' });
+    }
+    if (Math.abs(mv.exposure) > 50_000) {
+      out.push({ text: `${fmt.money(Math.abs(mv.exposure))} ${mv.exposure > 0 ? 'less' : 'more'} at risk`,
+        tone: mv.exposure > 0 ? 'up' : 'down' });
+    }
+    out.push(mv.cost > 50_000 ? { text: `costs ${fmt.money(mv.cost)}`, tone: 'down' }
+      : mv.cost < -50_000 ? { text: `saves ${fmt.money(-mv.cost)}`, tone: 'up' }
+        : { text: 'no extra cost', tone: '' });
+    out.push({ text: mv.landsAt === null ? 'no effect this year'
+      : mv.landsAt <= month ? 'takes effect now' : `lands in ${MONTHS[mv.landsAt]}`, tone: '' });
+    return out;
   };
 
   /* The organisation gets the stage, whatever size the stage is.
@@ -245,6 +240,10 @@ export function Sandbox() {
     document.body.classList.toggle('world', started);
     return () => document.body.classList.remove('world');
   }, [started]);
+
+  /* A new month is a new headline, so the rail goes back to the top of it. */
+  const railRef = useRef<HTMLElement>(null);
+  useLayoutEffect(() => { railRef.current?.scrollTo({ top: 0 }); }, [month]);
 
   const stageRef = useRef<HTMLDivElement>(null);
   const [box, setBox] = useState<{ w: number; h: number } | null>(null);
@@ -377,33 +376,32 @@ export function Sandbox() {
 
   return (
     <main className="sandbox sb-live">
-      {/* A title block, the way a drawing carries one: who, when, and the three readings
-          that change under you, in labelled cells with rules between them. It was a row
-          of loose text in the page's own type, which reads as a document heading, and
-          two of its four figures were facts that never moved. */}
       <header className="om-top">
         <div className="tb-id">
           <h1>{isFixture ? model.name : 'Your model'}</h1>
-          <p className="om-sub">{result.months[0]?.slice(0, 4)} operating model</p>
+          <p className="om-sub">{result.months[0]?.slice(0, 4)} plan{isFixture ? ' · fictional' : ''}</p>
         </div>
         <div className="tb-cell tb-clock">
           <span className="tb-k">Month</span>
-          {/* Keyed on the month so it remounts when the year moves, which is what lets it
-              mark the change rather than simply reading differently afterwards. */}
+          {/* Keyed on the month so it remounts, and marks the change, when the year moves. */}
           <p><b key={month}>{MONTHS[month]}</b><em>{month + 1} of {months}</em></p>
         </div>
         <div className={'tb-cell tb-state s-' + sit.tone}>
-          <span className="tb-k">State</span>
-          <p><b>{sit.tone === 'good' ? 'On plan'
-            : sit.overCount === 1 ? '1 team over' : `${sit.overCount} teams over`}</b></p>
+          <span className="tb-k">Over capacity</span>
+          <p><b>{sit.overCount} of {sit.teams}</b><em>teams</em></p>
         </div>
-        <div className="tb-cell">
-          <span className="tb-k">Committed</span>
+        <div className="tb-cell tb-cash">
+          <span className="tb-k">Budget used</span>
           <p><b>{fmt.money(cash.spentToDate)}</b><em>of {fmt.money(cash.budget)}</em></p>
+          <span className="tb-meter" aria-hidden="true">
+            <i style={{ width: `${Math.min(100, (cash.spentToDate / Math.max(cash.budget, 1)) * 100)}%` }}
+               className={cash.spentToDate > cash.pace * 1.02 ? 'hot' : ''} />
+            <u style={{ left: `${Math.min(100, (cash.pace / Math.max(cash.budget, 1)) * 100)}%` }} />
+          </span>
         </div>
         <div className="tb-cell">
           <span className="tb-k">People</span>
-          <p><b>{fmt.count(Math.round(headcount))}</b><em>in their seats</em></p>
+          <p><b>{fmt.count(Math.round(headcount))}</b></p>
         </div>
       </header>
 
@@ -425,11 +423,11 @@ export function Sandbox() {
         <p className="fc-hint">Drag the map sideways to follow the work.</p>
       </div>
 
-      <aside className="sb-rail">
+      <aside className="sb-rail" ref={railRef}>
         {verdict && (
-          <section className="om-panel om-end">
-            <p className="om-end-k">The year is over</p>
-            <h2 className="om-q">
+          <section className="rl-card rl-end">
+            <p className="rl-eyebrow">The year is over</p>
+            <h2 className="rl-h">
               {verdict.met
                 ? 'You got through it.'
                 : verdict.pastCapacity && verdict.overBudget
@@ -438,53 +436,28 @@ export function Sandbox() {
                     ? 'You went past what your teams could do.'
                     : 'You went past the budget.'}
             </h2>
-            <dl className="om-end-l">
-              <dt>Worst month</dt>
-              <dd className={verdict.pastCapacity ? 'down' : 'up'}>
-                {pct(verdict.peak)} of what that team could do
-              </dd>
-              <dt>Spent</dt>
-              <dd className={verdict.overBudget ? 'down' : 'up'}>
-                {fmt.money(verdict.spent)} of {fmt.money(verdict.budget)}
-              </dd>
-              <dt>Turned away</dt>
-              <dd className={verdict.shed > 0 ? 'down' : 'up'}>
-                {verdict.shed > 0 ? `${fmt.hours(verdict.shed)} of work, for good` : 'nothing'}
-              </dd>
+            <dl className="rl-tiles">
+              <div className={verdict.pastCapacity ? 't-bad' : 't-flat'}>
+                <dd>{pct(verdict.peak)}</dd><dt>busiest month for any team</dt>
+              </div>
+              <div className={verdict.overBudget ? 't-bad' : 't-flat'}>
+                <dd>{fmt.money(verdict.spent)}</dd><dt>spent of {fmt.money(verdict.budget)}</dt>
+              </div>
+              <div className={verdict.shed > 0 ? 't-bad' : 't-flat'}>
+                <dd>{verdict.shed > 0 ? fmt.hours(verdict.shed) : 'None'}</dd><dt>work turned away</dt>
+              </div>
             </dl>
-            <p className="om-note">
-              The objective was to get through the year without going past what your
-              teams can do, and without going past the budget.
-            </p>
-          </section>
-        )}
-
-        {!focus && !verdict && ahead.first && (
-          <section className="om-panel om-ahead">
-            <p className="om-end-k">The year ahead</p>
-            <p className="om-ahead-l">
-              <b>{ahead.count} of {ahead.teams}</b> teams go past the line they plan to run
-              at before December. The first is <b>{name(ahead.first.teamId)}</b>, in{' '}
-              <b>{MONTHS[ahead.first.at]}</b>.
-              {ahead.worstOver > 0 && (
-                <> The worst month is <b>{MONTHS[ahead.worst]}</b>, with{' '}
-                  <b>{ahead.worstOver}</b> of them over at once.</>
-              )}
-            </p>
-            <p className="om-note">
-              Advance the year and watch where it gives, or pick a team to see what it is
-              handling now.
-            </p>
+            <p className="rl-note">The goal: stay inside what your teams can do, and inside the budget.</p>
           </section>
         )}
 
         {brief && (
-          <section className="om-panel om-brief">
-            <p className="om-end-k">{brief.when}</p>
-            <h2 className="om-q">{brief.question}</h2>
-            <p className="om-brief-s">{brief.setup}</p>
+          <section className="rl-card rl-brief">
+            <p className="rl-eyebrow">{brief.when}</p>
+            <h2 className="rl-h rl-h-s">{brief.question}</h2>
+            <p className="rl-line">{brief.setup}</p>
             {brief.focusTeamId && brief.focusTeamId !== focus && (
-              <button type="button" className="om-brief-go"
+              <button type="button" className="rl-link"
                       onClick={() => setSel({ kind: 'team', id: brief.focusTeamId! })}>
                 Show me {name(brief.focusTeamId)} &rarr;
               </button>
@@ -492,272 +465,226 @@ export function Sandbox() {
           </section>
         )}
 
-      {/* One panel. Why it is happening and what you can do about it are one thought, and
-          a tab bar between them files them in different drawers. */}
-      {!(sel?.kind !== 'stream' && !focus && ahead.first && !verdict) && (
-      <section className="om-panel">
         {sel?.kind === 'stream' ? (() => {
           const st = tuned.demandStreams.find((x) => x.id === sel.id)!;
           const f = result.flow.find((x) => x.sourceId === sel.id && x.kind === 'arrival')!;
           return (
-            <p className="fi-sub">
-              <b>{st.name}</b> lands on {name(st.teamId)}, {st.handlingMinutesPerUnit} minutes each.
-              {' '}{fmt.count(f.unitsByMonth[month])} {st.unit} this month,
-              {' '}{fmt.count(st.annualVolume)} across the year.
-            </p>
+            <section className="rl-card">
+              <p className="rl-eyebrow">{MONTHS[month]} · incoming work</p>
+              <h2 className="rl-h rl-h-s">{st.name}</h2>
+              <p className="rl-line">
+                {fmt.count(f.unitsByMonth[month])} {st.unit} this month, {fmt.count(st.annualVolume)} across
+                the year. Each takes {st.handlingMinutesPerUnit} minutes and lands on {name(st.teamId)}.
+              </p>
+            </section>
           );
         })() : !focus ? (
-          /* The year-ahead panel above already holds this ground when it is showing, and
-             two panels saying nothing is picked yet is one too many. */
-          <p className="fi-idle">Pick a team. You'll get what it's handling now, and
-            what you can do about it.</p>
-        ) : (
-          <>
-            <h2 className="om-q">Why is {name(focus)} where it is in {MONTHS[month]}?</h2>
-            <ol className="om-chain">
-              {chain.map((l, i) => <li key={i} className={'t-' + l.tone}>{l.text}</li>)}
-            </ol>
-            {(() => {
-              const w = workloadOf(result, focus, month);
-              const m = result.teams.find((t) => t.teamId === focus)?.months[month];
-              return w && m
-                ? <Why w={w} team={name(focus)} month={MONTHS[month]} answered={m.serviceLevel} fmt={fmt} />
-                : null;
-            })()}
-            {leads.length > 0 && (
-              <div className="om-ties om-leads">
-                <p className="om-end-k">What reaches this team, and when</p>
-                <ul>
-                  {[...new Map(leads.map((l) => [l.detail, l])).values()].map((l, i) => (
-                    <li key={i} className={'k-' + l.kind}>
-                      <span>{l.detail}</span>
-                    </li>
+          ahead.first && !verdict ? (
+            <section className="rl-card">
+              <p className="rl-eyebrow">The year ahead</p>
+              <h2 className="rl-h">
+                {ahead.count} of {ahead.teams} teams go over capacity this year
+              </h2>
+              <p className="rl-line">
+                First is <b>{name(ahead.first.teamId)}</b> in {MONTHS[ahead.first.at]}.
+                {ahead.worstOver > 1 && <> Worst is {MONTHS[ahead.worst]}, with {ahead.worstOver} over at once.</>}
+              </p>
+              <p className="rl-note">Advance the month, or pick a team on the map.</p>
+            </section>
+          ) : !verdict && (
+            <section className="rl-card">
+              <p className="rl-line">Pick a team on the map to see what it's handling.</p>
+            </section>
+          )
+        ) : (() => {
+          const w = workloadOf(result, focus, month);
+          const m = result.teams.find((t) => t.teamId === focus)?.months[month];
+          if (!w || !m) return null;
+          const head = headlineOf(w, fmt);
+          return (
+            <section className={'rl-card rl-focus p-' + head.press}>
+              <p className="rl-eyebrow">{MONTHS[month]} · {name(focus)}</p>
+              <h2 className="rl-h">
+                {head.word}{head.by && <> by <em>{head.by}</em></>}
+              </h2>
+              <p className="rl-line">{head.line}</p>
+              <Why w={w} answered={m.serviceLevel} fmt={fmt} />
+
+              {impact.length > 0 && (
+                <dl className="rl-tiles">
+                  {impact.slice(0, 4).map((x) => (
+                    <div key={x.label} className={'t-' + x.tone}><dd>{x.value}</dd><dt>{x.label}</dt></div>
                   ))}
-                </ul>
-              </div>
-            )}
+                </dl>
+              )}
 
-            {ties.length > 0 && (
-              <div className="om-ties">
-                <p className="om-end-k">Staffing the same work</p>
-                <ul>
-                  {ties.map((t) => (
-                    <li key={t.teamId}>
-                      <button type="button" onClick={() => setSel({ kind: 'team', id: t.teamId })}>
-                        {name(t.teamId)}
-                      </button>
-                      <span>{t.shared.map((x) => x.name).join(', ')}</span>
-                    </li>
-                  ))}
-                </ul>
-                <p className="om-note">
-                  These teams are drawing on the same people. Hiring here won't help them,
-                  and if one of them slips it comes back to this one.
-                </p>
-              </div>
-            )}
-
-            <h2 className="om-q om-q2">What can you do about it?</h2>
-            <ul className="om-moves">
-              {moves.map((mv) => {
-                const on = armed === mv.decision.id;
-                return (
-                  <li key={mv.decision.id} className={on ? 'on' : ''}>
-                    <button type="button" aria-expanded={on}
-                            onClick={() => setArmed(on ? null : mv.decision.id)}>
-                      <b>{mv.title}</b>
-                      <span className="om-move-w">{mv.when}</span>
-                      <span className="om-move-i">{moveLine(mv)}</span>
-                    </button>
-                    {on && (
-                      <div className="om-commit" ref={commitRef}>
-                        <dl>
-                          {Math.abs(mv.servicePoints) > 0.005 && (
-                            <>
-                              <dt>Answered in time</dt>
-                              <dd className={mv.servicePoints > 0 ? 'up' : 'down'}>
-                                {pp(mv.servicePoints)}
-                              </dd>
-                            </>
-                          )}
-                          {Math.abs(mv.exposure) > 50_000 && (
-                            <>
-                              <dt>At risk</dt>
-                              <dd className={mv.exposure > 0 ? 'up' : 'down'}>
-                                {fmt.money(Math.abs(mv.exposure))} {mv.exposure > 0 ? 'less' : 'more'}
-                              </dd>
-                            </>
-                          )}
-                          <dt>Cost</dt>
-                          <dd className={mv.cost > 50_000 ? 'down' : mv.cost < -50_000 ? 'up' : ''}>
-                            {mv.cost > 50_000 ? `${fmt.money(mv.cost)} more`
-                              : mv.cost < -50_000 ? `${fmt.money(-mv.cost)} saved` : 'no change'}
-                          </dd>
-                          <dt>Shows up</dt>
-                          <dd>{mv.landsAt !== null ? MONTHS[mv.landsAt] : 'not this year'}</dd>
-                        </dl>
-                        <p className="om-commit-a">
-                          <button type="button" className="om-go"
-                                  onClick={() => take(mv.decision)}>Commit</button>
-                          <button type="button" className="om-no"
-                                  onClick={() => setArmed(null)}>Cancel</button>
-                        </p>
-                      </div>
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
-            <p className="om-note">
-              Every number on those came from running the year with that move in it.
-            </p>
-          </>
-        )}
-      </section>
-      )}
-
-      {decisions.length > 0 && (
-        <section className="om-panel om-year">
-          <h2 className="om-q">Your year, against the plan as written</h2>
-
-          {rec.lines.length === 0 ? (
-            <p className="fc-rcpt-none">Nothing measurable moved.</p>
-          ) : (
-            <table className="om-vs">
-              <thead>
-                <tr><th scope="col" /><th scope="col">The plan</th><th scope="col">Your year</th><th scope="col" /></tr>
-              </thead>
-              <tbody>
-                {rec.lines.map((l) => (
-                  <tr key={l.key}>
-                    <th scope="row">{l.label}</th>
-                    <td>{asValue(l.from, l.unit)}</td>
-                    <td className="om-vs-mine">{asValue(l.to, l.unit)}</td>
-                    <td className={l.good ? 'up' : 'down'}>{asDelta(l)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-          <p className="fc-rcpt-f">
-            {rec.firstMonth !== null
-              ? <>It first shows up in <b>{MONTHS[rec.firstMonth]}</b>.</>
-              : <>It changes nothing in any month of this year.</>}
-            {' '}
-            {rec.moved
-              ? rec.moved.to
-                ? <>The {rec.moved.metric === 'queue' ? 'queue' : 'money'} now turns on{' '}
-                    <b>{name(rec.moved.to)}</b>{rec.moved.from ? <> instead of {name(rec.moved.from)}</> : null}.</>
-                : <>Nothing binds the {rec.moved.metric === 'queue' ? 'queue' : 'money'} any more.</>
-              : <>The constraint hasn't moved.</>}
-          </p>
-
-          {tracks.length > 0 && (
-            <Replay tracks={tracks} months={months} labels={MONTHS} diverges={diverges}
-                    value={trackValue} />
-          )}
-
-          {/* Each decision against the ones before it, not against the plan, because the
-              second hire into a team you have already relieved is not worth what the
-              first one was. */}
-          <h3 className="om-q om-q2">What each call bought</h3>
-          <ol className="om-ledger">
-            {ledger.map((e, i) => (
-              <li key={e.decision.id + i}>
-                <p className="om-led-h">
-                  <span className="om-log-m">{MONTHS[result.months.indexOf(e.decision.month)] ?? e.decision.month}</span>
-                  <b>{e.decision.label}</b>
-                </p>
-                {e.effect.lines.length === 0 ? (
-                  <p className="om-led-none">Bought nothing on top of what was already decided.</p>
-                ) : (
-                  <ul className="om-led-l">
-                    {e.effect.lines.map((l) => (
-                      <li key={l.key} className={l.good ? 'up' : 'down'}>
-                        <b>{asDelta(l)}</b>
-                        <span>{l.label.toLowerCase()}</span>
+              {moves.length > 0 && (
+                <div className="rl-moves">
+                  <h3 className="rl-sub">Your move <span>each one tested against the full year</span></h3>
+                  <ul>
+                    {moves.map((mv) => (
+                      <li key={mv.decision.id}>
+                        <div>
+                          <b>{mv.title}</b>
+                          <p className="rl-chips">
+                            {chipsOf(mv).map((c) => <span key={c.text} className={c.tone}>{c.text}</span>)}
+                          </p>
+                        </div>
+                        <button type="button" onClick={() => take(mv.decision)}>Commit</button>
                       </li>
                     ))}
                   </ul>
+                </div>
+              )}
+
+              <div className="rl-more">
+                <details>
+                  <summary>Where the hours go</summary>
+                  <Why w={w} answered={m.serviceLevel} fmt={fmt} variant="detail" />
+                </details>
+                {leads.length > 0 && (
+                  <details>
+                    <summary>What reaches this team, and when</summary>
+                    <ul className="rl-list">
+                      {[...new Map(leads.map((l) => [l.detail, l])).values()].map((l, i) => (
+                        <li key={i}>{l.detail}</li>
+                      ))}
+                    </ul>
+                  </details>
                 )}
-                <p className="om-led-f">
-                  {e.effect.firstMonth !== null
-                    ? <>Showed up in {MONTHS[e.effect.firstMonth]}.</>
-                    : <>Never showed up this year.</>}
-                  {e.effect.moved?.to && <> Moved the constraint to {name(e.effect.moved.to)}.</>}
-                </p>
-              </li>
-            ))}
-          </ol>
-        </section>
-      )}
+                {ties.length > 0 && (
+                  <details>
+                    <summary>Shares people with {ties.length} {ties.length === 1 ? 'team' : 'teams'}</summary>
+                    <ul className="rl-list">
+                      {ties.map((t) => (
+                        <li key={t.teamId}>
+                          <button type="button" onClick={() => setSel({ kind: 'team', id: t.teamId })}>
+                            {name(t.teamId)}
+                          </button>
+                          <span>{t.shared.map((x) => x.name).join(', ')}</span>
+                        </li>
+                      ))}
+                    </ul>
+                    <p className="rl-note">Hiring here won't help them, and if one of them slips it
+                      comes back to this team.</p>
+                  </details>
+                )}
+              </div>
+            </section>
+          );
+        })()}
 
-      <section className="om-feed">
-        <h2>Operations feed</h2>
-        {feed.length === 0 ? (
-          <p className="om-feed-none">Quiet so far.</p>
-        ) : (
-          <ol>
-            {feed.slice(-9).reverse().map((f, i) => (
-              <li key={i} className={'t-' + f.tone}>
-                <span>{MONTHS[f.month]}</span>{f.text}
-              </li>
-            ))}
-          </ol>
+        {decisions.length > 0 && (
+          <section className="rl-card om-year">
+            <p className="rl-eyebrow">Your year so far</p>
+            <h2 className="rl-h rl-h-s">
+              {rec.firstMonth !== null
+                ? <>Your calls first show up in {MONTHS[rec.firstMonth]}</>
+                : <>Nothing you've done changes this year yet</>}
+            </h2>
+            {rec.lines.length > 0 && (
+              <table className="om-vs">
+                <thead>
+                  <tr><th scope="col" /><th scope="col">The plan</th><th scope="col">Yours</th><th scope="col" /></tr>
+                </thead>
+                <tbody>
+                  {rec.lines.map((l) => (
+                    <tr key={l.key}>
+                      <th scope="row">{l.label}</th>
+                      <td>{asValue(l.from, l.unit)}</td>
+                      <td className="om-vs-mine">{asValue(l.to, l.unit)}</td>
+                      <td className={l.good ? 'up' : 'down'}>{asDelta(l)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+            {rec.moved && (
+              <p className="rl-line">
+                {rec.moved.to
+                  ? <>The {rec.moved.metric === 'queue' ? 'queue' : 'money'} now turns on{' '}
+                      <b>{name(rec.moved.to)}</b>{rec.moved.from ? <> instead of {name(rec.moved.from)}</> : null}.</>
+                  : <>Nothing binds the {rec.moved.metric === 'queue' ? 'queue' : 'money'} any more.</>}
+              </p>
+            )}
+            <div className="rl-more">
+              {tracks.length > 0 && (
+                <details>
+                  <summary>Month by month, against the plan</summary>
+                  <Replay tracks={tracks} months={months} labels={MONTHS} diverges={diverges}
+                          value={trackValue} />
+                </details>
+              )}
+              <details>
+                <summary>What each call bought ({ledger.length})</summary>
+                {/* Each decision against the ones before it, not against the plan: the second
+                    hire into a team you've already relieved isn't worth what the first was. */}
+                <ol className="om-ledger">
+                  {ledger.map((e, i) => (
+                    <li key={e.decision.id + i}>
+                      <p className="om-led-h">
+                        <span className="om-log-m">{MONTHS[result.months.indexOf(e.decision.month)] ?? e.decision.month}</span>
+                        <b>{e.decision.label}</b>
+                      </p>
+                      {e.effect.lines.length === 0 ? (
+                        <p className="om-led-none">Bought nothing on top of what was already decided.</p>
+                      ) : (
+                        <ul className="om-led-l">
+                          {e.effect.lines.map((l) => (
+                            <li key={l.key} className={l.good ? 'up' : 'down'}>
+                              <b>{asDelta(l)}</b>
+                              <span>{l.label.toLowerCase()}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                      <p className="om-led-f">
+                        {e.effect.firstMonth !== null
+                          ? <>Showed up in {MONTHS[e.effect.firstMonth]}.</>
+                          : <>Never showed up this year.</>}
+                        {e.effect.moved?.to && <> Moved the constraint to {name(e.effect.moved.to)}.</>}
+                      </p>
+                    </li>
+                  ))}
+                </ol>
+              </details>
+            </div>
+          </section>
         )}
-      </section>
 
-      {/* One way out, and it is not a second game. The numbers underneath are already a
-          masthead link, so offering them again here was the same door twice; what is not
-          anywhere else is the written answer, for a reader who would rather not play.
-          The page bails on a model that carries no run, so it is only offered for one
-          that does. */}
-      {model.run && (
-        <div className="rb-opts sb-go">
-          <a className="rb-opt" href="#/answer"><b>Read the answer instead</b>
-            <span>There's no best plan, only a best plan for something. Every path,
-              ranked against each objective in turn.</span></a>
+        <div className="rl-more rl-foot">
+          {feed.length > 0 && (
+            <details>
+              <summary>What's happened so far ({feed.length})</summary>
+              <ol className="om-feed-l">
+                {feed.slice(-9).reverse().map((f, i) => (
+                  <li key={i} className={'t-' + f.tone}>
+                    <span>{MONTHS[f.month]}</span>{f.text}
+                  </li>
+                ))}
+              </ol>
+            </details>
+          )}
+          {model.run && (
+            <a className="rl-row" href="#/answer">Skip the game and read the answer <span>&rarr;</span></a>
+          )}
         </div>
-      )}
       </aside>
 
-      {/* The deck: the clock of this world, and the one button that moves it. Both are
-          pinned, so advancing a month is never something you scroll to find. */}
-      <footer className="sb-deck">
+      {/* The deck: the year, and the one button that moves it. Pinned, so advancing a
+          month is never something you scroll to find. */}
+      <footer className="sb-deck sb-deck2">
         <YearSpine shape={shape} base={baseShape} month={month} labels={MONTHS} playing={false}
                    onPick={(m) => setAt(m)} onPlay={advance} cash={cash} />
-      {/* What is happening, and the three things a person can do about it. */}
-      <section className={'om-sit s-' + sit.tone}>
-        <p className="om-sit-h">
-          {sit.row && sit.name ? (
-            <>
-              <b className="om-sit-who">{sit.name}</b> is {PRESSURE_WORD[pressureOf(sit.row)].toLowerCase()}
-              {(() => {
-                const w = workloadOf(result, sit.teamId!, month);
-                const q = w ? asUnits(w, sit.row.carriedInHours) : null;
-                const lost = w ? asUnits(w, sit.row.shedHours) : null;
-                return (
-                  <>
-                    {q !== null && q >= 1 && <>, with <b>{fmt.count(Math.round(q))} {w!.unit}</b> waiting</>}
-                    {lost !== null && lost >= 1 && <> and <b>{fmt.count(Math.round(lost))} {w!.unit}</b> turned away this month</>}
-                  </>
-                );
-              })()}.
-            </>
-          ) : <>Every team is inside the line it plans to run at.</>}
-        </p>
         <div className="om-acts">
           <button type="button" className="om-adv" onClick={advance} disabled={month >= months - 1}>
-            {month >= months - 1 ? 'The year is over' : `Advance to ${MONTHS[month + 1]}`}
+            {month >= months - 1 ? 'The year is over' : <>Advance to {MONTHS[month + 1]} &rarr;</>}
           </button>
-          {month > 0 && (
-            <button type="button" className="om-back" onClick={() => setAt(0)}>Back to {MONTHS[0]}</button>
-          )}
-          {decisions.length > 0 && (
-            <button type="button" className="om-back" onClick={undo}>Undo the last decision</button>
-          )}
+          <p className="om-acts2">
+            {decisions.length > 0 && <button type="button" onClick={undo}>Undo last move</button>}
+            {month > 0 && <button type="button" onClick={() => setAt(0)}>Back to {MONTHS[0]}</button>}
+          </p>
         </div>
-      </section>
       </footer>
     </main>
   );

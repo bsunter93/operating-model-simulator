@@ -1,65 +1,57 @@
 import type { ModelResult } from '../models/results';
 import type { OperatingModel } from '../models/types';
-import { asUnits, pressureOf, PRESSURE_WORD, workloadOf } from './workload';
+import { asUnits, workloadOf } from './workload';
 
 /**
- * What being over capacity actually costs, followed downstream until it reaches money.
- *
- * Red on its own says a threshold was crossed, which is a fact about a line rather than a
- * fact about the business. The chain says what the crossing did: this many waiting, this
- * many turned away, these initiatives now short of the people they were promised, this
- * much revenue standing behind them. Every link is a field the engine produced.
+ * What being over capacity costs this month, followed downstream until it reaches money:
+ * work turned away, work waiting, how much was picked up in time, and the initiatives now
+ * short of the people they were promised. Every figure is a field the engine produced.
  */
 
 export type Tone = 'bad' | 'warn' | 'flat';
 
-export interface Link {
-  text: string;
+export interface Impact {
+  label: string;
+  value: string;
   tone: Tone;
 }
 
-export function chainFor(
+export function impactFor(
   model: OperatingModel, result: ModelResult, teamId: string, month: number,
   fmt: { count(v: number): string; money(v: number): string },
-): Link[] {
+): Impact[] {
   const row = result.teams.find((t) => t.teamId === teamId)?.months[month];
   const w = workloadOf(result, teamId, month);
-  const team = model.teams.find((t) => t.id === teamId);
-  if (!row || !w || !team) return [];
+  if (!row || !w) return [];
 
-  const out: Link[] = [];
-  const press = pressureOf(row);
   const say = (hours: number) => {
     const u = asUnits(w, hours);
     return u !== null && u >= 1 ? `${fmt.count(Math.round(u))} ${w.unit}` : `${fmt.count(Math.round(hours))} hours`;
   };
 
-  out.push({
-    text: `${team.name} is ${PRESSURE_WORD[press].toLowerCase()}`,
-    tone: press === 'buried' ? 'bad' : press === 'over' ? 'warn' : 'flat',
-  });
-  if (row.carriedInHours > 0) out.push({ text: `${say(row.carriedInHours)} waiting`, tone: 'warn' });
-  if (row.shedHours > 0) out.push({ text: `${say(row.shedHours)} turned away for good`, tone: 'bad' });
-  if (row.serviceLevel !== null && row.serviceLevel < 0.95) {
-    out.push({ text: `${Math.round(row.serviceLevel * 100)}% picked up in time`, tone: row.serviceLevel < 0.5 ? 'bad' : 'warn' });
-  }
-
-  /* The link that turns an operations problem into a business one. An initiative is at
-     risk here only when this team is one of the teams it needs AND the engine found a
-     shortfall on it, so the chain cannot blame a team for somebody else's slip. */
+  const out: Impact[] = [];
+  /* An initiative is at risk here only when this team is one of the teams it needs AND the
+     engine found a shortfall on it, so a team isn't blamed for somebody else's slip. */
   const atRisk = result.exposure.items.filter((x) => {
     if (x.capacityShortfall <= 0) return false;
     const init = model.initiatives.find((i) => i.id === x.initiativeId);
     return !!init && (init.requiredFteByTeam[teamId] ?? 0) > 0;
   });
+  const money = atRisk.reduce((a, x) => a + x.exposure, 0);
+  if (money > 0) out.push({ label: 'revenue at risk', value: fmt.money(money), tone: 'bad' });
   if (atRisk.length) {
     out.push({
-      text: `${atRisk.length} ${atRisk.length === 1 ? 'initiative' : 'initiatives'} short of the people they were promised`,
-      tone: 'warn',
+      label: atRisk.length === 1 ? 'initiative short of people' : 'initiatives short of people',
+      value: String(atRisk.length), tone: 'warn',
     });
-    const money = atRisk.reduce((a, x) => a + x.exposure, 0);
-    if (money > 0) out.push({ text: `${fmt.money(money)} of revenue standing behind them`, tone: 'bad' });
   }
-  if (out.length === 1) out.push({ text: 'nothing downstream is waiting on it', tone: 'flat' });
+  if (row.shedHours > 0) out.push({ label: 'turned away for good', value: say(row.shedHours), tone: 'bad' });
+  if (row.carriedInHours > 0) out.push({ label: 'waiting from last month', value: say(row.carriedInHours), tone: 'warn' });
+  if (row.serviceLevel !== null && row.serviceLevel < 0.95) {
+    out.push({
+      label: 'picked up in time', value: `${Math.round(row.serviceLevel * 100)}%`,
+      tone: row.serviceLevel < 0.5 ? 'bad' : 'warn',
+    });
+  }
   return out;
 }
