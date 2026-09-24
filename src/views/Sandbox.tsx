@@ -17,7 +17,8 @@ import { Replay } from '../components/Replay';
 import { MONTHS, pct, pp, signed } from '../lib/format';
 import { FlowCanvas, layout, type Sel } from '../components/FlowCanvas';
 import { YearSpine } from '../components/YearSpine';
-import { Why, headlineOf } from '../components/Why';
+import { Why } from '../components/Why';
+import { headlineOf } from '../lib/headline';
 import { RUN_WORLDS } from '../data/templates';
 import { WorldMark } from '../components/WorldMark';
 
@@ -670,43 +671,20 @@ export function Sandbox() {
         </div>
       </aside>
 
-      {/* The deck: the clock of this world, and the one button that moves it. Both are
-          pinned, so advancing a month is never something you scroll to find. */}
-      <footer className="sb-deck">
+      {/* The deck: the year, and the one button that moves it. Pinned, so advancing a
+          month is never something you scroll to find. */}
+      <footer className="sb-deck sb-deck2">
         <YearSpine shape={shape} base={baseShape} month={month} labels={MONTHS} playing={false}
                    onPick={(m) => setAt(m)} onPlay={advance} cash={cash} />
-      {/* What is happening, and the three things a person can do about it. */}
-      <section className={'om-sit s-' + sit.tone}>
-        <p className="om-sit-h">
-          {sit.row && sit.name ? (
-            <>
-              <b className="om-sit-who">{sit.name}</b> is {PRESSURE_WORD[pressureOf(sit.row)].toLowerCase()}
-              {(() => {
-                const w = workloadOf(result, sit.teamId!, month);
-                const q = w ? asUnits(w, sit.row.carriedInHours) : null;
-                const lost = w ? asUnits(w, sit.row.shedHours) : null;
-                return (
-                  <>
-                    {q !== null && q >= 1 && <>, with <b>{fmt.count(Math.round(q))} {w!.unit}</b> waiting</>}
-                    {lost !== null && lost >= 1 && <> and <b>{fmt.count(Math.round(lost))} {w!.unit}</b> turned away this month</>}
-                  </>
-                );
-              })()}.
-            </>
-          ) : <>Every team is inside the line it plans to run at.</>}
-        </p>
         <div className="om-acts">
           <button type="button" className="om-adv" onClick={advance} disabled={month >= months - 1}>
-            {month >= months - 1 ? 'The year is over' : `Advance to ${MONTHS[month + 1]}`}
+            {month >= months - 1 ? 'The year is over' : <>Advance to {MONTHS[month + 1]} &rarr;</>}
           </button>
-          {month > 0 && (
-            <button type="button" className="om-back" onClick={() => setAt(0)}>Back to {MONTHS[0]}</button>
-          )}
-          {decisions.length > 0 && (
-            <button type="button" className="om-back" onClick={undo}>Undo the last decision</button>
-          )}
+          <p className="om-acts2">
+            {decisions.length > 0 && <button type="button" onClick={undo}>Undo last move</button>}
+            {month > 0 && <button type="button" onClick={() => setAt(0)}>Back to {MONTHS[0]}</button>}
+          </p>
         </div>
-      </section>
       </footer>
     </main>
   );

@@ -29,7 +29,7 @@ const TEAM_W = 236;
    the year underneath. The last pass stripped the numbers off entirely, which fixed the
    noise and took the instrument with it. Density is not the problem; density with no
    hierarchy is. */
-const TEAM_H_MIN = 76, TEAM_H_MAX = 132;
+const TEAM_H = 108;
 /* The interior runs from nothing to half again what the team can do, so the ceiling is a
    line drawn inside the building rather than the top of it. Going past what you can do is
    then something you watch happen, with room above it, instead of a bar that fills up and
@@ -63,25 +63,9 @@ export interface Layout {
   teams: Map<string, Placed>;
 }
 
-/** How many people one figure stands for, chosen so the largest team shows about eight of
-    them. A fixed scale would draw forty figures for one team and one for another. */
-function peopleScale(model: OperatingModel): number {
-  const hi = Math.max(...model.teams.map((t) => t.currentFte));
-  return Math.max(1, Math.round(hi / 8));
-}
-
-/** A team occupies space in proportion to the people in it, from the model rather than the
-    month, so scrubbing the year moves the numbers and never the furniture. */
+/** Every team gets the same card: one reading per card is easier to compare than a size. */
 function teamHeights(model: OperatingModel): Map<string, number> {
-  const fte = model.teams.map((t) => t.currentFte);
-  const lo = Math.min(...fte), hi = Math.max(...fte);
-  const span = hi - lo;
-  return new Map(model.teams.map((t) => [
-    t.id,
-    Math.round(span > 0
-      ? TEAM_H_MIN + (TEAM_H_MAX - TEAM_H_MIN) * ((t.currentFte - lo) / span)
-      : (TEAM_H_MIN + TEAM_H_MAX) / 2),
-  ]));
+  return new Map(model.teams.map((t) => [t.id, TEAM_H]));
 }
 
 /**
@@ -215,6 +199,8 @@ export function layout(
 /* A route taking one case in seventy-seven is not "1%": rounded to the nearest whole
    number the small splits all read the same, and the small splits are the ones nobody
    expects to matter. */
+const PILL = { holding: 'Room', tight: 'Near limit', over: 'Over', buried: 'Past limit' } as const;
+
 export const shareLabel = (v: number) =>
   (v < 0.02 ? (v * 100).toFixed(1) : String(Math.round(v * 100))) + '%';
 
@@ -289,7 +275,6 @@ interface Props {
 
 export function FlowCanvas({ model, result, month, selected, onSelect, compact, pipeline, monthLabels, fit = 1, spread = 0, leads = [], narrow = null }: Props) {
   const geo = useMemo(() => layout(model, result, spread, narrow), [model, result, spread, narrow]);
-  const per = useMemo(() => peopleScale(model), [model]);
   const edges = result.flow.map((f) => ({ f, units: f.unitsByMonth[month] ?? 0 }));
   const peak = Math.max(1, ...edges.map((e) => e.units));
   /* Hovering lights exactly what clicking would, so a reader can trace a channel back to
@@ -321,6 +306,7 @@ export function FlowCanvas({ model, result, month, selected, onSelect, compact, 
       (f.sourceId === focus.id || f.viaStreamId === focus.id) && f.toTeamId === teamId);
   };
 
+  const fedBy = (teamId: string) => result.flow.some((f) => f.toTeamId === teamId);
   const scaled = fit !== 1;
   return (
     <div className={scaled ? 'fc-scroll fc-fitted' : 'fc-scroll'}
@@ -359,8 +345,10 @@ export function FlowCanvas({ model, result, month, selected, onSelect, compact, 
                   const dur = 5.4 - 3 * rel;
                   return Array.from({ length: count }, (_, i) => (
                     <circle key={i} className="fc-tok" r={1.6 + 1.4 * Math.sqrt(rel)}>
+                      {/* A negative start puts each dot part-way along from the first frame;
+                          a positive one parks it at the canvas origin until it starts. */}
                       <animateMotion dur={`${dur.toFixed(2)}s`} repeatCount="indefinite"
-                                     begin={`${((i * dur) / count).toFixed(2)}s`}>
+                                     begin={`-${((i * dur) / count).toFixed(2)}s`}>
                         <mpath href={`#lane-${f.id}`} />
                       </animateMotion>
                     </circle>
@@ -394,20 +382,6 @@ export function FlowCanvas({ model, result, month, selected, onSelect, compact, 
           })}
         </svg>
 
-        {model.teams
-          .filter((t) => !result.flow.some((f) => f.kind === 'arrival' && f.toTeamId === t.id))
-          .map((t) => {
-            const box = geo.teams.get(t.id);
-            if (!box) return null;
-            return (
-              <span key={t.id} className={'fc-inhouse' + (selected ? ' dim' : '')}
-                    style={{ left: box.x - geo.queueW - 4, top: box.y + box.h / 2 - 7 }}
-                    title={`${t.name} has no arriving work: its year is change work`}>
-                no queue
-              </span>
-            );
-          })}
-
         {result.flow.filter((f) => f.kind === 'arrival').map((f) => {
           /* The narrow layout places no sources: their column is a third of the width a
              phone has, and what arrives is one tap away in the panel. */
@@ -439,9 +413,6 @@ export function FlowCanvas({ model, result, month, selected, onSelect, compact, 
           const press = pressureOf(w);
           const waiting = m.availableProductiveHours > 0 ? m.carriedInHours / m.availableProductiveHours : 0;
           const marks = Math.min(MARK_MAX, Math.ceil(waiting / MARK_UNIT));
-          const shed = m.shedHours > 0
-            ? Math.min(14, Math.ceil((m.shedHours / Math.max(1, m.availableProductiveHours)) / MARK_UNIT))
-            : 0;
           const series = result.teams.find((x) => x.teamId === t.id)!.months.map((x) => x.utilization);
           const pending = pipeline(t.id);
           const queued = asUnits(w, m.carriedInHours);
@@ -455,9 +426,10 @@ export function FlowCanvas({ model, result, month, selected, onSelect, compact, 
             queued !== null && queued >= 1 ? `${compact(Math.round(queued))} ${w.unit} waiting` : null,
             lost !== null && lost >= 1 ? `${compact(Math.round(lost))} ${w.unit} turned away` : null,
           ].filter(Boolean).join(' · ');
+          const plan = level(m.targetUtilization);
           return (
             <button key={t.id} type="button"
-                    className={`fc-node s-${m.status}`
+                    className={`tc p-${press}`
                       + (focus?.kind === 'team' && focus.id === t.id ? ' on' : near(t.id) ? '' : ' dim')
                       + (tied.has(t.id) ? ' tied' : '')}
                     style={{ left: p.x, top: p.y, width: p.w, height: p.h }}
@@ -465,16 +437,44 @@ export function FlowCanvas({ model, result, month, selected, onSelect, compact, 
                     onMouseEnter={() => setHover({ kind: 'team', id: t.id })}
                     onMouseLeave={() => setHover(null)}
                     onClick={() => onSelect(isOn('team', t.id) ? null : { kind: 'team', id: t.id })}>
-              {/* The block is the gauge. A bar beside a percentage is the most
-                  dashboard-shaped object there is; a level rising inside the building
-                  says the same thing and says it about a place. */}
-              <span className="fc-vessel" aria-hidden="true">
-                <i className="fc-level" style={{ height: level(util) + '%' }} />
-                <u className="fc-plan" style={{ bottom: level(m.targetUtilization) + '%' }} />
-                <u className="fc-ceil" style={{ bottom: level(1) + '%' }} />
+              {/* The team's own year, faint behind the reading, with a dot for this month. */}
+              <svg className="tc-spark" viewBox="0 0 100 16" preserveAspectRatio="none" aria-hidden="true">
+                <path className="tc-spark-a" d={sparkArea(series, month)} />
+                <path className="tc-spark-l" d={sparkLine(series)} />
+              </svg>
+              <span className="tc-sparkd" aria-hidden="true">
+                <i style={{
+                  left: `${series.length > 1 ? (month / (series.length - 1)) * 100 : 50}%`,
+                  top: `${(sparkY(util) / 16) * 100}%`,
+                }} />
+              </span>
+              <b className="tc-n">{t.name}</b>
+              <span className="tc-read">
+                <b className="tc-pc">{Math.round(util * 100)}<em>%</em></b>
+                <span className="tc-pill">{PILL[press]}</span>
+                <span className="tc-ppl">{Math.round(m.availableFte)} people</span>
+              </span>
+              {/* The gauge runs to half again what the team can do, so going past the plan
+                  (the tick) and past the ceiling (the end mark) both have room to show. */}
+              <span className="tc-gauge" aria-hidden="true">
+                <i style={{ width: level(util) + '%' }} />
+                <u className="tc-plan" style={{ left: plan + '%' }} />
+                <u className="tc-ceil" style={{ left: level(1) + '%' }} />
+              </span>
+              <span className="tc-line">
+                {queued !== null && queued >= 1
+                  ? <><b>{compact(Math.round(queued))}</b> {w.unit} waiting</>
+                  : m.serviceLevel !== null
+                    ? <><b>{Math.round(m.serviceLevel * 100)}%</b> picked up in time</>
+                    : fedBy(t.id)
+                      ? <><b>{compact(Math.round(asUnits(w, w.given) ?? w.given))}</b> {w.unit ?? 'hours'} this month</>
+                      : <>change work only, no queue</>}
+                {lost !== null && lost >= 1 && (
+                  <em className="tc-lost">{compact(Math.round(lost))} turned away</em>
+                )}
               </span>
               {marks > 0 && (
-                <span className="fc-q" aria-hidden="true">
+                <span className="fc-q tc-q" aria-hidden="true">
                   {Array.from({ length: Math.ceil(marks / MARK_ROWS) }, (_, c) => (
                     <span key={c}>
                       {Array.from({ length: Math.min(MARK_ROWS, marks - c * MARK_ROWS) },
@@ -483,68 +483,9 @@ export function FlowCanvas({ model, result, month, selected, onSelect, compact, 
                   ))}
                 </span>
               )}
-              <span className="fc-node-h">
-                <b className="fc-node-n">{t.name}</b>
-                {/* The people, countable. One figure to a few of them, so a big team looks
-                    like a big team rather than like a bigger number. */}
-                <span className="fc-ppl" aria-hidden="true"
-                      title={`${Math.round(m.availableFte)} people, one figure to ${per}`}>
-                  {Array.from({ length: Math.max(1, Math.min(9, Math.round(m.availableFte / per))) },
-                    (_, i) => <i key={i} />)}
-                </span>
-              </span>
-              <span className="fc-read">
-                <b className="fc-pc">{Math.round(util * 100)}<em>%</em></b>
-              </span>
-              <span className="fc-line">
-                {/* A team past the line it planned to run at was printing its service
-                    level, so a block read "88%" in alert red over "100% picked up in
-                    time". Both numbers were true and the pair was nonsense. Past the
-                    line, the line is what the block says. */}
-                {queued !== null && queued >= 1
-                  ? <><b>{compact(Math.round(queued))}</b> {w.unit} waiting</>
-                  : press !== 'holding'
-                    ? <>{PRESSURE_WORD[press].toLowerCase()}</>
-                    : m.serviceLevel !== null
-                      ? <><b>{Math.round(m.serviceLevel * 100)}%</b> picked up in time</>
-                      : <>{PRESSURE_WORD[press].toLowerCase()}</>}
-                {lost !== null && lost >= 1 && (
-                  <em className="fc-lost" title={`${compact(Math.round(lost))} ${w.unit} turned away for good`}>
-                    &minus;{compact(Math.round(lost))}
-                  </em>
-                )}
-              </span>
-              {/* People asked for, on their way. Hollow until they are in their seats, so a
-                  reader watches capacity arrive rather than reading that it will. */}
-              {/* The team's own twelve months, behind everything else. A block that shows
-                  only today makes a reader scrub to learn the shape; this carries it, and
-                  as a ground rather than a row it costs no height and reads as texture. */}
-              <svg className="fc-spark" viewBox="0 0 100 16" preserveAspectRatio="none" aria-hidden="true">
-                <path className="fc-spark-a" d={sparkArea(series, month)} />
-                <path className="fc-spark-l" d={sparkLine(series)} />
-                <line className="fc-spark-t" x1="0" x2="100"
-                      y1={sparkY(m.targetUtilization)} y2={sparkY(m.targetUtilization)} />
-              </svg>
-              {/* Where you are on the block's own arc. It used to be a circle inside the
-                  trace, and the trace is drawn with preserveAspectRatio="none" on a
-                  100x16 box: stretched to the block it turned a 1.9 radius into a 9x24
-                  smear sitting across the readout. Marked in HTML instead, so it is a
-                  dot at every block size. */}
-              <span className="fc-sparkd" aria-hidden="true">
-                <i style={{
-                  left: `${series.length > 1 ? (month / (series.length - 1)) * 100 : 50}%`,
-                  top: `${(sparkY(util) / 16) * 100}%`,
-                }} />
-              </span>
               {pending && (
-                <span className="fc-pipe" title={`${pending.headcount} people arriving ${monthLabels[pending.landsAt] ?? 'after this year'}`}>
-                  {Array.from({ length: Math.min(10, pending.headcount) }, (_, i) => <i key={i} />)}
-                  <em>{monthLabels[pending.landsAt] ?? 'next year'}</em>
-                </span>
-              )}
-              {shed > 0 && (
-                <span className="fc-shed" aria-hidden="true">
-                  {Array.from({ length: shed }, (_, i) => <i key={i} />)}
+                <span className="tc-pipe" title={`${pending.headcount} people arriving ${monthLabels[pending.landsAt] ?? 'after this year'}`}>
+                  +{pending.headcount} in {monthLabels[pending.landsAt] ?? 'next year'}
                 </span>
               )}
             </button>

@@ -2365,3 +2365,94 @@ body.world .foot{padding:6px clamp(16px,3vw,32px);font-size:10.5px;line-height:1
 body.world .mast-in{max-width:none;padding-left:clamp(14px,2.2vw,26px);padding-right:clamp(14px,2.2vw,26px)}
 .sandbox.sb-live{grid-template-columns:minmax(0,1fr) clamp(340px,28vw,440px)}
 @media (max-width:960px){.sandbox.sb-live{grid-template-columns:minmax(0,1fr)}}
+
+/* ── team cards and map, v2 ──────────────────────────────────────────────
+   Each team is one card with one reading: the number, a word for it, and a gauge with
+   the plan marked on it. The map around them is quieter so the cards carry the page. */
+.sb-live .fc{background-image:none}
+.sb-live .fc::before,.sb-live .fc::after{display:none}
+.tc{position:absolute;display:flex;flex-direction:column;gap:7px;padding:12px 14px 11px;
+  text-align:left;border:1px solid var(--line);border-radius:12px;background:var(--surface);
+  overflow:visible;transition:border-color .15s,box-shadow .15s,opacity .15s}
+.tc > :not(.tc-spark):not(.tc-sparkd):not(.tc-q):not(.tc-pipe){position:relative;z-index:1}
+.tc:hover{border-color:var(--accent)}
+.tc.on{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.tc.dim{opacity:.45}
+.tc.p-over,.tc.p-buried{border-color:color-mix(in srgb,var(--alert) 55%,var(--line))}
+.tc.p-over.on,.tc.p-buried.on{border-color:var(--alert);box-shadow:0 0 0 3px var(--alert-soft)}
+.tc-h{display:flex;align-items:baseline;justify-content:space-between;gap:8px;min-width:0}
+.tc-n{font:600 13px/1.2 var(--sans);color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tc-ppl{margin-left:auto;flex:none;font:400 11.5px/1 var(--sans);color:var(--muted)}
+.tc-read{display:flex;align-items:center;gap:9px}
+.tc-pc{font:600 26px/1 var(--display);color:var(--ink);letter-spacing:-.01em;font-variant-numeric:tabular-nums}
+.tc-pc em{font:500 13px/1 var(--sans);font-style:normal;color:var(--muted);margin-left:1px}
+.tc-pill{padding:2px 8px;border-radius:99px;font:600 11px/1.45 var(--sans);
+  background:color-mix(in srgb,var(--accent) 13%,transparent);color:var(--accent)}
+.tc.p-tight .tc-pill{background:var(--warm-soft);color:var(--warm)}
+.tc.p-over .tc-pill,.tc.p-buried .tc-pill{background:var(--alert-soft);color:var(--alert)}
+.tc.p-tight .tc-pc{color:var(--warm)}
+.tc.p-over .tc-pc,.tc.p-buried .tc-pc{color:var(--alert)}
+.tc-gauge{position:relative;display:block;height:6px;border-radius:3px;background:var(--hair)}
+.tc-gauge i{position:absolute;left:0;top:0;bottom:0;border-radius:3px;background:var(--accent);
+  transition:width .35s cubic-bezier(.2,.7,.3,1)}
+.tc.p-tight .tc-gauge i{background:var(--warm)}
+.tc.p-over .tc-gauge i,.tc.p-buried .tc-gauge i{background:var(--alert)}
+.tc-gauge u{position:absolute;top:-3px;bottom:-3px;width:2px;border-radius:1px;text-decoration:none}
+.tc-plan{background:var(--ink);opacity:.55}
+.tc-ceil{background:var(--muted);opacity:.35}
+.tc-line{display:flex;align-items:baseline;gap:8px;font:400 11.5px/1.3 var(--sans);color:var(--muted);
+  white-space:nowrap;overflow:hidden}
+.tc-line b{color:var(--body);font-weight:600}
+.tc-lost{font-style:normal;color:var(--alert);font-weight:600}
+.tc-spark{position:absolute;left:14px;right:14px;bottom:4px;width:calc(100% - 28px);height:34%;pointer-events:none}
+.tc-spark-a{fill:var(--accent);opacity:.05}
+.tc-spark-l{fill:none;stroke:var(--accent);stroke-width:1;opacity:.25;vector-effect:non-scaling-stroke}
+.tc.p-tight .tc-spark-a{fill:var(--warm)} .tc.p-tight .tc-spark-l{stroke:var(--warm)}
+.tc.p-over .tc-spark-a,.tc.p-buried .tc-spark-a{fill:var(--alert)}
+.tc.p-over .tc-spark-l,.tc.p-buried .tc-spark-l{stroke:var(--alert)}
+.tc-sparkd{position:absolute;left:14px;right:14px;bottom:4px;height:34%;pointer-events:none}
+.tc-sparkd{display:none}
+.tc-sparkd i{position:absolute;width:5px;height:5px;margin:-2.5px 0 0 -2.5px;border-radius:50%;
+  background:var(--ink);opacity:.4}
+.tc-q{top:auto;bottom:10px;transform:none}
+.tc-pipe{position:absolute;left:100%;top:12px;margin-left:8px;padding:2px 7px;border-radius:6px;
+  white-space:nowrap;font:600 10.5px/1.4 var(--sans);color:var(--accent);background:var(--accent-soft)}
+
+/* sources: small labelled pills */
+.sb-live .fc-src{border:1px solid var(--line);border-style:solid;border-radius:9px;background:var(--surface);
+  padding:0 10px;box-shadow:none}
+.sb-live .fc-src b{font:600 12.5px/1.15 var(--sans);color:var(--ink)}
+.sb-live .fc-src span{font:400 10.5px/1.2 var(--sans);letter-spacing:0;text-transform:none;color:var(--muted)}
+/* wires: quieter until you point at something */
+.sb-live .fc-edge .fc-lane{opacity:.55}
+.sb-live .fc-edge .fc-wire{opacity:.7}
+.sb-live .fc-edge.dim{opacity:.35}
+.sb-live .fc-lbl{font:600 10.5px/1.3 var(--sans);border-radius:6px}
+
+/* ── deck, v2: play, the year, and the one button ─────────────────────── */
+.sb-deck.sb-deck2{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;
+  gap:18px 24px;padding:12px clamp(14px,2.2vw,26px) 12px}
+.ys.ys2{grid-template-columns:40px minmax(0,1fr);gap:4px 14px;margin:0;align-items:center}
+.ys2 .ys-play{width:40px;height:40px;font-size:12px;grid-row:1}
+.ys2 .ys-track{border:0;padding:0;gap:5px}
+.ys2 .ys-m{gap:5px}
+.ys-stack{position:relative;display:flex;flex-direction:column-reverse;gap:2px;height:40px;
+  padding:3px;border-radius:7px;background:var(--hair)}
+.ys-stack i{display:block;flex:none;border-radius:2px;background:var(--alert);opacity:.8;
+  min-height:3px;max-height:9px}
+.ys-was{position:absolute;left:3px;right:3px;bottom:3px;border:1px dashed var(--muted);border-radius:2px;opacity:.7}
+.ys2 .ys-m.past .ys-stack i{opacity:.45}
+.ys2 .ys-m.on .ys-stack{outline:2px solid var(--ink);outline-offset:1px}
+.ys2 .ys-m:hover .ys-stack{background:var(--line)}
+.ys2 .ys-l{font:400 11.5px/1 var(--sans);letter-spacing:0;text-transform:none;color:var(--muted)}
+.ys2 .ys-m.on .ys-l{color:var(--ink);font-weight:600}
+.ys2 .ys-cap{grid-column:2;margin:2px 0 0;font:400 11.5px/1.4 var(--sans);color:var(--muted)}
+.sb-deck2 .om-acts{display:flex;flex-direction:column;align-items:stretch;gap:6px;margin:0}
+.sb-deck2 .om-adv{margin:0;padding:13px 22px;border-radius:12px;font:600 15px/1 var(--sans)}
+.om-acts2{display:flex;justify-content:center;gap:14px;margin:0}
+.om-acts2 button{font:500 12px/1.3 var(--sans);color:var(--muted)}
+.om-acts2 button:hover{color:var(--ink);text-decoration:underline;text-underline-offset:3px}
+@media (max-width:960px){
+  .sb-deck.sb-deck2{grid-template-columns:minmax(0,1fr)}
+  .sb-deck2 .om-acts{flex-direction:row;align-items:center;justify-content:space-between}
+}
